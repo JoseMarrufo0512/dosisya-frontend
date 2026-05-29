@@ -129,13 +129,8 @@ function Index() {
   );
 }
 
-        </section>
-      </div>
-    </main>
-  );
-}
+function ResultCard({ item }: { item: ResultItem }) {
 
-function ResultCard({ item }: { item: (typeof MOCK)["data"][number] }) {
   const { medicamento, precio, farmacia, ubicacion } = item;
   const waUrl = `https://wa.me/${farmacia.whatsapp_contacto.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
     `Hola, ¿tienen ${medicamento.nombre_normalizado} disponible?`
