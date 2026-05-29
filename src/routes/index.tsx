@@ -57,6 +57,12 @@ function Index() {
     }
   };
 
+  return (
+    <main className="min-h-screen bg-background">
+      <div className="mx-auto flex min-h-screen max-w-md flex-col px-5 pb-10 pt-12">
+        {/* Header */}
+        <header className={`flex flex-col items-center text-center transition-all ${view === "idle" ? "mt-16" : "mt-2"}`}>
+
           <div className="flex items-center gap-2">
             <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary text-primary-foreground">
               <Sparkles className="h-5 w-5" />
