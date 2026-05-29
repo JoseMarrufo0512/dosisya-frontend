@@ -12,40 +12,49 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-const MOCK = {
-  status: "success",
-  resultados_totales: 1,
-  data: [
-    {
-      id_inventario: "uuid-9876-5432",
-      medicamento: { nombre_normalizado: "Atamel Forte 500mg" },
-      precio: { usd: 2.5, ves: 95.0 },
-      farmacia: {
-        id_farmacia: "uuid-1234-5678",
-        nombre: "Farmatodo Araure",
-        es_premium: true,
-        whatsapp_contacto: "+584121234567",
-      },
-      ubicacion: { distancia_km: 1.2 },
-    },
-  ],
+type ResultItem = {
+  id_inventario: string;
+  medicamento: { nombre_normalizado: string };
+  precio: { usd: number; ves: number };
+  farmacia: {
+    id_farmacia: string;
+    nombre: string;
+    es_premium: boolean;
+    whatsapp_contacto: string;
+  };
+  ubicacion: { distancia_km: number };
 };
 
-type View = "idle" | "loading" | "results" | "empty";
+type View = "idle" | "loading" | "results" | "empty" | "error";
+
+const API_URL = "https://proyecto-dosis-ya.vercel.app/api/v1/medicamentos/buscar";
+const LAT = 9.5597;
+const LON = -69.2019;
 
 function Index() {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<View>("idle");
+  const [results, setResults] = useState<ResultItem[]>([]);
+  const [errorMsg, setErrorMsg] = useState<string>("");
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim()) return;
+    const q = query.trim();
+    if (!q) return;
     setView("loading");
-    setTimeout(() => {
-      // Demo: "nada" → empty, anything else → results
-      if (query.trim().toLowerCase() === "nada") setView("empty");
-      else setView("results");
-    }, 1200);
+    setErrorMsg("");
+    try {
+      const url = `${API_URL}?query=${encodeURIComponent(q)}&lat=${LAT}&lon=${LON}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      const data: ResultItem[] = Array.isArray(json?.data) ? json.data : [];
+      setResults(data);
+      setView(data.length === 0 ? "empty" : "results");
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Error desconocido");
+      setView("error");
+    }
   };
 
   return (
@@ -53,6 +62,7 @@ function Index() {
       <div className="mx-auto flex min-h-screen max-w-md flex-col px-5 pb-10 pt-12">
         {/* Header */}
         <header className={`flex flex-col items-center text-center transition-all ${view === "idle" ? "mt-16" : "mt-2"}`}>
+
           <div className="flex items-center gap-2">
             <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary text-primary-foreground">
               <Sparkles className="h-5 w-5" />
@@ -93,12 +103,17 @@ function Index() {
         <section className="mt-8 flex-1">
           {view === "loading" && <LoadingState />}
           {view === "empty" && <EmptyState />}
+          {view === "error" && (
+            <p className="mt-8 text-center text-sm text-destructive">
+              Ocurrió un error al buscar: {errorMsg}
+            </p>
+          )}
           {view === "results" && (
             <div className="space-y-4">
               <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                {MOCK.resultados_totales} resultado{MOCK.resultados_totales !== 1 && "s"}
+                {results.length} resultado{results.length !== 1 && "s"}
               </p>
-              {MOCK.data.map((item) => (
+              {results.map((item) => (
                 <ResultCard key={item.id_inventario} item={item} />
               ))}
             </div>
@@ -114,7 +129,8 @@ function Index() {
   );
 }
 
-function ResultCard({ item }: { item: (typeof MOCK)["data"][number] }) {
+function ResultCard({ item }: { item: ResultItem }) {
+
   const { medicamento, precio, farmacia, ubicacion } = item;
   const waUrl = `https://wa.me/${farmacia.whatsapp_contacto.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
     `Hola, ¿tienen ${medicamento.nombre_normalizado} disponible?`
