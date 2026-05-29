@@ -103,12 +103,17 @@ function Index() {
         <section className="mt-8 flex-1">
           {view === "loading" && <LoadingState />}
           {view === "empty" && <EmptyState />}
+          {view === "error" && (
+            <p className="mt-8 text-center text-sm text-destructive">
+              Ocurrió un error al buscar: {errorMsg}
+            </p>
+          )}
           {view === "results" && (
             <div className="space-y-4">
               <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                {MOCK.resultados_totales} resultado{MOCK.resultados_totales !== 1 && "s"}
+                {results.length} resultado{results.length !== 1 && "s"}
               </p>
-              {MOCK.data.map((item) => (
+              {results.map((item) => (
                 <ResultCard key={item.id_inventario} item={item} />
               ))}
             </div>
@@ -118,6 +123,12 @@ function Index() {
               Tip: prueba escribiendo el nombre de un medicamento.
             </p>
           )}
+        </section>
+      </div>
+    </main>
+  );
+}
+
         </section>
       </div>
     </main>
