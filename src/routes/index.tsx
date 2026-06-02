@@ -1,57 +1,187 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { Search, MapPin, Loader2, PackageSearch, Sparkles } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  Search,
+  MapPin,
+  Loader2,
+  PackageSearch,
+  Sparkles,
+  Bike,
+  Pill,
+  Navigation,
+  AlertCircle,
+} from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "DosisYa — Encuentra tu medicamento al mejor precio" },
-      { name: "description", content: "Busca medicamentos en farmacias cercanas y contacta al instante por WhatsApp." },
+      { title: "DosisYa — Encuentra tu medicamento cerca de ti" },
+      {
+        name: "description",
+        content:
+          "Busca medicamentos en farmacias cercanas en Venezuela. Compara precios en USD y Bs., y contacta por WhatsApp al instante.",
+      },
     ],
   }),
   component: Index,
 });
 
-type ResultItem = {
-  id_inventario: string;
-  medicamento: { nombre_normalizado: string };
-  precio: { usd: number; ves: number };
-  farmacia: {
-    id_farmacia: string;
-    nombre: string;
-    es_premium: boolean;
-    whatsapp_contacto: string;
-  };
-  ubicacion: { distancia_km: number };
+// ============ Types ============
+type Resultado = {
+  farmacia_id: string;
+  farmacia_nombre: string;
+  direccion: string;
+  telefono_whatsapp: string;
+  nivel_suscripcion: "premium" | "gratuita";
+  tiene_delivery: boolean;
+  medicamento_id: string;
+  principio_activo: string;
+  marca_comercial: string | null;
+  presentacion: string;
+  precio_usd: number;
+  precio_ves: number;
+  stock_disponible: boolean;
+  distancia_metros: number;
+  score_similitud: number;
 };
+
+type ApiResponse<T> = {
+  status: "success" | "error";
+  message: string;
+  data: T | null;
+};
+
+type BusquedaData = { total: number; resultados: Resultado[] };
 
 type View = "idle" | "loading" | "results" | "empty" | "error";
 
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "https://proyecto-dosis-ya.vercel.app";
-const API_URL = `${API_BASE}/api/v1/medicamentos/buscar`;
-const LAT = 9.5597;
-const LON = -69.2019;
+type Coords = { lat: number; lon: number };
 
+type TipoInteraccion =
+  | "clic_whatsapp"
+  | "clic_llamar"
+  | "ver_mapa"
+  | "ver_detalle"
+  | "compartir"
+  | "capture_pantalla";
+
+// ============ Config ============
+const API_BASE =
+  (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ??
+  "https://proyecto-dosis-ya.vercel.app";
+
+// Fallback: Barquisimeto, Venezuela
+const FALLBACK_COORDS: Coords = { lat: 10.0647, lon: -69.3471 };
+
+// ============ Helpers ============
+const formatDistancia = (m: number) =>
+  m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(1)} km`;
+
+const formatVes = (v: number) =>
+  new Intl.NumberFormat("es-VE", { maximumFractionDigits: 2 }).format(v);
+
+async function buscarMedicamentos(
+  q: string,
+  coords: Coords,
+  radio: number,
+  conDelivery: boolean,
+): Promise<BusquedaData> {
+  const params = new URLSearchParams({
+    q,
+    lat: String(coords.lat),
+    lon: String(coords.lon),
+    radio: String(radio),
+    con_delivery: String(conDelivery),
+  });
+  const res = await fetch(`${API_BASE}/api/v1/medicamentos/buscar?${params}`);
+  const json: ApiResponse<BusquedaData> = await res.json();
+  if (json.status === "error" || !json.data) {
+    throw new Error(json.message || `HTTP ${res.status}`);
+  }
+  return json.data;
+}
+
+async function registrarLead(
+  farmaciaId: string,
+  medicamentoId: string,
+  tipo: TipoInteraccion,
+): Promise<void> {
+  try {
+    await fetch(`${API_BASE}/api/v1/leads/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        farmacia_id: farmaciaId,
+        medicamento_buscado_id: medicamentoId,
+        tipo_interaccion: tipo,
+      }),
+    });
+  } catch {
+    // Silent — analytics no debe romper UX
+  }
+}
+
+// ============ Component ============
 function Index() {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<View>("idle");
-  const [results, setResults] = useState<ResultItem[]>([]);
-  const [errorMsg, setErrorMsg] = useState<string>("");
+  const [results, setResults] = useState<Resultado[]>([]);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [coords, setCoords] = useState<Coords | null>(null);
+  const [geoStatus, setGeoStatus] = useState<"idle" | "loading" | "ok" | "denied">("idle");
+  const [radio, setRadio] = useState(5000);
+  const [conDelivery, setConDelivery] = useState(false);
+  const [manualLat, setManualLat] = useState("");
+  const [manualLon, setManualLon] = useState("");
+
+  const requestGeo = () => {
+    if (!("geolocation" in navigator)) {
+      setGeoStatus("denied");
+      return;
+    }
+    setGeoStatus("loading");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+        setGeoStatus("ok");
+      },
+      () => setGeoStatus("denied"),
+      { enableHighAccuracy: true, timeout: 8000 },
+    );
+  };
+
+  useEffect(() => {
+    requestGeo();
+  }, []);
+
+  const handleManualCoords = () => {
+    const lat = parseFloat(manualLat);
+    const lon = parseFloat(manualLon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+    setCoords({ lat, lon });
+    setGeoStatus("ok");
+  };
+
+  const useFallback = () => {
+    setCoords(FALLBACK_COORDS);
+    setGeoStatus("ok");
+  };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     const q = query.trim();
-    if (!q) return;
+    if (q.length < 2) {
+      setErrorMsg("Escribe al menos 2 caracteres.");
+      setView("error");
+      return;
+    }
+    const c = coords ?? FALLBACK_COORDS;
     setView("loading");
     setErrorMsg("");
     try {
-      const url = `${API_URL}?query=${encodeURIComponent(q)}&lat=${LAT}&lon=${LON}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      const data: ResultItem[] = Array.isArray(json?.data) ? json.data : [];
-      setResults(data);
-      setView(data.length === 0 ? "empty" : "results");
+      const data = await buscarMedicamentos(q, c, radio, conDelivery);
+      setResults(data.resultados);
+      setView(data.total === 0 ? "empty" : "results");
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Error desconocido");
       setView("error");
@@ -59,44 +189,106 @@ function Index() {
   };
 
   return (
-    <main className="min-h-screen bg-background">
-      <div className="mx-auto flex min-h-screen max-w-md flex-col px-5 pb-10 pt-12">
+    <main
+      className="min-h-screen"
+      style={{
+        background:
+          "radial-gradient(1200px 600px at 50% -200px, #e8fbf2 0%, transparent 60%), #ffffff",
+      }}
+    >
+      <div className="mx-auto flex min-h-screen max-w-2xl flex-col px-5 pb-12 pt-8 md:pt-12">
         {/* Header */}
-        <header className={`flex flex-col items-center text-center transition-all ${view === "idle" ? "mt-16" : "mt-2"}`}>
-
-          <div className="flex items-center gap-2">
-            <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary text-primary-foreground">
-              <Sparkles className="h-5 w-5" />
+        <header className="flex flex-col items-center text-center">
+          <div className="flex items-center gap-2.5">
+            <div
+              className="grid h-11 w-11 place-items-center rounded-2xl text-white shadow-lg"
+              style={{ background: "var(--gradient-hero)" }}
+            >
+              <Pill className="h-5 w-5" />
             </div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">
-              Dosis<span className="text-primary">Ya</span>
+            <h1 className="text-3xl font-extrabold tracking-tight text-primary md:text-4xl">
+              Dosis<span style={{ color: "#3ddc97" }}>Ya</span>
             </h1>
           </div>
           {view === "idle" && (
-            <p className="mt-3 text-balance text-sm text-muted-foreground">
-              Encuentra tu medicamento al mejor precio en farmacias cerca de ti.
+            <p className="mt-3 max-w-md text-balance text-sm text-muted-foreground md:text-base">
+              Encuentra tu medicamento en farmacias cercanas. Precio, distancia y WhatsApp en un toque.
             </p>
           )}
         </header>
 
+        {/* Geo banner */}
+        <GeoBanner
+          status={geoStatus}
+          coords={coords}
+          onRetry={requestGeo}
+          onUseFallback={useFallback}
+          manualLat={manualLat}
+          manualLon={manualLon}
+          setManualLat={setManualLat}
+          setManualLon={setManualLon}
+          onManualSubmit={handleManualCoords}
+        />
+
         {/* Search */}
-        <form onSubmit={handleSearch} className="mt-8">
+        <form onSubmit={handleSearch} className="mt-5">
           <div className="group relative">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" />
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar medicamento..."
-              className="h-14 w-full rounded-lg border border-border bg-card pl-12 pr-4 text-base text-foreground shadow-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
+              placeholder="Ej: Losartán, Atamel, Ibuprofeno..."
+              className="h-14 w-full rounded-xl border border-border bg-card pl-12 pr-4 text-base text-foreground shadow-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
               aria-label="Buscar medicamento"
             />
           </div>
+
+          {/* Filters */}
+          <div className="mt-4 rounded-xl border border-border bg-card/60 p-4 backdrop-blur">
+            <div className="flex items-center justify-between gap-3">
+              <label htmlFor="radio" className="text-sm font-medium text-foreground">
+                Radio de búsqueda
+              </label>
+              <span className="text-sm font-semibold text-primary">{formatDistancia(radio)}</span>
+            </div>
+            <input
+              id="radio"
+              type="range"
+              min={100}
+              max={50000}
+              step={100}
+              value={radio}
+              onChange={(e) => setRadio(parseInt(e.target.value, 10))}
+              className="mt-2 w-full accent-[color:var(--secondary)]"
+            />
+            <label className="mt-3 flex cursor-pointer items-center justify-between gap-3 text-sm">
+              <span className="flex items-center gap-2 text-foreground">
+                <Bike className="h-4 w-4 text-primary" />
+                Solo con delivery
+              </span>
+              <span
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${conDelivery ? "bg-[color:var(--secondary)]" : "bg-muted"}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={conDelivery}
+                  onChange={(e) => setConDelivery(e.target.checked)}
+                  className="sr-only"
+                />
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${conDelivery ? "translate-x-5" : "translate-x-0.5"}`}
+                />
+              </span>
+            </label>
+          </div>
+
           <button
             type="submit"
-            className="mt-3 h-12 w-full rounded-lg bg-primary text-sm font-semibold text-primary-foreground transition-all hover:opacity-90 active:scale-[0.99]"
+            className="mt-4 h-12 w-full rounded-xl text-sm font-semibold text-white shadow-lg transition-all hover:opacity-95 active:scale-[0.99]"
+            style={{ background: "var(--gradient-hero)" }}
           >
-            Buscar
+            Buscar farmacias
           </button>
         </form>
 
@@ -104,24 +296,20 @@ function Index() {
         <section className="mt-8 flex-1">
           {view === "loading" && <LoadingState />}
           {view === "empty" && <EmptyState />}
-          {view === "error" && (
-            <p className="mt-8 text-center text-sm text-destructive">
-              Ocurrió un error al buscar: {errorMsg}
-            </p>
-          )}
+          {view === "error" && <ErrorState message={errorMsg} />}
           {view === "results" && (
             <div className="space-y-4">
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {results.length} resultado{results.length !== 1 && "s"}
               </p>
-              {results.map((item) => (
-                <ResultCard key={item.id_inventario} item={item} />
+              {results.map((item, i) => (
+                <ResultCard key={`${item.farmacia_id}-${item.medicamento_id}`} item={item} index={i} />
               ))}
             </div>
           )}
           {view === "idle" && (
-            <p className="mt-12 text-center text-xs text-muted-foreground">
-              Tip: prueba escribiendo el nombre de un medicamento.
+            <p className="mt-8 text-center text-xs text-muted-foreground">
+              Tip: busca por el principio activo (ej: Paracetamol) para más resultados.
             </p>
           )}
         </section>
@@ -130,67 +318,238 @@ function Index() {
   );
 }
 
-function ResultCard({ item }: { item: ResultItem }) {
+// ============ Subcomponents ============
 
-  const { medicamento, precio, farmacia, ubicacion } = item;
-  const waUrl = `https://wa.me/${farmacia.whatsapp_contacto.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
-    `Hola, ¿tienen ${medicamento.nombre_normalizado} disponible?`
-  )}`;
+function GeoBanner({
+  status,
+  coords,
+  onRetry,
+  onUseFallback,
+  manualLat,
+  manualLon,
+  setManualLat,
+  setManualLon,
+  onManualSubmit,
+}: {
+  status: "idle" | "loading" | "ok" | "denied";
+  coords: Coords | null;
+  onRetry: () => void;
+  onUseFallback: () => void;
+  manualLat: string;
+  manualLon: string;
+  setManualLat: (v: string) => void;
+  setManualLon: (v: string) => void;
+  onManualSubmit: () => void;
+}) {
+  if (status === "ok" && coords) {
+    return (
+      <div className="mt-6 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+        <Navigation className="h-3.5 w-3.5 text-[color:var(--secondary)]" />
+        Ubicación: {coords.lat.toFixed(4)}, {coords.lon.toFixed(4)}
+      </div>
+    );
+  }
+  if (status === "loading") {
+    return (
+      <div className="mt-6 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        Solicitando tu ubicación...
+      </div>
+    );
+  }
+  if (status === "denied") {
+    return (
+      <div className="mt-6 rounded-xl border border-border bg-muted/40 p-4">
+        <div className="flex items-start gap-2">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-foreground">No pudimos detectar tu ubicación</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Ingresa coordenadas manualmente o usa Barquisimeto como referencia.
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <input
+                inputMode="decimal"
+                value={manualLat}
+                onChange={(e) => setManualLat(e.target.value)}
+                placeholder="Latitud"
+                className="h-9 rounded-lg border border-border bg-card px-3 text-sm outline-none focus:border-primary"
+              />
+              <input
+                inputMode="decimal"
+                value={manualLon}
+                onChange={(e) => setManualLon(e.target.value)}
+                placeholder="Longitud"
+                className="h-9 rounded-lg border border-border bg-card px-3 text-sm outline-none focus:border-primary"
+              />
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={onManualSubmit}
+                className="h-8 rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground"
+              >
+                Usar coordenadas
+              </button>
+              <button
+                type="button"
+                onClick={onRetry}
+                className="h-8 rounded-md border border-border bg-card px-3 text-xs font-medium text-foreground"
+              >
+                Reintentar GPS
+              </button>
+              <button
+                type="button"
+                onClick={onUseFallback}
+                className="h-8 rounded-md border border-border bg-card px-3 text-xs font-medium text-foreground"
+              >
+                Usar Barquisimeto
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return null;
+}
+
+function ResultCard({ item, index }: { item: Resultado; index: number }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const phone = item.telefono_whatsapp.replace(/[^0-9]/g, "");
+  const medLabel = item.marca_comercial
+    ? `${item.marca_comercial} (${item.principio_activo})`
+    : item.principio_activo;
+  const waText = `Hola, ¿tienen disponible ${medLabel} ${item.presentacion}?`;
+  const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(waText)}`;
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.direccion)}`;
+
+  const onWhatsApp = () => {
+    void registrarLead(item.farmacia_id, item.medicamento_id, "clic_whatsapp");
+  };
+  const onMap = () => {
+    void registrarLead(item.farmacia_id, item.medicamento_id, "ver_mapa");
+  };
+  const onExpand = () => {
+    if (!expanded) void registrarLead(item.farmacia_id, item.medicamento_id, "ver_detalle");
+    setExpanded((v) => !v);
+  };
 
   return (
     <article
-      className="overflow-hidden rounded-lg border border-border bg-card p-5"
-      style={{ boxShadow: "var(--shadow-card)" }}
+      className="animate-fade-in-up overflow-hidden rounded-2xl border border-border bg-card p-5 backdrop-blur"
+      style={{
+        boxShadow: "var(--shadow-card)",
+        background: "var(--glass-bg)",
+        animationDelay: `${index * 60}ms`,
+      }}
     >
-      <div className="flex items-start justify-between gap-3">
-        <h2 className="text-xl font-bold capitalize leading-tight text-foreground">
-          {medicamento.nombre_normalizado}
-        </h2>
-        {farmacia.es_premium && (
+      {/* Badges */}
+      <div className="flex flex-wrap items-center gap-2">
+        {item.nivel_suscripcion === "premium" && (
           <span
-            className="inline-flex shrink-0 items-center gap-1 rounded-md px-2.5 py-1 text-xs font-bold text-premium-foreground shadow-sm"
+            className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-bold text-premium-foreground shadow-sm"
             style={{ background: "var(--gradient-premium)" }}
           >
             <Sparkles className="h-3 w-3" />
             Premium
           </span>
         )}
+        {item.tiene_delivery && (
+          <span className="inline-flex items-center gap-1 rounded-md bg-[color:var(--secondary)]/20 px-2 py-0.5 text-[11px] font-bold text-primary">
+            <Bike className="h-3 w-3" />
+            Delivery
+          </span>
+        )}
+        {!item.stock_disponible && (
+          <span className="inline-flex items-center rounded-md bg-destructive/10 px-2 py-0.5 text-[11px] font-bold text-destructive">
+            Sin stock
+          </span>
+        )}
       </div>
 
+      {/* Med */}
+      <h2 className="mt-2 text-lg font-bold capitalize leading-tight text-foreground">
+        {item.marca_comercial ?? item.principio_activo}
+      </h2>
+      {item.marca_comercial && (
+        <p className="text-xs text-muted-foreground">{item.principio_activo}</p>
+      )}
+      <p className="mt-0.5 text-sm text-muted-foreground">{item.presentacion}</p>
+
+      {/* Price */}
       <div className="mt-3 flex items-baseline gap-2">
-        <span className="text-3xl font-extrabold text-foreground">${precio.usd.toFixed(2)}</span>
-        <span className="text-sm text-muted-foreground">Bs. {precio.ves.toFixed(2)}</span>
+        <span className="text-2xl font-extrabold text-foreground">
+          ${item.precio_usd.toFixed(2)}
+        </span>
+        <span className="text-sm text-muted-foreground">Bs. {formatVes(item.precio_ves)}</span>
       </div>
 
-      <div className="mt-4 border-t border-border pt-3">
-        <p className="text-sm font-semibold text-foreground">{farmacia.nombre}</p>
+      {/* Pharmacy */}
+      <button
+        type="button"
+        onClick={onExpand}
+        className="mt-4 w-full border-t border-border pt-3 text-left"
+        aria-expanded={expanded}
+      >
+        <p className="text-sm font-semibold text-foreground">{item.farmacia_nombre}</p>
         <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
           <MapPin className="h-3.5 w-3.5" />
-          A {ubicacion.distancia_km} km de ti
+          {formatDistancia(item.distancia_metros)} · {expanded ? "Ocultar" : "Ver dirección"}
         </p>
-      </div>
+        {expanded && (
+          <p className="mt-2 text-xs text-muted-foreground">{item.direccion}</p>
+        )}
+      </button>
 
-      <a
-        href={waUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-whatsapp font-semibold text-whatsapp-foreground transition-all hover:opacity-90 active:scale-[0.99]"
-      >
-        <WhatsAppIcon className="h-5 w-5" />
-        Contactar por WhatsApp
-      </a>
+      {/* Actions */}
+      <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
+        <a
+          href={waUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={onWhatsApp}
+          className="flex h-11 items-center justify-center gap-2 rounded-xl bg-whatsapp font-semibold text-whatsapp-foreground transition-all hover:opacity-90 active:scale-[0.99]"
+        >
+          <WhatsAppIcon className="h-5 w-5" />
+          WhatsApp
+        </a>
+        <a
+          href={mapsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={onMap}
+          className="flex h-11 items-center justify-center gap-1.5 rounded-xl border border-border bg-card px-4 text-sm font-semibold text-primary transition-all hover:bg-accent active:scale-[0.99]"
+          aria-label="Ver en mapa"
+        >
+          <MapPin className="h-4 w-4" />
+          Mapa
+        </a>
+      </div>
     </article>
   );
 }
 
 function LoadingState() {
   return (
-    <div className="flex flex-col items-center justify-center py-10 text-center">
-      <Loader2 className="h-10 w-10 animate-spin text-primary" />
-      <p className="mt-4 text-sm font-medium text-foreground">Rastreando farmacias cercanas...</p>
-      <div className="mt-6 w-full space-y-3">
-        <div className="h-28 animate-pulse rounded-lg bg-muted" />
+    <div className="space-y-4">
+      <div className="flex items-center justify-center gap-2 py-2 text-sm font-medium text-foreground">
+        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+        Rastreando farmacias cercanas...
       </div>
+      {[0, 1, 2].map((i) => (
+        <div
+          key={i}
+          className="animate-pulse rounded-2xl border border-border bg-card p-5"
+          style={{ boxShadow: "var(--shadow-card)" }}
+        >
+          <div className="h-3 w-20 rounded bg-muted" />
+          <div className="mt-3 h-5 w-2/3 rounded bg-muted" />
+          <div className="mt-2 h-4 w-1/3 rounded bg-muted" />
+          <div className="mt-4 h-10 w-full rounded-xl bg-muted" />
+        </div>
+      ))}
     </div>
   );
 }
@@ -198,12 +557,23 @@ function LoadingState() {
 function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
-      <div className="grid h-16 w-16 place-items-center rounded-full bg-muted">
-        <PackageSearch className="h-8 w-8 text-muted-foreground" />
+      <div className="grid h-16 w-16 place-items-center rounded-full bg-accent">
+        <PackageSearch className="h-8 w-8 text-primary" />
       </div>
       <p className="mt-4 max-w-xs text-balance text-sm text-muted-foreground">
-        No encontramos este medicamento cerca de ti. Revisa si el nombre está bien escrito o intenta con un radio más amplio.
+        No encontramos ese medicamento cerca. Intenta ampliar el radio o buscar el principio activo genérico.
       </p>
+    </div>
+  );
+}
+
+function ErrorState({ message }: { message: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center px-4 py-10 text-center">
+      <div className="grid h-14 w-14 place-items-center rounded-full bg-destructive/10">
+        <AlertCircle className="h-7 w-7 text-destructive" />
+      </div>
+      <p className="mt-3 max-w-xs text-balance text-sm text-destructive">{message}</p>
     </div>
   );
 }

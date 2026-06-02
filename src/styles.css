@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
@@ -36,43 +37,55 @@
 }
 
 :root {
-  --radius: 0.5rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.18 0.02 160);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.02 160);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.02 160);
-  /* Emerald accent */
-  --primary: oklch(0.62 0.16 160);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.96 0.02 160);
-  --secondary-foreground: oklch(0.25 0.05 160);
-  --muted: oklch(0.97 0.005 160);
-  --muted-foreground: oklch(0.5 0.02 160);
-  --accent: oklch(0.95 0.04 160);
-  --accent-foreground: oklch(0.3 0.08 160);
+  --radius: 0.75rem;
+  --background: #ffffff;
+  --foreground: #0a2463;
+  --card: #ffffff;
+  --card-foreground: #0a2463;
+  --popover: #ffffff;
+  --popover-foreground: #0a2463;
+  /* Deep pharma blue */
+  --primary: #0a2463;
+  --primary-foreground: #ffffff;
+  /* Health green */
+  --secondary: #3ddc97;
+  --secondary-foreground: #0a2463;
+  --muted: #f3f5fb;
+  --muted-foreground: #5b6b8c;
+  --accent: #e8fbf2;
+  --accent-foreground: #0a2463;
   --destructive: oklch(0.6 0.22 25);
-  --destructive-foreground: oklch(0.99 0 0);
-  --border: oklch(0.92 0.01 160);
-  --input: oklch(0.93 0.01 160);
-  --ring: oklch(0.62 0.16 160);
+  --destructive-foreground: #ffffff;
+  --border: #e3e7f2;
+  --input: #e3e7f2;
+  --ring: #3ddc97;
   /* WhatsApp green #25D366 */
-  --whatsapp: oklch(0.74 0.18 150);
-  --whatsapp-foreground: oklch(1 0 0);
+  --whatsapp: #25d366;
+  --whatsapp-foreground: #ffffff;
   /* Premium gold */
-  --premium: oklch(0.82 0.16 85);
-  --premium-foreground: oklch(0.25 0.06 70);
+  --premium: #f5c542;
+  --premium-foreground: #3a2a00;
 
-  --gradient-premium: linear-gradient(135deg, oklch(0.88 0.16 90), oklch(0.75 0.18 70));
-  --shadow-card: 0 4px 20px -8px oklch(0.62 0.16 160 / 0.18);
+  --gradient-hero: linear-gradient(135deg, #0a2463 0%, #1e3a8a 60%, #3ddc97 140%);
+  --gradient-premium: linear-gradient(135deg, #ffd76b, #f5a623);
+  --shadow-card: 0 8px 32px -12px rgba(10, 36, 99, 0.18);
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.5);
 }
+
 
 @layer base {
   * { border-color: var(--color-border); }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
-    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-family: "Inter", "Outfit", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
 }
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up { animation: fadeInUp 0.4s ease-out both; }
+
