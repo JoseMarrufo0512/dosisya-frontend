@@ -27,7 +27,8 @@ type ResultItem = {
 
 type View = "idle" | "loading" | "results" | "empty" | "error";
 
-const API_URL = "https://proyecto-dosis-ya.vercel.app/api/v1/medicamentos/buscar";
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "https://proyecto-dosis-ya.vercel.app";
+const API_URL = `${API_BASE}/api/v1/medicamentos/buscar`;
 const LAT = 9.5597;
 const LON = -69.2019;
 
