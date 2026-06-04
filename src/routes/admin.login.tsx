@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { z } from "zod";
 import {
   Pill,
   Loader2,
@@ -23,6 +24,81 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const API_BASE = import.meta.env.VITE_API_URL || "https://proyecto-dosis-ya.vercel.app";
+
+/* ----------- Scalable sector catalog -----------
+ * Empezamos con Acarigua y Araure, pero el arreglo está pensado
+ * para crecer a otras ciudades/sectores sin tocar la UI. */
+type SectorOption = { value: string; label: string; ciudad: string };
+const SECTORES: SectorOption[] = [
+  { value: "acarigua", label: "Acarigua", ciudad: "Acarigua" },
+  { value: "araure", label: "Araure", ciudad: "Araure" },
+];
+
+/* ----------- Validation helpers ----------- */
+const NOMBRE_REGEX = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9 .,'&-]+$/;
+const SOLO_LETRAS_REGEX = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]+$/;
+const RIF_REGEX = /^[JVEGP]-\d{8}-\d$/;
+const TELEFONO_VE_REGEX = /^\+58\d{10}$/; // +58 + 10 dígitos
+
+const onlyDigits = (s: string) => s.replace(/\D/g, "");
+
+const formatRif = (raw: string) => {
+  // Mantiene letra inicial (J/V/E/G/P) + dígitos, inserta guiones J-XXXXXXXX-X
+  const cleaned = raw.toUpperCase().replace(/[^JVEGP0-9]/g, "");
+  if (!cleaned) return "";
+  const letra = /^[JVEGP]/.test(cleaned) ? cleaned[0] : "J";
+  const nums = cleaned.replace(/[^0-9]/g, "").slice(0, 9);
+  if (nums.length <= 8) {
+    return nums.length ? `${letra}-${nums}` : `${letra}-`;
+  }
+  return `${letra}-${nums.slice(0, 8)}-${nums.slice(8, 9)}`;
+};
+
+const formatTelefonoVE = (raw: string) => {
+  // Normaliza a +58XXXXXXXXXX
+  let d = onlyDigits(raw);
+  if (d.startsWith("58")) d = d.slice(2);
+  if (d.startsWith("0")) d = d.slice(1);
+  d = d.slice(0, 10);
+  return d ? `+58${d}` : "";
+};
+
+const loginSchema = z.object({
+  email: z.string().trim().email("Correo inválido").max(255),
+  password: z.string().min(8, "Mínimo 8 caracteres").max(128),
+});
+
+const step1Schema = z.object({
+  nombre: z
+    .string()
+    .trim()
+    .min(3, "Mínimo 3 caracteres")
+    .max(120, "Máximo 120 caracteres")
+    .regex(NOMBRE_REGEX, "Solo letras, números y . , ' & -"),
+  rif: z.string().regex(RIF_REGEX, "Formato: J-12345678-9"),
+  whatsapp: z
+    .string()
+    .regex(TELEFONO_VE_REGEX, "Formato: +58 seguido de 10 dígitos"),
+});
+
+const step2Schema = z.object({
+  sector: z.string().min(1, "Selecciona un sector"),
+  referencia: z
+    .string()
+    .trim()
+    .min(5, "Describe brevemente (mín. 5 caracteres)")
+    .max(180, "Máximo 180 caracteres"),
+});
+
+const step3Schema = z.object({
+  email: z.string().trim().email("Correo inválido").max(255),
+  password: z
+    .string()
+    .min(8, "Mínimo 8 caracteres")
+    .max(128)
+    .regex(/[A-Za-z]/, "Debe incluir una letra")
+    .regex(/\d/, "Debe incluir un número"),
+});
 
 export const Route = createFileRoute("/admin/login")({
   head: () => ({
