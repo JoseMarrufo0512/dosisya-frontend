@@ -212,16 +212,29 @@ function LoginCard({ onSwitch }: { onSwitch: () => void }) {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    const parsed = loginSchema.safeParse({ email, password });
+    if (!parsed.success) {
+      const errs: Record<string, string> = {};
+      for (const issue of parsed.error.issues) {
+        const k = issue.path[0] as string;
+        if (k && !errs[k]) errs[k] = issue.message;
+      }
+      setFieldErrors(errs);
+      return;
+    }
+    setFieldErrors({});
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/api/v1/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(parsed.data),
       });
       const json = await res.json();
       if (!res.ok || json?.status !== "success") {
@@ -246,7 +259,7 @@ function LoginCard({ onSwitch }: { onSwitch: () => void }) {
         Accede al panel de tu farmacia.
       </p>
 
-      <form onSubmit={onSubmit} className="mt-6 space-y-4">
+      <form onSubmit={onSubmit} className="mt-6 space-y-4" noValidate>
         <Field
           id="email"
           label="Correo corporativo"
@@ -255,8 +268,10 @@ function LoginCard({ onSwitch }: { onSwitch: () => void }) {
           autoComplete="email"
           required
           value={email}
-          onChange={(v) => setEmail(v)}
-          placeholder="farmacia@ejemplo.com"
+          onChange={setEmail}
+          placeholder="tu-farmacia@correo.com"
+          error={fieldErrors.email}
+          maxLength={255}
         />
         <Field
           id="password"
@@ -266,15 +281,13 @@ function LoginCard({ onSwitch }: { onSwitch: () => void }) {
           autoComplete="current-password"
           required
           value={password}
-          onChange={(v) => setPassword(v)}
+          onChange={setPassword}
           placeholder="••••••••"
+          error={fieldErrors.password}
+          maxLength={128}
         />
 
-        {error && (
-          <div className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
-            {error}
-          </div>
-        )}
+        {error && <ErrorBox text={error} />}
 
         <Button
           type="submit"
@@ -291,7 +304,6 @@ function LoginCard({ onSwitch }: { onSwitch: () => void }) {
         </Button>
       </form>
 
-      {/* Affiliate CTA */}
       <button
         type="button"
         onClick={onSwitch}
@@ -320,7 +332,7 @@ type RegData = {
   nombre: string;
   rif: string;
   whatsapp: string;
-  sector: "Acarigua" | "Araure" | "";
+  sector: string;
   referencia: string;
   email: string;
   password: string;
@@ -342,25 +354,50 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
   const [saving, setSaving] = useState(false);
   const [autoSaved, setAutoSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [done, setDone] = useState(false);
 
-  const update = <K extends keyof RegData>(k: K, v: RegData[K]) =>
+  const update = <K extends keyof RegData>(k: K, v: RegData[K]) => {
     setData((d) => ({ ...d, [k]: v }));
+    if (fieldErrors[k as string]) {
+      setFieldErrors((e) => {
+        const { [k as string]: _omit, ...rest } = e;
+        return rest;
+      });
+    }
+  };
 
-  /* Step 1 → background lead creation */
+  const collectErrors = (issues: z.ZodIssue[]) => {
+    const errs: Record<string, string> = {};
+    for (const issue of issues) {
+      const k = issue.path[0] as string;
+      if (k && !errs[k]) errs[k] = issue.message;
+    }
+    return errs;
+  };
+
   const handleStep1 = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    const parsed = step1Schema.safeParse({
+      nombre: data.nombre,
+      rif: data.rif,
+      whatsapp: data.whatsapp,
+    });
+    if (!parsed.success) {
+      setFieldErrors(collectErrors(parsed.error.issues));
+      return;
+    }
+    setFieldErrors({});
     setSaving(true);
     try {
-      // Simulated background save (partial lead)
       const res = await fetch(`${API_BASE}/api/v1/leads/parcial`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          nombre_farmacia: data.nombre,
-          rif: data.rif,
-          whatsapp: data.whatsapp,
+          nombre_farmacia: parsed.data.nombre,
+          rif: parsed.data.rif,
+          whatsapp: parsed.data.whatsapp,
           tipo_lead: "registro_parcial",
         }),
       }).catch(() => null);
@@ -373,7 +410,6 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
       setAutoSaved(true);
       setStep(2);
     } catch {
-      // never block UX on auto-save failure
       setAutoSaved(true);
       setStep(2);
     } finally {
@@ -384,12 +420,30 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
   const handleStep2 = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    const parsed = step2Schema.safeParse({
+      sector: data.sector,
+      referencia: data.referencia,
+    });
+    if (!parsed.success) {
+      setFieldErrors(collectErrors(parsed.error.issues));
+      return;
+    }
+    setFieldErrors({});
     setStep(3);
   };
 
   const handleStep3 = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    const parsed = step3Schema.safeParse({
+      email: data.email,
+      password: data.password,
+    });
+    if (!parsed.success) {
+      setFieldErrors(collectErrors(parsed.error.issues));
+      return;
+    }
+    setFieldErrors({});
     setSaving(true);
     try {
       const res = await fetch(`${API_BASE}/api/v1/auth/register`, {
@@ -401,8 +455,8 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
           whatsapp: data.whatsapp,
           sector: data.sector,
           punto_referencia: data.referencia,
-          email: data.email,
-          password: data.password,
+          email: parsed.data.email,
+          password: parsed.data.password,
           lead_id: data.lead_id,
         }),
       });
@@ -465,15 +519,20 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
       <Stepper step={step} />
 
       {step === 1 && (
-        <form onSubmit={handleStep1} className="mt-5 space-y-4">
+        <form onSubmit={handleStep1} className="mt-5 space-y-4" noValidate>
           <Field
             id="nombre"
             label="Nombre de la farmacia"
             icon={Building2}
             required
             value={data.nombre}
-            onChange={(v) => update("nombre", v)}
-            placeholder="Farmatodo Araure"
+            onChange={(v) => {
+              const clean = v.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9 .,'&-]/g, "");
+              update("nombre", clean);
+            }}
+            placeholder="Ej. Farmacia San Rafael"
+            error={fieldErrors.nombre}
+            maxLength={120}
           />
           <Field
             id="rif"
@@ -481,18 +540,25 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
             icon={FileBadge}
             required
             value={data.rif}
-            onChange={(v) => update("rif", v.toUpperCase())}
+            onChange={(v) => update("rif", formatRif(v))}
             placeholder="J-12345678-9"
+            error={fieldErrors.rif}
+            maxLength={12}
+            hint="Empieza con J, V, E, G o P."
           />
           <Field
             id="whatsapp"
-            label="Número de WhatsApp"
+            label="WhatsApp"
             icon={Phone}
             required
             value={data.whatsapp}
-            onChange={(v) => update("whatsapp", v)}
-            placeholder="+58 412 1234567"
+            onChange={(v) => update("whatsapp", formatTelefonoVE(v))}
+            placeholder="+584121234567"
             type="tel"
+            inputMode="tel"
+            error={fieldErrors.whatsapp}
+            maxLength={13}
+            hint="Solo números · Venezuela (+58) + 10 dígitos."
           />
           {error && <ErrorBox text={error} />}
           <Button
@@ -514,28 +580,34 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
       )}
 
       {step === 2 && (
-        <form onSubmit={handleStep2} className="mt-5 space-y-4">
+        <form onSubmit={handleStep2} className="mt-5 space-y-4" noValidate>
           <div className="space-y-2">
-            <Label>Sector / Urbanización</Label>
+            <Label>Sector / Ciudad</Label>
             <div className="grid grid-cols-2 gap-2">
-              {(["Acarigua", "Araure"] as const).map((s) => {
-                const active = data.sector === s;
+              {SECTORES.map((s) => {
+                const active = data.sector === s.value;
                 return (
                   <button
-                    key={s}
+                    key={s.value}
                     type="button"
-                    onClick={() => update("sector", s)}
+                    onClick={() => update("sector", s.value)}
                     className={`h-11 rounded-md border text-sm font-medium transition-colors inline-flex items-center justify-center gap-2 ${
                       active
                         ? "bg-primary text-primary-foreground border-primary"
                         : "bg-background border-input hover:bg-accent"
                     }`}
                   >
-                    <MapPin className="h-4 w-4" /> {s}
+                    <MapPin className="h-4 w-4" /> {s.label}
                   </button>
                 );
               })}
             </div>
+            {fieldErrors.sector && (
+              <p className="text-xs text-destructive">{fieldErrors.sector}</p>
+            )}
+            <p className="text-[11px] text-muted-foreground">
+              Pronto sumaremos más ciudades de Venezuela.
+            </p>
           </div>
           <Field
             id="ref"
@@ -544,7 +616,9 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
             required
             value={data.referencia}
             onChange={(v) => update("referencia", v)}
-            placeholder="Frente al CC Buenaventura"
+            placeholder="Ej. A 2 cuadras de la plaza Bolívar"
+            error={fieldErrors.referencia}
+            maxLength={180}
           />
           {error && <ErrorBox text={error} />}
           <div className="flex gap-2">
@@ -558,7 +632,6 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
             </Button>
             <Button
               type="submit"
-              disabled={!data.sector || !data.referencia}
               className="flex-1 h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
             >
               Siguiente <ArrowRight className="h-4 w-4 ml-1" />
@@ -568,7 +641,7 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
       )}
 
       {step === 3 && (
-        <form onSubmit={handleStep3} className="mt-5 space-y-4">
+        <form onSubmit={handleStep3} className="mt-5 space-y-4" noValidate>
           <Field
             id="r-email"
             label="Correo electrónico"
@@ -576,8 +649,11 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
             type="email"
             required
             value={data.email}
-            onChange={(v) => update("email", v)}
-            placeholder="farmacia@ejemplo.com"
+            onChange={(v) => update("email", v.trim())}
+            placeholder="tu-farmacia@correo.com"
+            error={fieldErrors.email}
+            maxLength={255}
+            autoComplete="email"
           />
           <Field
             id="r-pass"
@@ -588,6 +664,10 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
             value={data.password}
             onChange={(v) => update("password", v)}
             placeholder="Mínimo 8 caracteres"
+            error={fieldErrors.password}
+            maxLength={128}
+            autoComplete="new-password"
+            hint="Incluye al menos una letra y un número."
           />
           {error && <ErrorBox text={error} />}
           <div className="flex gap-2">
@@ -602,7 +682,7 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
             </Button>
             <Button
               type="submit"
-              disabled={saving || data.password.length < 8}
+              disabled={saving}
               className="flex-1 h-11 bg-secondary hover:bg-secondary/90 text-secondary-foreground font-semibold"
             >
               {saving ? (
@@ -676,6 +756,10 @@ function Field({
   placeholder,
   required,
   autoComplete,
+  error,
+  hint,
+  maxLength,
+  inputMode,
 }: {
   id: string;
   label: string;
@@ -686,9 +770,22 @@ function Field({
   placeholder?: string;
   required?: boolean;
   autoComplete?: string;
+  error?: string;
+  hint?: string;
+  maxLength?: number;
+  inputMode?:
+    | "text"
+    | "tel"
+    | "email"
+    | "numeric"
+    | "search"
+    | "url"
+    | "none"
+    | "decimal";
 }) {
+  const invalid = Boolean(error);
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       <Label htmlFor={id}>{label}</Label>
       <div className="relative">
         <Icon className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -697,12 +794,29 @@ function Field({
           type={type}
           required={required}
           autoComplete={autoComplete}
+          inputMode={inputMode}
+          maxLength={maxLength}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="pl-9 h-11"
+          aria-invalid={invalid}
+          aria-describedby={
+            invalid ? `${id}-error` : hint ? `${id}-hint` : undefined
+          }
+          className={`pl-9 h-11 ${
+            invalid ? "border-destructive focus-visible:ring-destructive" : ""
+          }`}
         />
       </div>
+      {invalid ? (
+        <p id={`${id}-error`} className="text-xs text-destructive">
+          {error}
+        </p>
+      ) : hint ? (
+        <p id={`${id}-hint`} className="text-[11px] text-muted-foreground">
+          {hint}
+        </p>
+      ) : null}
     </div>
   );
 }
