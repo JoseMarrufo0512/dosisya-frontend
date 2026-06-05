@@ -234,7 +234,7 @@ function LoginCard({ onSwitch }: { onSwitch: () => void }) {
       const res = await fetch(`${API_BASE}/api/v1/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(parsed.data),
+        body: JSON.stringify({ correo: parsed.data.email, password: parsed.data.password }),
       });
       const json = await res.json();
       if (!res.ok || json?.status !== "success") {
