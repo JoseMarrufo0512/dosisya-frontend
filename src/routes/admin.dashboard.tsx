@@ -174,10 +174,22 @@ function AdminDashboard() {
               transition={{ duration: 0.2 }}
             >
               {section === "inicio" && (
-                <InicioSection nombre={nombre} loading={loading} data={data} />
+                <InicioSection
+                  nombre={nombre}
+                  loading={loading}
+                  data={data}
+                  inventoryCount={inventoryCount}
+                />
               )}
               {section === "inventario" && (
-                <InventarioSection loading={loading} data={data} />
+                <InventarioSection
+                  loading={loading}
+                  data={data}
+                  onUploaded={(count) => {
+                    setInventoryCount(count);
+                    setData((prev) => prev ? { ...prev, total_inventario: count } : prev);
+                  }}
+                />
               )}
               {section === "configuracion" && <ConfiguracionSection nombre={nombre} />}
               {section === "soporte" && <SoporteSection />}
