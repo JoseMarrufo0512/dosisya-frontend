@@ -116,6 +116,14 @@ export const Route = createFileRoute("/admin/login")({
 
 type Mode = "login" | "register";
 
+type LoginResponse = {
+  data: {
+    farmacia_id: string;
+    auth_token: string;
+    nombre_farmacia: string;
+  };
+};
+
 function AuthPage() {
   const [mode, setMode] = useState<Mode>("login");
 
@@ -231,24 +239,24 @@ function LoginCard({ onSwitch }: { onSwitch: () => void }) {
     setFieldErrors({});
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/v1/auth/login`, {
+      const response = await fetch(`${API_BASE}/api/v1/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ correo: parsed.data.email, password: parsed.data.password }),
       });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(json?.message || json?.detail || "Credenciales inválidas");
+      const data = (await response.json()) as LoginResponse;
+      console.log("Respuesta login DosisYa:", data);
+
+      if (!response.ok) {
+        throw new Error("Credenciales inválidas");
       }
-      const authToken = json?.data?.auth_token;
-      const farmaciaId = json?.data?.farmacia_id;
-      if (!authToken || !farmaciaId) {
-        throw new Error("Respuesta inválida del servidor");
-      }
+
+      const authToken = data.data.auth_token;
+      const farmaciaId = data.data.farmacia_id;
       localStorage.setItem("auth_token", authToken);
       localStorage.setItem("farmacia_id", farmaciaId);
-      if (json?.data?.nombre_farmacia) {
-        localStorage.setItem("nombre_farmacia", json.data.nombre_farmacia);
+      if (data.data.nombre_farmacia) {
+        localStorage.setItem("nombre_farmacia", data.data.nombre_farmacia);
       }
       navigate({ to: "/admin/dashboard" });
     } catch (err) {
