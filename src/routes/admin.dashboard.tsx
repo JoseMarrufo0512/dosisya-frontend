@@ -12,11 +12,11 @@ import {
   X,
   MessageCircle,
   MapPin,
-  Upload,
   Search,
   TrendingUp,
-  Sparkles,
+  Boxes,
 } from "lucide-react";
+import { UploadInventory } from "@/components/UploadInventory";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
