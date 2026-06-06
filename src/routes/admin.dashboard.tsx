@@ -12,11 +12,11 @@ import {
   X,
   MessageCircle,
   MapPin,
-  Upload,
   Search,
   TrendingUp,
-  Sparkles,
+  Boxes,
 } from "lucide-react";
+import { UploadInventory } from "@/components/UploadInventory";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -51,6 +51,7 @@ type DashboardData = {
   nombre_farmacia?: string;
   pacientes_interesados_hoy?: number;
   busquedas_zona?: number;
+  total_inventario?: number;
   inventario?: Array<{
     id?: string;
     nombre: string;
@@ -66,6 +67,7 @@ function AdminDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [inventoryCount, setInventoryCount] = useState<number | null>(null);
 
   useEffect(() => {
     const farmaciaId =
@@ -174,10 +176,22 @@ function AdminDashboard() {
               transition={{ duration: 0.2 }}
             >
               {section === "inicio" && (
-                <InicioSection nombre={nombre} loading={loading} data={data} />
+                <InicioSection
+                  nombre={nombre}
+                  loading={loading}
+                  data={data}
+                  inventoryCount={inventoryCount}
+                />
               )}
               {section === "inventario" && (
-                <InventarioSection loading={loading} data={data} />
+                <InventarioSection
+                  loading={loading}
+                  data={data}
+                  onUploaded={(count) => {
+                    setInventoryCount(count);
+                    setData((prev) => prev ? { ...prev, total_inventario: count } : prev);
+                  }}
+                />
               )}
               {section === "configuracion" && <ConfiguracionSection nombre={nombre} />}
               {section === "soporte" && <SoporteSection />}
@@ -260,11 +274,14 @@ function InicioSection({
   nombre,
   loading,
   data,
+  inventoryCount,
 }: {
   nombre: string;
   loading: boolean;
   data: DashboardData | null;
+  inventoryCount: number | null;
 }) {
+  const totalInv = inventoryCount ?? data?.total_inventario ?? 0;
   return (
     <div className="space-y-6">
       <div>
@@ -276,7 +293,7 @@ function InicioSection({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <MetricCard
           label="Pacientes interesados hoy"
           value={loading ? null : (data?.pacientes_interesados_hoy ?? 14).toString()}
@@ -290,6 +307,13 @@ function InicioSection({
           hint="Personas buscando medicinas en tu zona"
           icon={<Search className="h-5 w-5" />}
           accent="bg-primary/10 text-primary"
+        />
+        <MetricCard
+          label="Total en Inventario"
+          value={loading && inventoryCount === null ? null : totalInv.toString()}
+          hint="Medicamentos cargados en tu farmacia"
+          icon={<Boxes className="h-5 w-5" />}
+          accent="bg-secondary/20 text-[#0a2463]"
         />
       </div>
 
@@ -314,14 +338,12 @@ function InicioSection({
 function InventarioSection({
   loading,
   data,
+  onUploaded,
 }: {
   loading: boolean;
   data: DashboardData | null;
+  onUploaded: (count: number) => void;
 }) {
-  const handleUploadExcel = () => {
-    alert("Próximamente: sube tu Excel y nuestra IA lo normaliza automáticamente.");
-  };
-
   const items = data?.inventario ?? [
     { nombre: "Acetaminofén 500mg", presentacion: "Tabletas x 10", stock: 45, precio_usd: 1.2 },
     { nombre: "Ibuprofeno 400mg", presentacion: "Tabletas x 20", stock: 30, precio_usd: 2.5 },
@@ -331,23 +353,24 @@ function InventarioSection({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Mi Inventario</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Gestiona los medicamentos disponibles en tu farmacia.
-          </p>
-        </div>
-        <Button
-          onClick={handleUploadExcel}
-          size="lg"
-          className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20"
-        >
-          <Upload className="h-4 w-4 mr-2" />
-          Subir Inventario (Excel)
-          <Sparkles className="h-3.5 w-3.5 ml-2 opacity-80" />
-        </Button>
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Mi Inventario</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Sube tu archivo y nuestra IA lo normaliza automáticamente.
+        </p>
       </div>
+
+      <UploadInventory
+        onUploaded={(res) => {
+          const r = res as { total?: number; count?: number; inventario?: unknown[] } | null;
+          const count =
+            r?.total ??
+            r?.count ??
+            (Array.isArray(r?.inventario) ? r!.inventario!.length : 0);
+          onUploaded(count);
+        }}
+      />
+
 
       <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-[0_4px_20px_-12px_rgba(10,36,99,0.15)]">
         {loading ? (
