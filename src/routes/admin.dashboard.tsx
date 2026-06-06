@@ -66,6 +66,7 @@ function AdminDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [inventoryCount, setInventoryCount] = useState<number | null>(null);
 
   useEffect(() => {
     const farmaciaId =
