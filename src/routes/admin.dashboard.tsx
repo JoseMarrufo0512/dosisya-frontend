@@ -274,11 +274,14 @@ function InicioSection({
   nombre,
   loading,
   data,
+  inventoryCount,
 }: {
   nombre: string;
   loading: boolean;
   data: DashboardData | null;
+  inventoryCount: number | null;
 }) {
+  const totalInv = inventoryCount ?? data?.total_inventario ?? 0;
   return (
     <div className="space-y-6">
       <div>
@@ -290,7 +293,7 @@ function InicioSection({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <MetricCard
           label="Pacientes interesados hoy"
           value={loading ? null : (data?.pacientes_interesados_hoy ?? 14).toString()}
@@ -304,6 +307,13 @@ function InicioSection({
           hint="Personas buscando medicinas en tu zona"
           icon={<Search className="h-5 w-5" />}
           accent="bg-primary/10 text-primary"
+        />
+        <MetricCard
+          label="Total en Inventario"
+          value={loading && inventoryCount === null ? null : totalInv.toString()}
+          hint="Medicamentos cargados en tu farmacia"
+          icon={<Boxes className="h-5 w-5" />}
+          accent="bg-secondary/20 text-[#0a2463]"
         />
       </div>
 
