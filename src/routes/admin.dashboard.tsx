@@ -51,6 +51,7 @@ type DashboardData = {
   nombre_farmacia?: string;
   pacientes_interesados_hoy?: number;
   busquedas_zona?: number;
+  total_inventario?: number;
   inventario?: Array<{
     id?: string;
     nombre: string;
