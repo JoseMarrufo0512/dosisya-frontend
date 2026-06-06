@@ -236,14 +236,20 @@ function LoginCard({ onSwitch }: { onSwitch: () => void }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ correo: parsed.data.email, password: parsed.data.password }),
       });
-      const json = await res.json();
-      if (!res.ok || json?.status !== "success") {
-        throw new Error(json?.message || "Credenciales inválidas");
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(json?.message || json?.detail || "Credenciales inválidas");
       }
-      const farmaciaId = json?.data?.farmacia_id || json?.farmacia_id;
-      if (!farmaciaId) throw new Error("No se recibió farmacia_id");
+      const authToken = json?.data?.auth_token;
+      const farmaciaId = json?.data?.farmacia_id;
+      if (!authToken || !farmaciaId) {
+        throw new Error("Respuesta inválida del servidor");
+      }
+      localStorage.setItem("auth_token", authToken);
       localStorage.setItem("farmacia_id", farmaciaId);
-      if (json?.data?.token) localStorage.setItem("auth_token", json.data.token);
+      if (json?.data?.nombre_farmacia) {
+        localStorage.setItem("nombre_farmacia", json.data.nombre_farmacia);
+      }
       navigate({ to: "/admin/dashboard" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al iniciar sesión");
