@@ -37,6 +37,10 @@ export interface ParamsBusqueda {
 export const API_BASE =
   (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "";
 
+// Alias de conveniencia para consumidores existentes
+export type Coords = { lat: number; lng: number };
+export type Resultado = ResultadoFarmacia;
+
 export async function buscarMedicamentos(
   params: ParamsBusqueda,
 ): Promise<RespuestaAPI> {
