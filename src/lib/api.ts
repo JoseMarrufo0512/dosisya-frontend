@@ -1,53 +1,65 @@
 // Cliente HTTP base de DosisYa
-export const API_BASE =
-  (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ??
-  "https://proyecto-dosis-ya.vercel.app";
-
-export type ApiResponse<T> = {
-  status: "success" | "error";
-  message: string;
-  data: T | null;
-};
-
-export type Resultado = {
+export interface ResultadoFarmacia {
   farmacia_id: string;
   farmacia_nombre: string;
   direccion: string;
-  telefono_whatsapp: string;
+  whatsapp: string;
   nivel_suscripcion: "premium" | "gratuita";
+  es_premium: boolean;
   tiene_delivery: boolean;
+  lat: number;
+  lng: number;
   medicamento_id: string;
-  principio_activo: string;
+  medicamento_nombre: string;
   marca_comercial: string | null;
   presentacion: string;
   precio_usd: number;
   precio_ves: number;
   stock_disponible: boolean;
-  distancia_metros: number;
+  distancia_m: number;
   score_similitud: number;
-};
+}
 
-export type BusquedaData = { total: number; resultados: Resultado[] };
+export interface RespuestaAPI {
+  status: "success" | "error";
+  message: string;
+  data: { total: number; resultados: ResultadoFarmacia[] } | null;
+}
 
-export type Coords = { lat: number; lon: number };
+export interface ParamsBusqueda {
+  q: string;
+  lat: number;
+  lng: number;
+  radio?: number;
+  con_delivery?: boolean;
+}
+
+export const API_BASE =
+  (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "";
+
+// Alias de conveniencia para consumidores existentes
+export type Coords = { lat: number; lng: number };
+export type Resultado = ResultadoFarmacia;
 
 export async function buscarMedicamentos(
-  q: string,
-  coords: Coords,
-  radio: number,
-  conDelivery: boolean,
-): Promise<BusquedaData> {
-  const params = new URLSearchParams({
-    q,
-    lat: String(coords.lat),
-    lon: String(coords.lon),
-    radio: String(radio),
-    con_delivery: String(conDelivery),
-  });
-  const res = await fetch(`${API_BASE}/api/v1/medicamentos/buscar?${params}`);
-  const json: ApiResponse<BusquedaData> = await res.json();
-  if (json.status === "error" || !json.data) {
-    throw new Error(json.message || `HTTP ${res.status}`);
+  params: ParamsBusqueda,
+): Promise<RespuestaAPI> {
+  try {
+    const qs = new URLSearchParams({
+      q: params.q,
+      lat: String(params.lat),
+      lng: String(params.lng),
+      ...(params.radio !== undefined ? { radio: String(params.radio) } : {}),
+      ...(params.con_delivery !== undefined
+        ? { con_delivery: String(params.con_delivery) }
+        : {}),
+    });
+    const res = await fetch(
+      `${API_BASE}/api/v1/medicamentos/buscar?${qs.toString()}`,
+    );
+    const json = (await res.json()) as RespuestaAPI;
+    return json;
+  } catch {
+    return { status: "error", message: "Error de red", data: null };
   }
-  return json.data;
 }

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { Coords } from "@/lib/api";
 
 // Fallback: Barquisimeto, Venezuela
-export const FALLBACK_COORDS: Coords = { lat: 10.0647, lon: -69.3471 };
+export const FALLBACK_COORDS: Coords = { lat: 10.0647, lng: -69.3471 };
 
 export type GeoStatus = "idle" | "loading" | "ok" | "denied";
 
@@ -18,7 +18,7 @@ export function useGeolocalizacion(autoRequest = true) {
     setStatus("loading");
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setStatus("ok");
       },
       () => setStatus("denied"),

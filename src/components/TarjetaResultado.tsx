@@ -22,22 +22,21 @@ function WhatsAppIcon({ className }: { className?: string }) {
 export function TarjetaResultado({ item, index }: { item: Resultado; index: number }) {
   const [expanded, setExpanded] = useState(false);
 
-  const phone = item.telefono_whatsapp.replace(/[^0-9]/g, "");
+  const phone = item.whatsapp.replace(/[^0-9]/g, "");
   const medLabel = item.marca_comercial
-    ? `${item.marca_comercial} (${item.principio_activo})`
-    : item.principio_activo;
+    ? `${item.marca_comercial} (${item.medicamento_nombre})`
+    : item.medicamento_nombre;
   const waText = `Hola, ¿tienen disponible ${medLabel} ${item.presentacion}?`;
   const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(waText)}`;
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.direccion)}`;
 
   const onWhatsApp = () => {
-    void registrarLead(item.farmacia_id, item.medicamento_id, "clic_whatsapp");
+    void registrarLead(item.farmacia_id, "click_whatsapp", item.medicamento_id);
   };
   const onMap = () => {
-    void registrarLead(item.farmacia_id, item.medicamento_id, "ver_mapa");
+    void registrarLead(item.farmacia_id, "ver_mapa", item.medicamento_id);
   };
   const onExpand = () => {
-    if (!expanded) void registrarLead(item.farmacia_id, item.medicamento_id, "ver_detalle");
     setExpanded((v) => !v);
   };
 
@@ -61,10 +60,10 @@ export function TarjetaResultado({ item, index }: { item: Resultado; index: numb
       </div>
 
       <h2 className="mt-2 text-lg font-bold capitalize leading-tight text-foreground">
-        {item.marca_comercial ?? item.principio_activo}
+        {item.marca_comercial ?? item.medicamento_nombre}
       </h2>
       {item.marca_comercial && (
-        <p className="text-xs text-muted-foreground">{item.principio_activo}</p>
+        <p className="text-xs text-muted-foreground">{item.medicamento_nombre}</p>
       )}
       <p className="mt-0.5 text-sm text-muted-foreground">{item.presentacion}</p>
 
@@ -84,7 +83,7 @@ export function TarjetaResultado({ item, index }: { item: Resultado; index: numb
         <p className="text-sm font-semibold text-foreground">{item.farmacia_nombre}</p>
         <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
           <MapPin className="h-3.5 w-3.5" />
-          {formatDistancia(item.distancia_metros)} · {expanded ? "Ocultar" : "Ver dirección"}
+          {formatDistancia(item.distancia_m)} · {expanded ? "Ocultar" : "Ver dirección"}
         </p>
         {expanded && (
           <p className="mt-2 text-xs text-muted-foreground">{item.direccion}</p>

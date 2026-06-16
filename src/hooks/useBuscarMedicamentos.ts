@@ -18,14 +18,20 @@ export function useBuscarMedicamentos() {
       }
       setView("loading");
       setError("");
-      try {
-        const data = await buscarMedicamentos(term, coords, radio, conDelivery);
-        setResults(data.resultados);
-        setView(data.total === 0 ? "empty" : "results");
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Error desconocido");
+      const resp = await buscarMedicamentos({
+        q: term,
+        lat: coords.lat,
+        lng: coords.lng,
+        radio,
+        con_delivery: conDelivery,
+      });
+      if (resp.status === "error" || !resp.data) {
+        setError(resp.message || "Error desconocido");
         setView("error");
+        return;
       }
+      setResults(resp.data.resultados);
+      setView(resp.data.total === 0 ? "empty" : "results");
     },
     [],
   );

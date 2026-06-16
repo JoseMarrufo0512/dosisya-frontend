@@ -44,9 +44,9 @@ function Index() {
 
   const handleManualCoords = () => {
     const lat = parseFloat(manualLat);
-    const lon = parseFloat(manualLon);
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
-    geo.setManual({ lat, lon });
+    const lng = parseFloat(manualLon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    geo.setManual({ lat, lng });
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -158,7 +158,7 @@ function GeoBanner({
     return (
       <div className="mt-6 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
         <Navigation className="h-3.5 w-3.5 text-[color:var(--secondary)]" />
-        Ubicación: {coords.lat.toFixed(4)}, {coords.lon.toFixed(4)}
+        Ubicación: {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
       </div>
     );
   }
