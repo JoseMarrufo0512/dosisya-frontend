@@ -1,46 +1,47 @@
 import { useCallback, useState } from "react";
-import { buscarMedicamentos, type Coords, type Resultado } from "@/lib/api";
+import { buscarMedicamentos, type ResultadoFarmacia } from "@/lib/api";
 
-export type SearchView = "idle" | "loading" | "results" | "empty" | "error";
+export interface UseBuscarMedicamentosReturn {
+  resultados: ResultadoFarmacia[];
+  cargando: boolean;
+  error: string | null;
+  totalResultados: number;
+  buscar: (
+    q: string,
+    lat: number,
+    lng: number,
+    conDelivery?: boolean,
+  ) => Promise<void>;
+}
 
-export function useBuscarMedicamentos() {
-  const [view, setView] = useState<SearchView>("idle");
-  const [results, setResults] = useState<Resultado[]>([]);
-  const [error, setError] = useState("");
+export function useBuscarMedicamentos(): UseBuscarMedicamentosReturn {
+  const [resultados, setResultados] = useState<ResultadoFarmacia[]>([]);
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [totalResultados, setTotalResultados] = useState(0);
 
-  const search = useCallback(
-    async (q: string, coords: Coords, radio: number, conDelivery: boolean) => {
-      const term = q.trim();
-      if (term.length < 2) {
-        setError("Escribe al menos 2 caracteres.");
-        setView("error");
-        return;
-      }
-      setView("loading");
-      setError("");
+  const buscar = useCallback(
+    async (q: string, lat: number, lng: number, conDelivery = false) => {
+      setCargando(true);
+      setError(null);
       const resp = await buscarMedicamentos({
-        q: term,
-        lat: coords.lat,
-        lng: coords.lng,
-        radio,
+        q,
+        lat,
+        lng,
         con_delivery: conDelivery,
       });
       if (resp.status === "error" || !resp.data) {
-        setError(resp.message || "Error desconocido");
-        setView("error");
-        return;
+        setError(resp.message || "Error al buscar medicamentos");
+        setResultados([]);
+        setTotalResultados(0);
+      } else {
+        setResultados(resp.data.resultados);
+        setTotalResultados(resp.data.total);
       }
-      setResults(resp.data.resultados);
-      setView(resp.data.total === 0 ? "empty" : "results");
+      setCargando(false);
     },
     [],
   );
 
-  const reset = useCallback(() => {
-    setView("idle");
-    setResults([]);
-    setError("");
-  }, []);
-
-  return { view, results, error, search, reset };
+  return { resultados, cargando, error, totalResultados, buscar };
 }

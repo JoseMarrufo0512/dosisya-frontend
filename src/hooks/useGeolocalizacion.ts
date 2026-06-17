@@ -1,44 +1,54 @@
-import { useCallback, useEffect, useState } from "react";
-import type { Coords } from "@/lib/api";
+import { useEffect, useState } from "react";
 
-// Fallback: Barquisimeto, Venezuela
-export const FALLBACK_COORDS: Coords = { lat: 10.0647, lng: -69.3471 };
+// Fallback: Acarigua, Venezuela
+export const FALLBACK_COORDS = { lat: 9.5569, lng: -69.1982 };
 
-export type GeoStatus = "idle" | "loading" | "ok" | "denied";
+export interface GeolocalizacionState {
+  lat: number | null;
+  lng: number | null;
+  error: string | null;
+  cargando: boolean;
+}
 
-export function useGeolocalizacion(autoRequest = true) {
-  const [coords, setCoords] = useState<Coords | null>(null);
-  const [status, setStatus] = useState<GeoStatus>("idle");
+export function useGeolocalizacion(): GeolocalizacionState {
+  const [state, setState] = useState<GeolocalizacionState>({
+    lat: null,
+    lng: null,
+    error: null,
+    cargando: true,
+  });
 
-  const request = useCallback(() => {
+  useEffect(() => {
     if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
-      setStatus("denied");
+      setState({
+        lat: FALLBACK_COORDS.lat,
+        lng: FALLBACK_COORDS.lng,
+        error: "Usando ubicación predeterminada: Acarigua",
+        cargando: false,
+      });
       return;
     }
-    setStatus("loading");
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        setStatus("ok");
+        setState({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          error: null,
+          cargando: false,
+        });
       },
-      () => setStatus("denied"),
-      { enableHighAccuracy: true, timeout: 8000 },
+      () => {
+        setState({
+          lat: FALLBACK_COORDS.lat,
+          lng: FALLBACK_COORDS.lng,
+          error: "Usando ubicación predeterminada: Acarigua",
+          cargando: false,
+        });
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
     );
   }, []);
 
-  const setManual = useCallback((c: Coords) => {
-    setCoords(c);
-    setStatus("ok");
-  }, []);
-
-  const useFallback = useCallback(() => {
-    setCoords(FALLBACK_COORDS);
-    setStatus("ok");
-  }, []);
-
-  useEffect(() => {
-    if (autoRequest) request();
-  }, [autoRequest, request]);
-
-  return { coords, status, request, setManual, useFallback };
+  return state;
 }
