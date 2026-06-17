@@ -33,9 +33,6 @@ function Index() {
     useBuscarMedicamentos();
   const { busquedas, agregar, limpiar } = useBusquedasRecientes();
 
-  const yaBuscaste = totalResultados > 0 || (!cargando && resultados.length >= 0 && query !== "" && error === null && hasSearched);
-
-  // simple flag: track if user has searched at least once
   const [hasSearched, setHasSearched] = useState(false);
 
   const doSearch = (term: string) => {
