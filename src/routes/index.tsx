@@ -150,9 +150,15 @@ function Index() {
         )}
 
         <section className="mt-8 flex-1">
+          {pendingTerm && (
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Esperando tu ubicación para buscar “{pendingTerm}”...
+            </div>
+          )}
           {cargando && <EstadoCargando />}
           {!cargando && error && <ErrorState message={error} />}
-          {!cargando && !error && hasSearched && resultados.length === 0 && (
+          {!cargando && !error && hasSearched && !pendingTerm && resultados.length === 0 && (
             <EstadoVacio />
           )}
           {!cargando && !error && resultados.length > 0 && (
