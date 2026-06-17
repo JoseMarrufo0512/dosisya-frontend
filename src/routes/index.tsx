@@ -1,22 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import {
-  Loader2,
-  Pill,
-  Navigation,
-  AlertCircle,
-} from "lucide-react";
+import { Loader2, Pill, Navigation, AlertCircle, Clock, X } from "lucide-react";
 import { BarraBusqueda } from "@/components/BarraBusqueda";
 import { TarjetaResultado } from "@/components/TarjetaResultado";
 import { EstadoCargando } from "@/components/EstadoCargando";
 import { EstadoVacio } from "@/components/EstadoVacio";
 import { useBuscarMedicamentos } from "@/hooks/useBuscarMedicamentos";
-import {
-  FALLBACK_COORDS,
-  useGeolocalizacion,
-  type GeoStatus,
-} from "@/hooks/useGeolocalizacion";
-import type { Coords } from "@/lib/api";
+import { useGeolocalizacion } from "@/hooks/useGeolocalizacion";
+import { useBusquedasRecientes } from "@/hooks/useLocalStorage";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -36,22 +27,26 @@ function Index() {
   const [query, setQuery] = useState("");
   const [radio, setRadio] = useState(5000);
   const [conDelivery, setConDelivery] = useState(false);
-  const [manualLat, setManualLat] = useState("");
-  const [manualLon, setManualLon] = useState("");
 
   const geo = useGeolocalizacion();
-  const { view, results, error, search } = useBuscarMedicamentos();
+  const { resultados, cargando, error, totalResultados, buscar } =
+    useBuscarMedicamentos();
+  const { busquedas, agregar, limpiar } = useBusquedasRecientes();
 
-  const handleManualCoords = () => {
-    const lat = parseFloat(manualLat);
-    const lng = parseFloat(manualLon);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-    geo.setManual({ lat, lng });
+  const [hasSearched, setHasSearched] = useState(false);
+
+  const doSearch = (term: string) => {
+    if (term.trim().length < 2) return;
+    const lat = geo.lat ?? 9.5569;
+    const lng = geo.lng ?? -69.1982;
+    setHasSearched(true);
+    agregar(term);
+    void buscar(term, lat, lng, conDelivery);
   };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    void search(query, geo.coords ?? FALLBACK_COORDS, radio, conDelivery);
+    doSearch(query);
   };
 
   return (
@@ -75,7 +70,7 @@ function Index() {
               Dosis<span style={{ color: "#3ddc97" }}>Ya</span>
             </h1>
           </div>
-          {view === "idle" && (
+          {!hasSearched && (
             <p className="mt-3 max-w-md text-balance text-sm text-muted-foreground md:text-base">
               Encuentra tu medicamento en farmacias cercanas. Precio, distancia y WhatsApp en un toque.
             </p>
@@ -83,15 +78,10 @@ function Index() {
         </header>
 
         <GeoBanner
-          status={geo.status}
-          coords={geo.coords}
-          onRetry={geo.request}
-          onUseFallback={geo.useFallback}
-          manualLat={manualLat}
-          manualLon={manualLon}
-          setManualLat={setManualLat}
-          setManualLon={setManualLon}
-          onManualSubmit={handleManualCoords}
+          cargando={geo.cargando}
+          lat={geo.lat}
+          lng={geo.lng}
+          error={geo.error}
         />
 
         <BarraBusqueda
@@ -104,16 +94,50 @@ function Index() {
           onSubmit={handleSearch}
         />
 
+        {!hasSearched && busquedas.length > 0 && (
+          <div className="mt-4">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <Clock className="h-3.5 w-3.5" /> Búsquedas recientes
+              </p>
+              <button
+                type="button"
+                onClick={limpiar}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                Limpiar
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {busquedas.map((b) => (
+                <button
+                  key={b}
+                  type="button"
+                  onClick={() => {
+                    setQuery(b);
+                    doSearch(b);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs text-foreground hover:bg-accent"
+                >
+                  {b}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <section className="mt-8 flex-1">
-          {view === "loading" && <EstadoCargando />}
-          {view === "empty" && <EstadoVacio />}
-          {view === "error" && <ErrorState message={error} />}
-          {view === "results" && (
+          {cargando && <EstadoCargando />}
+          {!cargando && error && <ErrorState message={error} />}
+          {!cargando && !error && hasSearched && resultados.length === 0 && (
+            <EstadoVacio />
+          )}
+          {!cargando && !error && resultados.length > 0 && (
             <div className="space-y-4">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {results.length} resultado{results.length !== 1 && "s"}
+                {totalResultados} resultado{totalResultados !== 1 && "s"}
               </p>
-              {results.map((item, i) => (
+              {resultados.map((item, i) => (
                 <TarjetaResultado
                   key={`${item.farmacia_id}-${item.medicamento_id}`}
                   item={item}
@@ -122,7 +146,7 @@ function Index() {
               ))}
             </div>
           )}
-          {view === "idle" && (
+          {!hasSearched && !cargando && (
             <p className="mt-8 text-center text-xs text-muted-foreground">
               Tip: busca por el principio activo (ej: Paracetamol) para más resultados.
             </p>
@@ -134,35 +158,17 @@ function Index() {
 }
 
 function GeoBanner({
-  status,
-  coords,
-  onRetry,
-  onUseFallback,
-  manualLat,
-  manualLon,
-  setManualLat,
-  setManualLon,
-  onManualSubmit,
+  cargando,
+  lat,
+  lng,
+  error,
 }: {
-  status: GeoStatus;
-  coords: Coords | null;
-  onRetry: () => void;
-  onUseFallback: () => void;
-  manualLat: string;
-  manualLon: string;
-  setManualLat: (v: string) => void;
-  setManualLon: (v: string) => void;
-  onManualSubmit: () => void;
+  cargando: boolean;
+  lat: number | null;
+  lng: number | null;
+  error: string | null;
 }) {
-  if (status === "ok" && coords) {
-    return (
-      <div className="mt-6 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-        <Navigation className="h-3.5 w-3.5 text-[color:var(--secondary)]" />
-        Ubicación: {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
-      </div>
-    );
-  }
-  if (status === "loading") {
+  if (cargando) {
     return (
       <div className="mt-6 flex items-center justify-center gap-2 text-xs text-muted-foreground">
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -170,57 +176,19 @@ function GeoBanner({
       </div>
     );
   }
-  if (status === "denied") {
+  if (error && lat !== null && lng !== null) {
     return (
-      <div className="mt-6 rounded-xl border border-border bg-muted/40 p-4">
-        <div className="flex items-start gap-2">
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-          <div className="flex-1">
-            <p className="text-sm font-medium text-foreground">No pudimos detectar tu ubicación</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Ingresa coordenadas manualmente o usa Barquisimeto como referencia.
-            </p>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <input
-                inputMode="decimal"
-                value={manualLat}
-                onChange={(e) => setManualLat(e.target.value)}
-                placeholder="Latitud"
-                className="h-9 rounded-lg border border-border bg-card px-3 text-sm outline-none focus:border-primary"
-              />
-              <input
-                inputMode="decimal"
-                value={manualLon}
-                onChange={(e) => setManualLon(e.target.value)}
-                placeholder="Longitud"
-                className="h-9 rounded-lg border border-border bg-card px-3 text-sm outline-none focus:border-primary"
-              />
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={onManualSubmit}
-                className="h-8 rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground"
-              >
-                Usar coordenadas
-              </button>
-              <button
-                type="button"
-                onClick={onRetry}
-                className="h-8 rounded-md border border-border bg-card px-3 text-xs font-medium text-foreground"
-              >
-                Reintentar GPS
-              </button>
-              <button
-                type="button"
-                onClick={onUseFallback}
-                className="h-8 rounded-md border border-border bg-card px-3 text-xs font-medium text-foreground"
-              >
-                Usar Barquisimeto
-              </button>
-            </div>
-          </div>
-        </div>
+      <div className="mt-6 flex items-start gap-2 rounded-xl border border-border bg-muted/40 p-3">
+        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+        <p className="text-xs text-muted-foreground">{error}</p>
+      </div>
+    );
+  }
+  if (lat !== null && lng !== null) {
+    return (
+      <div className="mt-6 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+        <Navigation className="h-3.5 w-3.5 text-[color:var(--secondary)]" />
+        Ubicación: {lat.toFixed(4)}, {lng.toFixed(4)}
       </div>
     );
   }
@@ -231,7 +199,7 @@ function ErrorState({ message }: { message: string }) {
   return (
     <div className="flex flex-col items-center justify-center px-4 py-10 text-center">
       <div className="grid h-14 w-14 place-items-center rounded-full bg-destructive/10">
-        <AlertCircle className="h-7 w-7 text-destructive" />
+        <X className="h-7 w-7 text-destructive" />
       </div>
       <p className="mt-3 max-w-xs text-balance text-sm text-destructive">{message}</p>
     </div>
