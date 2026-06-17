@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2, Pill, Navigation, AlertCircle, Clock, X } from "lucide-react";
 import { BarraBusqueda } from "@/components/BarraBusqueda";
 import { TarjetaResultado } from "@/components/TarjetaResultado";
@@ -34,15 +34,38 @@ function Index() {
   const { busquedas, agregar, limpiar } = useBusquedasRecientes();
 
   const [hasSearched, setHasSearched] = useState(false);
+  const [pendingTerm, setPendingTerm] = useState<string | null>(null);
+  const lastFiredRef = useRef<string | null>(null);
 
-  const doSearch = (term: string) => {
-    if (term.trim().length < 2) return;
-    const lat = geo.lat ?? 9.5569;
-    const lng = geo.lng ?? -69.1982;
+  const fire = (term: string, lat: number, lng: number) => {
+    const key = `${term}|${lat}|${lng}|${conDelivery}`;
+    if (lastFiredRef.current === key) return;
+    lastFiredRef.current = key;
     setHasSearched(true);
     agregar(term);
     void buscar(term, lat, lng, conDelivery);
   };
+
+  const doSearch = (term: string) => {
+    const t = term.trim();
+    if (t.length < 2) return;
+    if (geo.lat == null || geo.lng == null) {
+      // Esperar a que el hook resuelva las coordenadas
+      setPendingTerm(t);
+      setHasSearched(true);
+      return;
+    }
+    fire(t, geo.lat, geo.lng);
+  };
+
+  // Si había una búsqueda en espera, dispárala cuando lleguen las coords
+  useEffect(() => {
+    if (pendingTerm && geo.lat != null && geo.lng != null) {
+      fire(pendingTerm, geo.lat, geo.lng);
+      setPendingTerm(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingTerm, geo.lat, geo.lng]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
