@@ -34,8 +34,9 @@ export interface ParamsBusqueda {
   con_delivery?: boolean;
 }
 
-export const API_BASE =
-  (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "";
+// URL del backend en producción (hardcoded para el MVP).
+// Los consumidores concatenan `/api/v1/...`, por eso aquí guardamos sólo el host.
+export const API_BASE = "https://proyecto-dosis-ya.vercel.app";
 
 // Alias de conveniencia para consumidores existentes
 export type Coords = { lat: number; lng: number };
