@@ -13,22 +13,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     tsconfigPaths(),
-    VitePWA({
-      registerType: "autoUpdate",
-      workbox: {
-        runtimeCaching: [
-          {
-            urlPattern: /\/api\/v1\/medicamentos\/buscar/,
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "api-cache",
-              networkTimeoutSeconds: 5,
-              expiration: { maxEntries: 50, maxAgeSeconds: 300 }
-            }
-          }
-        ]
-      }
-    })
+
   ],
   server: {
     port: 5173,
