@@ -2,9 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Upload, Sparkles, FileSpreadsheet, Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
-
-const API_BASE =
-  import.meta.env.VITE_API_URL || "https://proyecto-dosis-ya.vercel.app";
+import { API_BASE } from "@/lib/api";
 
 const ACCEPTED_EXT = [".csv", ".xlsx"];
 const ACCEPTED_MIME = [

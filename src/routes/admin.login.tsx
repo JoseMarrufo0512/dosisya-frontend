@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const API_BASE = import.meta.env.VITE_API_URL || "https://proyecto-dosis-ya.vercel.app";
+import { API_BASE } from "@/lib/api";
 
 /* ----------- Scalable sector catalog -----------
  * Empezamos con Acarigua y Araure, pero el arreglo está pensado

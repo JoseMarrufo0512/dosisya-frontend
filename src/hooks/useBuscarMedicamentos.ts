@@ -11,6 +11,7 @@ export interface UseBuscarMedicamentosReturn {
     lat: number,
     lng: number,
     conDelivery?: boolean,
+    radio?: number
   ) => Promise<void>;
 }
 
@@ -21,7 +22,7 @@ export function useBuscarMedicamentos(): UseBuscarMedicamentosReturn {
   const [totalResultados, setTotalResultados] = useState(0);
 
   const buscar = useCallback(
-    async (q: string, lat: number, lng: number, conDelivery = false) => {
+    async (q: string, lat: number, lng: number, conDelivery = false, radio?: number) => {
       setCargando(true);
       setError(null);
       const resp = await buscarMedicamentos({
@@ -29,6 +30,7 @@ export function useBuscarMedicamentos(): UseBuscarMedicamentosReturn {
         lat,
         lng,
         con_delivery: conDelivery,
+        radio,
       });
       if (resp.status === "error" || !resp.data) {
         setError(resp.message || "Error al buscar medicamentos");

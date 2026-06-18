@@ -29,8 +29,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-const API_BASE =
-  import.meta.env.VITE_API_URL || "https://proyecto-dosis-ya.vercel.app";
+import { API_BASE } from "@/lib/api";
 
 export const Route = createFileRoute("/admin/dashboard")({
   head: () => ({
@@ -78,10 +77,22 @@ function AdminDashboard() {
     }
     (async () => {
       try {
+        const token =
+          typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
         const res = await fetch(
           `${API_BASE}/api/v1/farmacias/${farmaciaId}/dashboard`,
+          {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          },
         );
         const json = await res.json();
+        if (!res.ok) {
+          // 401/403 → redirigir al login
+          if (res.status === 401 || res.status === 403) {
+            navigate({ to: "/admin/login" });
+            return;
+          }
+        }
         setData(json?.data ?? json ?? {});
       } catch {
         setData({});

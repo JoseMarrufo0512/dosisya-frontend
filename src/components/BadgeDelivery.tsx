@@ -1,10 +1,7 @@
-import { Bike } from "lucide-react";
-
 export function BadgeDelivery() {
   return (
-    <span className="inline-flex items-center gap-1 rounded-md bg-[color:var(--secondary)]/20 px-2 py-0.5 text-[11px] font-bold text-primary">
-      <Bike className="h-3 w-3" />
-      Delivery
+    <span className="bg-emerald-100 text-emerald-700 rounded-full px-2 py-0.5 text-xs font-semibold inline-flex items-center gap-1">
+      🛵 Delivery
     </span>
   );
 }

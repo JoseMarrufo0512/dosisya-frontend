@@ -1,86 +1,67 @@
-import { Bike, Search } from "lucide-react";
+import { Search, Loader2, Clock } from "lucide-react";
 
-const formatDistancia = (m: number) =>
-  m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(1)} km`;
-
-type Props = {
+interface BarraBusquedaProps {
   query: string;
   onQueryChange: (v: string) => void;
-  radio: number;
-  onRadioChange: (v: number) => void;
-  conDelivery: boolean;
-  onDeliveryChange: (v: boolean) => void;
   onSubmit: (e: React.FormEvent) => void;
-};
+  cargando: boolean;
+  onRecalcularUbicacion: () => void;
+  busquedasRecientes: string[];
+  onBusquedaRecienteClick: (termino: string) => void;
+  compacta?: boolean;
+}
 
 export function BarraBusqueda({
   query,
   onQueryChange,
-  radio,
-  onRadioChange,
-  conDelivery,
-  onDeliveryChange,
   onSubmit,
-}: Props) {
+  cargando,
+  onRecalcularUbicacion,
+  busquedasRecientes,
+  onBusquedaRecienteClick,
+  compacta = false,
+}: BarraBusquedaProps) {
   return (
-    <form onSubmit={onSubmit} className="mt-5">
-      <div className="group relative">
-        <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" />
+    <div className={`w-full ${compacta ? "" : "max-w-xl mx-auto"}`}>
+      <form onSubmit={onSubmit} className="relative flex items-center w-full">
+        <div className="absolute left-4 text-gray-400">
+          {cargando ? <Loader2 className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5" />}
+        </div>
         <input
           type="text"
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
-          placeholder="Ej: Losartán, Atamel, Ibuprofeno..."
-          className="h-14 w-full rounded-xl border border-border bg-card pl-12 pr-4 text-base text-foreground shadow-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
-          aria-label="Buscar medicamento"
+          placeholder="¿Qué medicamento necesitas? (ej: Losartán, Amoxicilina...)"
+          className={`w-full rounded-full border border-gray-200 bg-white text-gray-900 shadow-md outline-none transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 ${
+            compacta ? "h-10 pl-10 pr-12 text-sm" : "h-14 pl-12 pr-14 text-base"
+          }`}
         />
-      </div>
-
-      <div className="mt-4 rounded-xl border border-border bg-card/60 p-4 backdrop-blur">
-        <div className="flex items-center justify-between gap-3">
-          <label htmlFor="radio" className="text-sm font-medium text-foreground">
-            Radio de búsqueda
-          </label>
-          <span className="text-sm font-semibold text-primary">{formatDistancia(radio)}</span>
+        <button
+          type="button"
+          onClick={onRecalcularUbicacion}
+          className={`absolute right-2 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 transition-colors ${
+            compacta ? "h-6 w-6 text-sm" : "h-10 w-10 text-xl"
+          }`}
+          title="Recalcular ubicación"
+        >
+          📍
+        </button>
+      </form>
+      
+      {!compacta && busquedasRecientes.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+          {busquedasRecientes.slice(0, 3).map((term) => (
+            <button
+              key={term}
+              onClick={() => onBusquedaRecienteClick(term)}
+              className="flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-500 hover:bg-gray-200 transition-colors"
+            >
+              <Clock className="h-3 w-3" />
+              {term}
+            </button>
+          ))}
         </div>
-        <input
-          id="radio"
-          type="range"
-          min={100}
-          max={50000}
-          step={100}
-          value={radio}
-          onChange={(e) => onRadioChange(parseInt(e.target.value, 10))}
-          className="mt-2 w-full accent-[color:var(--secondary)]"
-        />
-        <label className="mt-3 flex cursor-pointer items-center justify-between gap-3 text-sm">
-          <span className="flex items-center gap-2 text-foreground">
-            <Bike className="h-4 w-4 text-primary" />
-            Solo con delivery
-          </span>
-          <span
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${conDelivery ? "bg-[color:var(--secondary)]" : "bg-muted"}`}
-          >
-            <input
-              type="checkbox"
-              checked={conDelivery}
-              onChange={(e) => onDeliveryChange(e.target.checked)}
-              className="sr-only"
-            />
-            <span
-              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${conDelivery ? "translate-x-5" : "translate-x-0.5"}`}
-            />
-          </span>
-        </label>
-      </div>
-
-      <button
-        type="submit"
-        className="mt-4 h-12 w-full rounded-xl text-sm font-semibold text-white shadow-lg transition-all hover:opacity-95 active:scale-[0.99]"
-        style={{ background: "var(--gradient-hero)" }}
-      >
-        Buscar farmacias
-      </button>
-    </form>
+      )}
+    </div>
   );
 }

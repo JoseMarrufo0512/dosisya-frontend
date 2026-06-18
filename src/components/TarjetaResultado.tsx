@@ -1,117 +1,181 @@
-import { useState } from "react";
-import { MapPin } from "lucide-react";
-import type { Resultado } from "@/lib/api";
+import { type ResultadoFarmacia } from "@/lib/api";
 import { registrarLead } from "@/lib/leads";
 import { BadgePremium } from "./BadgePremium";
 import { BadgeDelivery } from "./BadgeDelivery";
+import { toast } from "sonner";
 
-const formatDistancia = (m: number) =>
-  m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(1)} km`;
-
-const formatVes = (v: number) =>
-  new Intl.NumberFormat("es-VE", { maximumFractionDigits: 2 }).format(v);
-
-function WhatsAppIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
-      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0 0 20.464 3.488" />
-    </svg>
-  );
+interface TarjetaResultadoProps {
+  resultado: ResultadoFarmacia;
+  onLeadRegistrado?: () => void;
 }
 
-export function TarjetaResultado({ item, index }: { item: Resultado; index: number }) {
-  const [expanded, setExpanded] = useState(false);
+export function TarjetaResultado({ resultado, onLeadRegistrado }: TarjetaResultadoProps) {
+  // Sanitizar número de WhatsApp: solo dígitos, con fallback seguro
+  const phone = resultado.whatsapp?.replace(/\D/g, "") ?? "";
+  const waText = `Hola, vi que tienen ${resultado.medicamento_nombre} (${resultado.presentacion}) en DosisYa. ¿Está disponible?`;
+  const waUrl = phone
+    ? `https://wa.me/${phone}?text=${encodeURIComponent(waText)}`
+    : "#";
+  const mapsUrl = `https://maps.google.com/?q=${resultado.lat},${resultado.lng}`;
 
-  const phone = item.whatsapp.replace(/[^0-9]/g, "");
-  const medLabel = item.marca_comercial
-    ? `${item.marca_comercial} (${item.medicamento_nombre})`
-    : item.medicamento_nombre;
-  const waText = `Hola, ¿tienen disponible ${medLabel} ${item.presentacion}?`;
-  const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(waText)}`;
-  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.direccion)}`;
+  // ID base para elementos únicos en la tarjeta (requerido para testing y a11y)
+  const cardId = `tarjeta-${resultado.farmacia_id}-${resultado.medicamento_id}`;
 
-  const onWhatsApp = () => {
-    void registrarLead(item.farmacia_id, "click_whatsapp", item.medicamento_id);
+  // ─── Handlers de leads CPC ────────────────────────────────────────────────
+  // Todos usan void (fire-and-forget) para no bloquear la navegación del usuario.
+  // El backend registra el lead antes de responder al usuario.
+
+  const handleWhatsApp = () => {
+    // "clic_whatsapp" es el valor canónico del enum PostgreSQL (preferido sobre "click_whatsapp")
+    void registrarLead(resultado.farmacia_id, "clic_whatsapp", resultado.medicamento_id);
+    onLeadRegistrado?.();
   };
-  const onMap = () => {
-    void registrarLead(item.farmacia_id, "ver_mapa", item.medicamento_id);
+
+  const handleMapa = () => {
+    void registrarLead(resultado.farmacia_id, "ver_mapa", resultado.medicamento_id);
+    onLeadRegistrado?.();
   };
-  const onExpand = () => {
-    setExpanded((v) => !v);
+
+  const handleGuardar = async () => {
+    // El lead se registra ANTES de intentar copiar: la intención ya cuenta como CPC
+    void registrarLead(resultado.farmacia_id, "capture_pantalla", resultado.medicamento_id);
+    onLeadRegistrado?.();
+
+    const textToCopy = `💊 ${resultado.medicamento_nombre} (${resultado.presentacion}) — $${resultado.precio_usd.toFixed(2)} USD — ${resultado.farmacia_nombre} — WhatsApp: ${resultado.whatsapp}`;
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      toast.success("✅ Info copiada al portapapeles", {
+        style: {
+          background: "#ecfdf5",
+          color: "#065f46",
+          borderColor: "#a7f3d0",
+        },
+      });
+    } catch {
+      toast.error("No se pudo copiar al portapapeles");
+    }
+  };
+
+  const handleCompartir = async () => {
+    // El lead se registra ANTES del share: la intención ya cuenta como CPC
+    void registrarLead(resultado.farmacia_id, "compartir", resultado.medicamento_id);
+    onLeadRegistrado?.();
+
+    const shareData = {
+      title: "Encontrado en DosisYa",
+      text: `Mira este precio: ${resultado.medicamento_nombre} a $${resultado.precio_usd.toFixed(2)} en ${resultado.farmacia_nombre}.`,
+      url: window.location.href,
+    };
+
+    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+      try {
+        await navigator.share(shareData);
+      } catch {
+        // Ignorar cancelación del usuario — no es un error
+      }
+    } else {
+      // Fallback: copiar URL al portapapeles
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        toast.success("🔗 Enlace copiado al portapapeles");
+      } catch {
+        toast.error("No se pudo copiar el enlace");
+      }
+    }
   };
 
   return (
     <article
-      className="animate-fade-in-up overflow-hidden rounded-2xl border border-border bg-card p-5 backdrop-blur"
-      style={{
-        boxShadow: "var(--shadow-card)",
-        background: "var(--glass-bg)",
-        animationDelay: `${index * 60}ms`,
-      }}
+      id={cardId}
+      aria-label={`${resultado.farmacia_nombre} — ${resultado.medicamento_nombre}`}
+      className="shadow-sm border border-gray-100 rounded-xl p-4 bg-white"
     >
-      <div className="flex flex-wrap items-center gap-2">
-        {item.nivel_suscripcion === "premium" && <BadgePremium />}
-        {item.tiene_delivery && <BadgeDelivery />}
-        {!item.stock_disponible && (
-          <span className="inline-flex items-center rounded-md bg-destructive/10 px-2 py-0.5 text-[11px] font-bold text-destructive">
-            Sin stock
-          </span>
-        )}
+      {/* HEADER */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex flex-col gap-1">
+          <h2 className="font-semibold text-gray-900 text-base leading-tight">
+            {resultado.farmacia_nombre}
+          </h2>
+          <div className="flex flex-wrap gap-1">
+            {resultado.es_premium && <BadgePremium />}
+            {resultado.tiene_delivery && <BadgeDelivery />}
+          </div>
+          <p className="text-gray-400 text-xs mt-1">
+            {(resultado.distancia_m / 1000).toFixed(1)} km · {resultado.direccion}
+          </p>
+        </div>
       </div>
 
-      <h2 className="mt-2 text-lg font-bold capitalize leading-tight text-foreground">
-        {item.marca_comercial ?? item.medicamento_nombre}
-      </h2>
-      {item.marca_comercial && (
-        <p className="text-xs text-muted-foreground">{item.medicamento_nombre}</p>
-      )}
-      <p className="mt-0.5 text-sm text-muted-foreground">{item.presentacion}</p>
-
-      <div className="mt-3 flex items-baseline gap-2">
-        <span className="text-2xl font-extrabold text-foreground">
-          ${item.precio_usd.toFixed(2)}
-        </span>
-        <span className="text-sm text-muted-foreground">Bs. {formatVes(item.precio_ves)}</span>
-      </div>
-
-      <button
-        type="button"
-        onClick={onExpand}
-        className="mt-4 w-full border-t border-border pt-3 text-left"
-        aria-expanded={expanded}
-      >
-        <p className="text-sm font-semibold text-foreground">{item.farmacia_nombre}</p>
-        <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-          <MapPin className="h-3.5 w-3.5" />
-          {formatDistancia(item.distancia_m)} · {expanded ? "Ocultar" : "Ver dirección"}
+      {/* MEDICAMENTO */}
+      <div className="mt-4">
+        <p className="font-medium text-gray-800 leading-snug">
+          {resultado.medicamento_nombre}
+          {resultado.marca_comercial && (
+            <span className="text-gray-400 text-sm ml-1 font-normal">
+              ({resultado.marca_comercial})
+            </span>
+          )}
         </p>
-        {expanded && (
-          <p className="mt-2 text-xs text-muted-foreground">{item.direccion}</p>
-        )}
-      </button>
+        <p className="text-gray-500 text-sm mt-0.5">{resultado.presentacion}</p>
+      </div>
 
-      <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
+      {/* PRECIOS */}
+      <div className="mt-3 flex items-baseline gap-2">
+        <span className="text-emerald-700 font-bold text-lg">
+          ${resultado.precio_usd.toFixed(2)} USD
+        </span>
+        <span className="text-gray-500 text-sm">
+          Bs. {resultado.precio_ves.toLocaleString("es-VE", { minimumFractionDigits: 2 })} VES
+        </span>
+      </div>
+
+      {/* ACCIONES — cada clic dispara un lead CPC al backend */}
+      <div className="mt-4 flex flex-wrap gap-2">
+        {/* WhatsApp → lead: clic_whatsapp */}
         <a
+          id={`${cardId}-btn-whatsapp`}
           href={waUrl}
+          onClick={handleWhatsApp}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={onWhatsApp}
-          className="flex h-11 items-center justify-center gap-2 rounded-xl bg-whatsapp font-semibold text-whatsapp-foreground transition-all hover:opacity-90 active:scale-[0.99]"
+          aria-label={`Contactar ${resultado.farmacia_nombre} por WhatsApp sobre ${resultado.medicamento_nombre}`}
+          className="bg-[#25D366] text-white rounded-lg px-4 py-2 flex-[1_1_100%] sm:flex-1 flex justify-center items-center text-center font-medium transition-opacity hover:opacity-90 min-w-[120px]"
         >
-          <WhatsAppIcon className="h-5 w-5" />
           WhatsApp
         </a>
+
+        {/* Ver mapa → lead: ver_mapa */}
         <a
+          id={`${cardId}-btn-mapa`}
           href={mapsUrl}
+          onClick={handleMapa}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={onMap}
-          className="flex h-11 items-center justify-center gap-1.5 rounded-xl border border-border bg-card px-4 text-sm font-semibold text-primary transition-all hover:bg-accent active:scale-[0.99]"
-          aria-label="Ver en mapa"
+          aria-label={`Ver ubicación de ${resultado.farmacia_nombre} en Google Maps`}
+          className="border border-gray-200 text-gray-600 rounded-lg px-3 py-2 flex justify-center items-center text-center text-sm hover:bg-gray-50 transition-colors flex-1 sm:flex-initial"
         >
-          <MapPin className="h-4 w-4" />
-          Mapa
+          📍 Ver mapa
         </a>
+
+        {/* Guardar info → lead: capture_pantalla */}
+        <button
+          id={`${cardId}-btn-guardar`}
+          onClick={handleGuardar}
+          aria-label={`Copiar información de ${resultado.medicamento_nombre} al portapapeles`}
+          className="border border-gray-200 text-gray-600 rounded-lg px-3 py-2 text-sm hover:bg-gray-50 transition-colors flex-1 sm:flex-initial"
+        >
+          💾 Guardar info
+        </button>
+
+        {/* Compartir → lead: compartir */}
+        <button
+          id={`${cardId}-btn-compartir`}
+          onClick={handleCompartir}
+          aria-label={`Compartir información de ${resultado.medicamento_nombre} en ${resultado.farmacia_nombre}`}
+          className="border border-gray-200 text-gray-600 rounded-lg px-3 py-2 text-sm hover:bg-gray-50 transition-colors flex-1 sm:flex-initial"
+        >
+          🔗 Compartir
+        </button>
       </div>
     </article>
   );
