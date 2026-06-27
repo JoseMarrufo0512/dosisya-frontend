@@ -51,10 +51,26 @@ export interface ParamsBusqueda {
   con_delivery?: boolean;
 }
 
-// URL del backend — se lee desde la variable de entorno VITE_API_URL (definida en .env).
-// Fallback al host de producción para evitar errores si la variable no está definida.
-export const API_BASE =
-  import.meta.env.VITE_API_URL ?? "https://proyecto-dosis-ya.vercel.app";
+// URL del backend — se lee desde la variable de entorno VITE_API_URL.
+//
+// Modos de operación:
+//   DEV local (proxy Vite activo):  VITE_API_URL="" → API_BASE="" → rutas relativas
+//                                   /api/v1/... → interceptadas por proxy → localhost:8000
+//   PRODUCCIÓN (Vercel):            VITE_API_URL="https://proyecto-dosis-ya.vercel.app"
+//                                   → llamadas directas al backend FastAPI
+//
+// NUNCA dejar el fallback en una URL de frontend (causaría loops de red).
+export const API_BASE: string =
+  import.meta.env.VITE_API_URL !== undefined
+    ? (import.meta.env.VITE_API_URL as string)
+    : "https://proyecto-dosis-ya.vercel.app";
+
+// Log de diagnóstico solo en desarrollo (no llega a producción)
+if (import.meta.env.DEV) {
+  console.log(
+    `[DosisYa API] Backend → ${API_BASE || "(proxy Vite → localhost:8000)"}`
+  );
+}
 
 // Alias de conveniencia para consumidores existentes
 export type Coords = { lat: number; lng: number };

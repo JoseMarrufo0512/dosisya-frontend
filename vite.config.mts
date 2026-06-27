@@ -18,5 +18,16 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
-  }
+    // Proxy: en desarrollo local, las llamadas a /api/v1/* se reenvían
+    // al backend FastAPI (localhost:8000) para evitar errores de CORS.
+    // En producción (Vercel), VITE_API_URL apunta directamente al backend.
+    proxy: {
+      "/api": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
 });
+
