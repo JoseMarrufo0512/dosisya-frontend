@@ -2,35 +2,46 @@ import { useState, FormEvent } from "react";
 import { useGeolocalizacion } from "./hooks/useGeolocalizacion";
 import { useBuscarMedicamentos } from "./hooks/useBuscarMedicamentos";
 import { useBusquedasRecientes } from "./hooks/useLocalStorage";
+import { useListaMedica } from "./hooks/useListaMedica";
 import { BarraBusqueda } from "./components/BarraBusqueda";
 import { TarjetaResultado } from "./components/TarjetaResultado";
 import { EstadoCargando } from "./components/EstadoCargando";
 import { EstadoVacio } from "./components/EstadoVacio";
+import { CartSummary } from "./components/lista/CartSummary";
+import { ListaMedicaDrawer } from "./components/lista/ListaMedicaDrawer";
+
+// Fallback: centro de Acarigua (mismo criterio que la versión anterior)
+const LAT_ACARIGUA = 9.5569;
+const LNG_ACARIGUA = -69.1982;
 
 export default function App() {
   const geo = useGeolocalizacion();
   const api = useBuscarMedicamentos();
   const recientes = useBusquedasRecientes();
+  const { totalDistintos } = useListaMedica();
 
   const [estado, setEstado] = useState<"hero" | "resultados">("hero");
   const [query, setQuery] = useState("");
   const [conDelivery, setConDelivery] = useState(false);
   const [radio, setRadio] = useState(5000);
   const [terminoBuscado, setTerminoBuscado] = useState("");
+  const [listaAbierta, setListaAbierta] = useState(false);
+
+  // Coordenadas efectivas: geolocalización real o fallback a Acarigua.
+  // Se comparten entre la búsqueda y el selector de farmacia de la lista.
+  const latEfectiva = geo.lat ?? LAT_ACARIGUA;
+  const lngEfectiva = geo.lng ?? LNG_ACARIGUA;
 
   const ejecutarBusqueda = async (termino: string, radioKm: number = 5) => {
     if (!termino.trim()) return;
-    
+
     setEstado("resultados");
     setTerminoBuscado(termino);
     setQuery(termino);
     recientes.agregar(termino);
     setRadio(radioKm * 1000);
 
-    const lat = geo.lat ?? 9.5569;
-    const lng = geo.lng ?? -69.1982;
-
-    await api.buscar(termino, lat, lng, conDelivery, radioKm * 1000);
+    await api.buscar(termino, latEfectiva, lngEfectiva, conDelivery, radioKm * 1000);
   };
 
   const handleSubmit = (e: FormEvent) => {
@@ -49,60 +60,57 @@ export default function App() {
     }
   };
 
-  if (estado === "hero") {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50">
-        <div className="text-center mb-8">
-          <h1 className="font-black text-4xl">
-            <span className="text-gray-900">Dosis</span>
-            <span className="text-emerald-600">Ya</span>
-          </h1>
-          <p className="text-gray-400 text-sm mt-1">Encuentra tu medicamento en Acarigua/Araure</p>
-        </div>
-
-        <BarraBusqueda
-          query={query}
-          onQueryChange={setQuery}
-          onSubmit={handleSubmit}
-          cargando={api.cargando}
-          onRecalcularUbicacion={handleRecalcular}
-          busquedasRecientes={recientes.busquedas}
-          onBusquedaRecienteClick={(term) => ejecutarBusqueda(term, 5)}
-          compacta={false}
-        />
-
-        <div className="mt-2 text-center text-xs text-gray-400">
-          {geo.error ? (
-            <p className="text-amber-600">⚠️ {geo.error}</p>
-          ) : geo.cargando ? (
-            <p>Obteniendo ubicación...</p>
-          ) : (
-            <p>📍 Usando tu ubicación actual</p>
-          )}
-        </div>
-
-        <div className="mt-8 flex items-center gap-3">
-          <label className="text-sm text-gray-600 font-medium">Solo con delivery 🛵</label>
-          <button
-            type="button"
-            onClick={() => setConDelivery(!conDelivery)}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              conDelivery ? "bg-emerald-500" : "bg-gray-300"
-            }`}
-          >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                conDelivery ? "translate-x-6" : "translate-x-1"
-              }`}
-            />
-          </button>
-        </div>
+  const vistaHero = (
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50">
+      <div className="text-center mb-8">
+        <h1 className="font-black text-4xl">
+          <span className="text-gray-900">Dosis</span>
+          <span className="text-emerald-600">Ya</span>
+        </h1>
+        <p className="text-gray-400 text-sm mt-1">Encuentra tu medicamento en Acarigua/Araure</p>
       </div>
-    );
-  }
 
-  // ESTADO RESULTADOS
-  return (
+      <BarraBusqueda
+        query={query}
+        onQueryChange={setQuery}
+        onSubmit={handleSubmit}
+        cargando={api.cargando}
+        onRecalcularUbicacion={handleRecalcular}
+        busquedasRecientes={recientes.busquedas}
+        onBusquedaRecienteClick={(term) => ejecutarBusqueda(term, 5)}
+        compacta={false}
+      />
+
+      <div className="mt-2 text-center text-xs text-gray-400">
+        {geo.error ? (
+          <p className="text-amber-600">⚠️ {geo.error}</p>
+        ) : geo.cargando ? (
+          <p>Obteniendo ubicación...</p>
+        ) : (
+          <p>📍 Usando tu ubicación actual</p>
+        )}
+      </div>
+
+      <div className="mt-8 flex items-center gap-3">
+        <label className="text-sm text-gray-600 font-medium">Solo con delivery 🛵</label>
+        <button
+          type="button"
+          onClick={() => setConDelivery(!conDelivery)}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+            conDelivery ? "bg-emerald-500" : "bg-gray-300"
+          }`}
+        >
+          <span
+            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+              conDelivery ? "translate-x-6" : "translate-x-1"
+            }`}
+          />
+        </button>
+      </div>
+    </div>
+  );
+
+  const vistaResultados = (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <header className="sticky top-0 bg-white shadow-sm z-10 py-3 px-4">
         <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center gap-4">
@@ -119,7 +127,7 @@ export default function App() {
             />
           </div>
         </div>
-        
+
         <div className="max-w-4xl mx-auto mt-3 flex items-center justify-between text-sm text-gray-600">
           <p>
             <span className="font-semibold text-gray-900">{api.totalResultados}</span> resultado(s) para '{terminoBuscado}'
@@ -139,9 +147,12 @@ export default function App() {
       </header>
 
       <main className="flex-1 overflow-y-auto">
-        <div className="max-w-2xl mx-auto px-4 py-4 space-y-3">
+        {/* pb-28 evita que la barra flotante de la lista tape la última tarjeta */}
+        <div
+          className={`max-w-2xl mx-auto px-4 py-4 space-y-3 ${totalDistintos > 0 ? "pb-28" : ""}`}
+        >
           {api.cargando && <EstadoCargando />}
-          
+
           {!api.cargando && api.resultados.length === 0 && (
             <EstadoVacio termino={terminoBuscado} />
           )}
@@ -152,5 +163,20 @@ export default function App() {
         </div>
       </main>
     </div>
+  );
+
+  return (
+    <>
+      {estado === "hero" ? vistaHero : vistaResultados}
+
+      {/* Lista Médica — visible sobre ambas vistas (spec receta-ia-y-carrito) */}
+      <CartSummary onVerLista={() => setListaAbierta(true)} />
+      <ListaMedicaDrawer
+        abierta={listaAbierta}
+        onOpenChange={setListaAbierta}
+        lat={latEfectiva}
+        lng={lngEfectiva}
+      />
+    </>
   );
 }

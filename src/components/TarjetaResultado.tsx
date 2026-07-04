@@ -1,7 +1,9 @@
 import { type ResultadoFarmacia } from "@/lib/api";
 import { registrarLead } from "@/lib/leads";
+import { useListaMedica } from "@/hooks/useListaMedica";
 import { BadgePremium } from "./BadgePremium";
 import { BadgeDelivery } from "./BadgeDelivery";
+import { Check, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 interface TarjetaResultadoProps {
@@ -10,26 +12,44 @@ interface TarjetaResultadoProps {
 }
 
 export function TarjetaResultado({ resultado, onLeadRegistrado }: TarjetaResultadoProps) {
-  // Sanitizar número de WhatsApp: solo dígitos, con fallback seguro
-  const phone = resultado.whatsapp?.replace(/\D/g, "") ?? "";
-  const waText = `Hola, vi que tienen ${resultado.medicamento_nombre} (${resultado.presentacion}) en DosisYa. ¿Está disponible?`;
-  const waUrl = phone
-    ? `https://wa.me/${phone}?text=${encodeURIComponent(waText)}`
-    : "#";
+  const { agregar, estaEnLista } = useListaMedica();
+  const enLista = estaEnLista(resultado.medicamento_id);
+
   const mapsUrl = `https://maps.google.com/?q=${resultado.lat},${resultado.lng}`;
 
   // ID base para elementos únicos en la tarjeta (requerido para testing y a11y)
   const cardId = `tarjeta-${resultado.farmacia_id}-${resultado.medicamento_id}`;
 
+  // ─── Añadir a la Lista Médica (spec receta-ia-y-carrito) ──────────────────
+  // OJO: aquí NO se registra lead. El lead CPC multi-producto se dispara al
+  // CONTACTAR desde la lista — añadir todavía no es una interacción facturable.
+
+  const handleAgregar = () => {
+    const item = agregar({
+      medicamentoId: resultado.medicamento_id,
+      nombre: resultado.medicamento_nombre,
+      presentacion: resultado.presentacion,
+      marcaComercial: resultado.marca_comercial ?? null,
+      precioRefUsd: resultado.precio_usd,
+    });
+    toast.success(
+      item.cantidad > 1
+        ? `${resultado.medicamento_nombre} · cantidad: ${item.cantidad}`
+        : "Añadido a tu lista",
+      {
+        description: item.cantidad > 1 ? undefined : "Elige farmacia cuando termines",
+        style: {
+          background: "#ecfdf5",
+          color: "#065f46",
+          borderColor: "#a7f3d0",
+        },
+      },
+    );
+  };
+
   // ─── Handlers de leads CPC ────────────────────────────────────────────────
   // Todos usan void (fire-and-forget) para no bloquear la navegación del usuario.
   // El backend registra el lead antes de responder al usuario.
-
-  const handleWhatsApp = () => {
-    // "clic_whatsapp" es el valor canónico del enum PostgreSQL (preferido sobre "click_whatsapp")
-    void registrarLead(resultado.farmacia_id, "clic_whatsapp", resultado.medicamento_id);
-    onLeadRegistrado?.();
-  };
 
   const handleMapa = () => {
     void registrarLead(resultado.farmacia_id, "ver_mapa", resultado.medicamento_id);
@@ -129,20 +149,32 @@ export function TarjetaResultado({ resultado, onLeadRegistrado }: TarjetaResulta
         </span>
       </div>
 
-      {/* ACCIONES — cada clic dispara un lead CPC al backend */}
+      {/* ACCIONES */}
       <div className="mt-4 flex flex-wrap gap-2">
-        {/* WhatsApp → lead: clic_whatsapp */}
-        <a
-          id={`${cardId}-btn-whatsapp`}
-          href={waUrl}
-          onClick={handleWhatsApp}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={`Contactar ${resultado.farmacia_nombre} por WhatsApp sobre ${resultado.medicamento_nombre}`}
-          className="bg-[#25D366] text-white rounded-lg px-4 py-2 flex-[1_1_100%] sm:flex-1 flex justify-center items-center text-center font-medium transition-opacity hover:opacity-90 min-w-[120px]"
+        {/* Añadir a mi lista → sin lead; el CPC se cobra al contactar desde la lista */}
+        <button
+          id={`${cardId}-btn-agregar`}
+          type="button"
+          onClick={handleAgregar}
+          aria-label={`Añadir ${resultado.medicamento_nombre} a tu lista médica`}
+          className={`rounded-lg px-4 py-2 flex-[1_1_100%] sm:flex-1 flex justify-center items-center gap-2 text-center font-medium transition-all min-w-[120px] active:scale-[0.98] ${
+            enLista
+              ? "border border-emerald-300 bg-emerald-50 text-emerald-700"
+              : "bg-primary text-primary-foreground hover:opacity-90"
+          }`}
         >
-          WhatsApp
-        </a>
+          {enLista ? (
+            <>
+              <Check className="h-4 w-4" aria-hidden />
+              En tu lista · {enLista.cantidad}
+            </>
+          ) : (
+            <>
+              <Plus className="h-4 w-4" aria-hidden />
+              Añadir a mi lista
+            </>
+          )}
+        </button>
 
         {/* Ver mapa → lead: ver_mapa */}
         <a
