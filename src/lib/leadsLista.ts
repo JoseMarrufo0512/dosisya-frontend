@@ -15,7 +15,7 @@ export function registrarLeadLista(
 ): void {
   if (medicamentoIds.length === 0) return;
 
-  void fetch(`${API_BASE}/api/v1/leads`, {
+  void fetch(`${API_BASE}/api/v1/leads/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     // ⚠️ Si tu backend espera OTRO nombre para el array (p. ej. "medicamentos")
