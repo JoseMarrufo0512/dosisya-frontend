@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Pill,
@@ -15,6 +15,8 @@ import {
   Search,
   TrendingUp,
   Boxes,
+  AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
 import { UploadInventory } from "@/components/UploadInventory";
 import { Button } from "@/components/ui/button";
@@ -66,41 +68,49 @@ function AdminDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [inventoryCount, setInventoryCount] = useState<number | null>(null);
 
-  useEffect(() => {
+  const cargarDashboard = useCallback(async () => {
     const farmaciaId =
       typeof window !== "undefined" ? localStorage.getItem("farmacia_id") : null;
     if (!farmaciaId) {
       navigate({ to: "/admin/login" });
       return;
     }
-    (async () => {
-      try {
-        const token =
-          typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
-        const res = await fetch(
-          `${API_BASE}/api/v1/farmacias/${farmaciaId}/dashboard`,
-          {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          },
-        );
-        const json = await res.json();
-        if (!res.ok) {
-          // 401/403 → redirigir al login
-          if (res.status === 401 || res.status === 403) {
-            navigate({ to: "/admin/login" });
-            return;
-          }
-        }
-        setData(json?.data ?? json ?? {});
-      } catch {
-        setData({});
-      } finally {
-        setLoading(false);
+    setLoading(true);
+    setError(false);
+    try {
+      const token =
+        typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+      const res = await fetch(
+        `${API_BASE}/api/v1/farmacias/${farmaciaId}/dashboard`,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        },
+      );
+      // 401/403 → sesión inválida, redirigir al login
+      if (res.status === 401 || res.status === 403) {
+        navigate({ to: "/admin/login" });
+        return;
       }
-    })();
+      if (!res.ok) {
+        // 500/otros → error real; no fabricar datos ni mostrar vacío silencioso
+        setError(true);
+        return;
+      }
+      const json = await res.json();
+      setData(json?.data ?? json ?? {});
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
   }, [navigate]);
+
+  useEffect(() => {
+    cargarDashboard();
+  }, [cargarDashboard]);
 
   const logout = () => {
     localStorage.removeItem("farmacia_id");
@@ -108,7 +118,10 @@ function AdminDashboard() {
     navigate({ to: "/admin/login" });
   };
 
-  const nombre = data?.nombre_farmacia ?? "Farmacia San Rafael";
+  const nombre =
+    data?.nombre_farmacia ??
+    (typeof window !== "undefined" ? localStorage.getItem("nombre_farmacia") : null) ??
+    "tu farmacia";
 
   const nav: { id: SectionId; label: string; icon: React.ReactNode }[] = [
     { id: "inicio", label: "Inicio", icon: <Home className="h-4 w-4" /> },
@@ -190,6 +203,8 @@ function AdminDashboard() {
                 <InicioSection
                   nombre={nombre}
                   loading={loading}
+                  error={error}
+                  onRetry={cargarDashboard}
                   data={data}
                   inventoryCount={inventoryCount}
                 />
@@ -284,11 +299,15 @@ function SidebarContent({
 function InicioSection({
   nombre,
   loading,
+  error,
+  onRetry,
   data,
   inventoryCount,
 }: {
   nombre: string;
   loading: boolean;
+  error: boolean;
+  onRetry: () => void;
   data: DashboardData | null;
   inventoryCount: number | null;
 }) {
@@ -304,17 +323,40 @@ function InicioSection({
         </p>
       </div>
 
+      {error && (
+        <div
+          role="alert"
+          aria-live="polite"
+          className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl border border-red-200 bg-red-50 p-4"
+        >
+          <AlertTriangle className="h-5 w-5 text-red-600 shrink-0" aria-hidden="true" />
+          <p className="text-sm text-red-800 flex-1">
+            No pudimos cargar tus métricas. Revisa tu conexión e inténtalo de nuevo.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onRetry}
+            disabled={loading}
+            className="border-red-300 text-red-800 hover:bg-red-100 self-start sm:self-auto"
+          >
+            <RefreshCw className={`h-4 w-4 mr-1.5 ${loading ? "animate-spin" : ""}`} aria-hidden="true" />
+            {loading ? "Reintentando…" : "Reintentar"}
+          </Button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <MetricCard
           label="Pacientes interesados hoy"
-          value={loading ? null : (data?.pacientes_interesados_hoy ?? 14).toString()}
+          value={loading ? null : (data?.pacientes_interesados_hoy?.toString() ?? "—")}
           hint="Clics a tu WhatsApp"
           icon={<MessageCircle className="h-5 w-5" />}
           accent="bg-[#25d366]/10 text-[#0f7c3a]"
         />
         <MetricCard
           label="Búsquedas cerca de ti"
-          value={loading ? null : (data?.busquedas_zona ?? 120).toString()}
+          value={loading ? null : (data?.busquedas_zona?.toString() ?? "—")}
           hint="Personas buscando medicinas en tu zona"
           icon={<Search className="h-5 w-5" />}
           accent="bg-primary/10 text-primary"
@@ -373,11 +415,16 @@ function InventarioSection({
 
       <UploadInventory
         onUploaded={(res) => {
-          const r = res as { total?: number; count?: number; inventario?: unknown[] } | null;
+          // Claves reales que devuelve el backend (ver farmacias.py upload).
+          const r = res as {
+            medicamentos_procesados?: number;
+            medicamentos_gemini?: number;
+            detalle?: unknown[];
+          } | null;
           const count =
-            r?.total ??
-            r?.count ??
-            (Array.isArray(r?.inventario) ? r!.inventario!.length : 0);
+            r?.medicamentos_procesados ??
+            r?.medicamentos_gemini ??
+            (Array.isArray(r?.detalle) ? r!.detalle!.length : 0);
           onUploaded(count);
         }}
       />

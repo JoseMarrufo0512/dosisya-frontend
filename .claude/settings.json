@@ -1,0 +1,18 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in *.ts|*.tsx) cd \"$CLAUDE_PROJECT_DIR\" && out=$(npx tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsbuildinfo 2>&1) || { { echo \"tsc --noEmit detectó errores de tipos tras editar $f:\"; echo \"$out\"; } >&2; exit 2; };; esac",
+            "asyncRewake": true,
+            "timeout": 120,
+            "statusMessage": "Verificando tipos (tsc --noEmit)..."
+          }
+        ]
+      }
+    ]
+  }
+}

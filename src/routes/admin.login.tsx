@@ -418,13 +418,14 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
 
       if (res && res.ok) {
         const json = await res.json().catch(() => ({}));
-        const leadId = json?.data?.lead_id || json?.lead_id;
+        const leadId = json?.data?.lead_parcial_id || json?.lead_parcial_id;
         if (leadId) update("lead_id", leadId);
+        setAutoSaved(true);
       }
-      setAutoSaved(true);
+      // El wizard avanza aunque el auto-save falle (fire-and-forget),
+      // pero sin marcar como guardado lo que no se guardó.
       setStep(2);
     } catch {
-      setAutoSaved(true);
       setStep(2);
     } finally {
       setSaving(false);
@@ -469,18 +470,20 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
           whatsapp: data.whatsapp,
           sector: data.sector,
           punto_referencia: data.referencia,
-          email: parsed.data.email,
+          correo: parsed.data.email,
           password: parsed.data.password,
-          lead_id: data.lead_id,
+          lead_parcial_id: data.lead_id,
         }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok || json?.status !== "success") {
-        throw new Error(json?.message || "No se pudo completar el registro");
+      if (!res.ok) {
+        throw new Error(
+          json?.error?.message || json?.detail || json?.message || "No se pudo completar el registro",
+        );
       }
       const farmaciaId = json?.data?.farmacia_id || json?.farmacia_id;
       if (farmaciaId) localStorage.setItem("farmacia_id", farmaciaId);
-      if (json?.data?.token) localStorage.setItem("auth_token", json.data.token);
+      if (json?.data?.auth_token) localStorage.setItem("auth_token", json.data.auth_token);
       setDone(true);
       setTimeout(() => navigate({ to: "/admin/dashboard" }), 900);
     } catch (err) {

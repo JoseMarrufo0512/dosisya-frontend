@@ -72,9 +72,18 @@ export function UploadInventory({ onUploaded }: Props) {
         }
 
         const json = await res.json().catch(() => ({}));
+        const payload = json?.data ?? json;
         setSuccess(true);
-        toast.success("¡Inventario actualizado con éxito!");
-        onUploaded?.(json?.data ?? json);
+        // Si el backend truncó el archivo (demasiado grande), avisar en vez de
+        // celebrar un éxito total — la farmacia no subió todo su inventario.
+        if (payload?.truncado) {
+          toast.warning(
+            "Subimos solo una parte: el archivo era muy grande. Divídelo y sube el resto.",
+          );
+        } else {
+          toast.success("¡Inventario actualizado con éxito!");
+        }
+        onUploaded?.(payload);
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Error subiendo el archivo";
         toast.error(msg);
