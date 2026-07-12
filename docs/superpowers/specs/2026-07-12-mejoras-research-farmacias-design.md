@@ -66,3 +66,40 @@ del orden.
 ### Fuera de alcance (YAGNI)
 - Orden por distancia (el dato existe pero no es parte de esta feature).
 - Comparación por presentación normalizada (v1 compara `precio_usd` absoluto).
+
+---
+
+## Track 1b: Genéricos equivalentes (versión backend)
+
+**Inspiración:** "Productos Equivalentes" de Inkafarma.
+
+### Restricción de datos (crítica, verificada)
+El catálogo actual tiene **una sola marca por principio activo** (Acetaminofén→
+Atamel, Omeprazol→Losec, Losartán→Cozaar, Metformina→Glucophage), cada uno en
+3 farmacias. **No hay genéricos ni marcas alternas.** La lógica se construye
+correcta, pero solo se "enciende" cuando el catálogo tenga equivalentes. Seed de
+demo: `DosisYa-Backend/db/seeds/demo_generico_equivalente.sql`.
+
+### Backend — `routers/medicamentos.py`
+`_BUSCAR_MEDICAMENTOS`: se antepone un CTE `principios_coincidentes` que resuelve
+los principios activos que matchean el término (por principio o por marca);
+luego el `WHERE` devuelve **todos** los productos de esos principios activos
+(`im.principio_activo IN (...)`), no solo los que matchean el término. Así, al
+buscar una marca (ej. Cozaar) aparece también el genérico del mismo principio
+activo. Mismos 6 parámetros, mismas columnas → sin cambios en el mapeo ni en el
+router. `score_similitud` sigue midiéndose contra el término, así que la
+coincidencia directa ordena primero y los equivalentes después.
+
+### Frontend — `App.tsx` + `TarjetaResultado.tsx`
+- `equivMasBaratoPorProducto`: por `medicamento_id`, el precio del equivalente
+  más barato = mismo `principio_activo` pero **distinto** `medicamento_id` (el
+  mismo producto en otra farmacia NO cuenta; eso es Track 1a).
+- Prop `equivalenteDesde`: si un equivalente cuesta menos, la tarjeta muestra la
+  nota "Hay un equivalente del mismo principio activo desde $X".
+- Pill "Genérico" cuando `marca_comercial` es nula/vacía.
+
+### Verificación
+- Backend: `py_compile` OK; **no-regresión** confirmada contra el endpoint en
+  vivo (las búsquedas existentes siguen devolviendo lo mismo).
+- La aparición de equivalentes NO es demostrable con los datos actuales; requiere
+  correr el seed de demo. Limitación reconocida explícitamente.

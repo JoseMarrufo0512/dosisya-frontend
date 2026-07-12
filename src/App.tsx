@@ -52,6 +52,28 @@ export default function App() {
     return idx;
   }, [resultadosOrdenados]);
 
+  // Genéricos equivalentes: por cada producto, el precio del equivalente más
+  // barato = mismo principio activo (medicamento_nombre) pero DISTINTO producto
+  // (medicamento_id). Ojo: mismo producto en otra farmacia NO cuenta (eso es
+  // comparación de precio, no equivalencia). key = medicamento_id.
+  const equivMasBaratoPorProducto = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const a of resultadosOrdenados) {
+      let min = Infinity;
+      for (const b of resultadosOrdenados) {
+        if (
+          b.medicamento_nombre === a.medicamento_nombre &&
+          b.medicamento_id !== a.medicamento_id &&
+          b.precio_usd < min
+        ) {
+          min = b.precio_usd;
+        }
+      }
+      if (min < Infinity) m.set(a.medicamento_id, min);
+    }
+    return m;
+  }, [resultadosOrdenados]);
+
   // Coordenadas efectivas: geolocalización real o fallback a Acarigua.
   // Se comparten entre la búsqueda y el selector de farmacia de la lista.
   const latEfectiva = geo.lat ?? LAT_ACARIGUA;
@@ -216,13 +238,21 @@ export default function App() {
             </div>
           )}
 
-          {!api.cargando && resultadosOrdenados.map((res, i) => (
-            <TarjetaResultado
-              key={`${res.farmacia_id}-${res.medicamento_id}-${i}`}
-              resultado={res}
-              esMasEconomico={i === idxMasEconomico}
-            />
-          ))}
+          {!api.cargando && resultadosOrdenados.map((res, i) => {
+            // Solo avisamos si el equivalente más barato del mismo principio
+            // activo cuesta MENOS que este producto.
+            const equivMin = equivMasBaratoPorProducto.get(res.medicamento_id);
+            const equivalenteDesde =
+              equivMin !== undefined && equivMin < res.precio_usd ? equivMin : null;
+            return (
+              <TarjetaResultado
+                key={`${res.farmacia_id}-${res.medicamento_id}-${i}`}
+                resultado={res}
+                esMasEconomico={i === idxMasEconomico}
+                equivalenteDesde={equivalenteDesde}
+              />
+            );
+          })}
         </div>
       </main>
     </div>

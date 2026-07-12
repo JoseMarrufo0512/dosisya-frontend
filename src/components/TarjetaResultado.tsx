@@ -11,13 +11,21 @@ interface TarjetaResultadoProps {
   onLeadRegistrado?: () => void;
   /** Marca esta tarjeta como la de menor precio entre los resultados mostrados. */
   esMasEconomico?: boolean;
+  /**
+   * Precio (USD) del equivalente más barato del mismo principio activo pero
+   * distinto producto. Si viene, se muestra la nota "equivalente desde $X".
+   */
+  equivalenteDesde?: number | null;
 }
 
 export function TarjetaResultado({
   resultado,
   onLeadRegistrado,
   esMasEconomico = false,
+  equivalenteDesde = null,
 }: TarjetaResultadoProps) {
+  // Genérico = sin marca comercial (o vacía).
+  const esGenerico = !resultado.marca_comercial?.trim();
   const { agregar, estaEnLista } = useListaMedica();
   const enLista = estaEnLista(resultado.medicamento_id);
 
@@ -140,13 +148,25 @@ export function TarjetaResultado({
       <div className="mt-4">
         <p className="font-medium text-gray-800 leading-snug">
           {resultado.medicamento_nombre}
-          {resultado.marca_comercial && (
+          {resultado.marca_comercial ? (
             <span className="text-gray-400 text-sm ml-1 font-normal">
               ({resultado.marca_comercial})
             </span>
+          ) : (
+            esGenerico && (
+              <span className="ml-2 inline-flex items-center rounded-full bg-sky-100 text-sky-800 text-xs font-medium px-2 py-0.5 align-middle">
+                Genérico
+              </span>
+            )
           )}
         </p>
         <p className="text-gray-500 text-sm mt-0.5">{resultado.presentacion}</p>
+        {equivalenteDesde != null && (
+          <p className="text-sky-700 text-xs mt-1.5 flex items-center gap-1">
+            💊 Hay un equivalente del mismo principio activo desde $
+            {equivalenteDesde.toFixed(2)}
+          </p>
+        )}
       </div>
 
       {/* PRECIOS */}
