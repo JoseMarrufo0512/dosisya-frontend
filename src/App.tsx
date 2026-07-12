@@ -1,4 +1,4 @@
-import { useState, FormEvent } from "react";
+import { useMemo, useState, FormEvent } from "react";
 import { useGeolocalizacion } from "./hooks/useGeolocalizacion";
 import { useBuscarMedicamentos } from "./hooks/useBuscarMedicamentos";
 import { useBusquedasRecientes } from "./hooks/useLocalStorage";
@@ -26,6 +26,31 @@ export default function App() {
   const [radio, setRadio] = useState(5000);
   const [terminoBuscado, setTerminoBuscado] = useState("");
   const [listaAbierta, setListaAbierta] = useState(false);
+  // Orden de resultados. "relevancia" = orden del backend (proximidad + boost
+  // premium; NO tocar por defecto, es parte de la monetización). "precio" =
+  // orden ascendente por precio_usd, solo del lado del cliente y opt-in.
+  const [orden, setOrden] = useState<"relevancia" | "precio">("relevancia");
+
+  // Resultados ordenados según el toggle, sin mutar el array original.
+  const resultadosOrdenados = useMemo(() => {
+    if (orden === "precio") {
+      return [...api.resultados].sort((a, b) => a.precio_usd - b.precio_usd);
+    }
+    return api.resultados;
+  }, [api.resultados, orden]);
+
+  // Índice del resultado de menor precio (para el badge "Más económico").
+  // Independiente del orden mostrado. Solo con ≥2 resultados tiene sentido.
+  const idxMasEconomico = useMemo(() => {
+    if (resultadosOrdenados.length < 2) return -1;
+    let idx = 0;
+    for (let i = 1; i < resultadosOrdenados.length; i++) {
+      if (resultadosOrdenados[i].precio_usd < resultadosOrdenados[idx].precio_usd) {
+        idx = i;
+      }
+    }
+    return idx;
+  }, [resultadosOrdenados]);
 
   // Coordenadas efectivas: geolocalización real o fallback a Acarigua.
   // Se comparten entre la búsqueda y el selector de farmacia de la lista.
@@ -157,8 +182,46 @@ export default function App() {
             <EstadoVacio termino={terminoBuscado} />
           )}
 
-          {!api.cargando && api.resultados.map((res, i) => (
-            <TarjetaResultado key={`${res.farmacia_id}-${res.medicamento_id}-${i}`} resultado={res} />
+          {/* Toggle de orden — solo con ≥2 resultados. Default "relevancia"
+              preserva el orden del backend (boost premium). */}
+          {!api.cargando && resultadosOrdenados.length >= 2 && (
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-gray-500">Ordenar:</span>
+              <div className="inline-flex rounded-lg border border-gray-200 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setOrden("relevancia")}
+                  aria-pressed={orden === "relevancia"}
+                  className={`rounded-md px-3 py-1 font-medium transition-colors ${
+                    orden === "relevancia"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  Relevancia
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOrden("precio")}
+                  aria-pressed={orden === "precio"}
+                  className={`rounded-md px-3 py-1 font-medium transition-colors ${
+                    orden === "precio"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  Precio ↑
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!api.cargando && resultadosOrdenados.map((res, i) => (
+            <TarjetaResultado
+              key={`${res.farmacia_id}-${res.medicamento_id}-${i}`}
+              resultado={res}
+              esMasEconomico={i === idxMasEconomico}
+            />
           ))}
         </div>
       </main>

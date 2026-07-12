@@ -9,9 +9,15 @@ import { toast } from "sonner";
 interface TarjetaResultadoProps {
   resultado: ResultadoFarmacia;
   onLeadRegistrado?: () => void;
+  /** Marca esta tarjeta como la de menor precio entre los resultados mostrados. */
+  esMasEconomico?: boolean;
 }
 
-export function TarjetaResultado({ resultado, onLeadRegistrado }: TarjetaResultadoProps) {
+export function TarjetaResultado({
+  resultado,
+  onLeadRegistrado,
+  esMasEconomico = false,
+}: TarjetaResultadoProps) {
   const { agregar, estaEnLista } = useListaMedica();
   const enLista = estaEnLista(resultado.medicamento_id);
 
@@ -108,7 +114,11 @@ export function TarjetaResultado({ resultado, onLeadRegistrado }: TarjetaResulta
     <article
       id={cardId}
       aria-label={`${resultado.farmacia_nombre} — ${resultado.medicamento_nombre}`}
-      className="shadow-sm border border-gray-100 rounded-xl p-4 bg-white"
+      className={`shadow-sm rounded-xl p-4 bg-white ${
+        esMasEconomico
+          ? "border-2 border-emerald-400 ring-1 ring-emerald-100"
+          : "border border-gray-100"
+      }`}
     >
       {/* HEADER */}
       <div className="flex items-start justify-between gap-2">
@@ -140,13 +150,18 @@ export function TarjetaResultado({ resultado, onLeadRegistrado }: TarjetaResulta
       </div>
 
       {/* PRECIOS */}
-      <div className="mt-3 flex items-baseline gap-2">
+      <div className="mt-3 flex items-baseline flex-wrap gap-x-2 gap-y-1">
         <span className="text-emerald-700 font-bold text-lg">
           ${resultado.precio_usd.toFixed(2)} USD
         </span>
         <span className="text-gray-500 text-sm">
           Bs. {resultado.precio_ves.toLocaleString("es-VE", { minimumFractionDigits: 2 })} VES
         </span>
+        {esMasEconomico && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold px-2 py-0.5">
+            💰 Más económico
+          </span>
+        )}
       </div>
 
       {/* ACCIONES */}
