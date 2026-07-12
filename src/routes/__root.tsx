@@ -84,6 +84,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:site", content: "@DosisYa" },
     ],
     links: [
+      { rel: "icon", href: "/favicon.ico", sizes: "48x48" },
+      { rel: "icon", href: "/icon-192x192.png", type: "image/png", sizes: "192x192" },
+      { rel: "apple-touch-icon", href: "/icon-192x192.png" },
       { rel: "manifest", href: "/manifest.json" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
