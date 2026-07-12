@@ -20,7 +20,7 @@ async function getServer() {
   return _server;
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   const server = await getServer();
 
   // Reconstruir URL absoluta (x-forwarded-* los pone Vercel/el proxy)
