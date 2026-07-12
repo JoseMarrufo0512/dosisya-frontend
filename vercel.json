@@ -1,8 +1,0 @@
-{
-  "rewrites": [
-    {
-      "source": "/((?!assets/|manifest.json|favicon.ico|_next/|api/).*)",
-      "destination": "/api/index"
-    }
-  ]
-}
