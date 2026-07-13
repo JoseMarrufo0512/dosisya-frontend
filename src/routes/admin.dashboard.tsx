@@ -17,6 +17,7 @@ import {
   Boxes,
   AlertTriangle,
   RefreshCw,
+  ScanLine,
 } from "lucide-react";
 import { UploadInventory } from "@/components/UploadInventory";
 import { Button } from "@/components/ui/button";
@@ -53,6 +54,7 @@ type DashboardData = {
   pacientes_interesados_hoy?: number;
   busquedas_zona?: number;
   total_inventario?: number;
+  leads_recipe_mes_actual?: number;
   inventario?: Array<{
     id?: string;
     nombre: string;
@@ -346,7 +348,7 @@ function InicioSection({
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           label="Pacientes interesados hoy"
           value={loading ? null : (data?.pacientes_interesados_hoy?.toString() ?? "—")}
@@ -367,6 +369,13 @@ function InicioSection({
           hint="Medicamentos cargados en tu farmacia"
           icon={<Boxes className="h-5 w-5" />}
           accent="bg-secondary/20 text-[#0a2463]"
+        />
+        <MetricCard
+          label="Pedidos con récipe este mes"
+          value={loading ? null : (data?.leads_recipe_mes_actual?.toString() ?? "—")}
+          hint="Leads que llegaron con récipe digitalizado"
+          icon={<ScanLine className="h-5 w-5" />}
+          accent="bg-emerald-100 text-emerald-700"
         />
       </div>
 
