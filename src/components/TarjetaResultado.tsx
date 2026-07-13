@@ -130,7 +130,7 @@ export function TarjetaResultado({
   return (
     <article
       id={cardId}
-      aria-label={`${resultado.farmacia_nombre} — ${resultado.medicamento_nombre}`}
+      aria-label={`${resultado.medicamento_nombre} — ${resultado.farmacia_nombre}`}
       className={`shadow-sm rounded-xl p-4 bg-white ${
         esMasEconomico
           ? "border-2 border-emerald-400 ring-1 ring-emerald-100"
