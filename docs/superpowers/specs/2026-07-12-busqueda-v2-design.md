@@ -22,7 +22,7 @@ José pidió "todos los paneles": panel de búsqueda + panel de usuario registra
 
 A trabaja **exclusivamente con la respuesta actual de `GET /api/v1/medicamentos/buscar`** (máx. 20 resultados): farmacia (nombre, dirección, whatsapp, nivel_suscripcion, tiene_delivery), medicamento (principio_activo, marca_comercial, presentacion), precio_usd, precio_ves, distancia_metros, score_similitud. **Cero llamadas nuevas, cero campos inventados.**
 
-Explícitamente fuera de A (faltan campos en BD; van en B/C): filtro "abierto ahora" (`horario`), filtro/badge "verificada" por farmacia (`verificada`), mapa (falta lat/lng en la respuesta), vista detalle de farmacia (falta endpoint público).
+Explícitamente fuera de A (van en B/C): filtro "abierto ahora" (`horario`, falta en BD), filtro/badge "verificada" por farmacia (`verificada`, falta en BD), mapa de resultados (decisión de foco: la respuesta YA incluye `lat`/`lng` de cada farmacia — verificado en `medicamentos.py` — pero el mapa se entrega en B junto con la vista detalle), vista detalle de farmacia (falta endpoint público).
 
 ### 2.2 Hero (variante C + confianza)
 
@@ -79,7 +79,7 @@ Explícitamente fuera de A (faltan campos en BD; van en B/C): filtro "abierto ah
 ## 3. Fases futuras (specs propios, no implementar aún)
 
 ### Fase B — Farmacias en contexto
-- **Backend (autorizado):** agregar `ST_Y/ST_X(f.ubicacion)` como `lat`/`lng` al SELECT de `_BUSCAR_MEDICAMENTOS`; nuevo `GET /api/v1/farmacias/{id}/perfil` público (info + inventario visible). Evaluar migración para `horario` y `verificada`.
+- **Backend (autorizado):** nuevo `GET /api/v1/farmacias/{id}/perfil` público (info + inventario visible). Evaluar migración para `horario` y `verificada`. (Corrección: `lat`/`lng` YA vienen en la respuesta de búsqueda — el SQL vigente vive en `medicamentos.py`, no en `repository.py`.)
 - **Frontend:** mapa de resultados con **Leaflet + OpenStreetMap** (gratis, sin API key); vista detalle de farmacia; filtros "abierto ahora"/"verificadas" cuando existan los campos.
 
 ### Fase C — Cuenta de paciente + panel de usuario
