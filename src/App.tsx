@@ -3,12 +3,14 @@ import { useGeolocalizacion } from "./hooks/useGeolocalizacion";
 import { useBuscarMedicamentos } from "./hooks/useBuscarMedicamentos";
 import { useBusquedasRecientes, useRecordatorios } from "./hooks/useLocalStorage";
 import { useListaMedica } from "./hooks/useListaMedica";
+import { HeroBusqueda } from "./components/HeroBusqueda";
 import { BarraBusqueda } from "./components/BarraBusqueda";
 import { TarjetaResultado } from "./components/TarjetaResultado";
 import { EstadoCargando } from "./components/EstadoCargando";
 import { EstadoVacio } from "./components/EstadoVacio";
 import { CartSummary } from "./components/lista/CartSummary";
 import { ListaMedicaDrawer } from "./components/lista/ListaMedicaDrawer";
+import { EscanerRecipe } from "./components/EscanerRecipe";
 
 // Fallback: centro de Acarigua (mismo criterio que la versión anterior)
 const LAT_ACARIGUA = 9.5569;
@@ -33,6 +35,7 @@ export default function App() {
   const [radio, setRadio] = useState(5000);
   const [terminoBuscado, setTerminoBuscado] = useState("");
   const [listaAbierta, setListaAbierta] = useState(false);
+  const [escanerAbierto, setEscanerAbierto] = useState(false);
   // Orden de resultados. "relevancia" = orden del backend (proximidad + boost
   // premium; NO tocar por defecto, es parte de la monetización). "precio" =
   // orden ascendente por precio_usd, solo del lado del cliente y opt-in.
@@ -115,78 +118,24 @@ export default function App() {
   };
 
   const vistaHero = (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50">
-      <div className="text-center mb-8">
-        <h1 className="font-black text-4xl">
-          <span className="text-gray-900">Dosis</span>
-          <span className="text-emerald-600">Ya</span>
-        </h1>
-        <p className="text-gray-400 text-sm mt-1">Encuentra tu medicamento en Acarigua/Araure</p>
-      </div>
-
-      <BarraBusqueda
-        query={query}
-        onQueryChange={setQuery}
-        onSubmit={handleSubmit}
-        cargando={api.cargando}
-        onRecalcularUbicacion={handleRecalcular}
-        busquedasRecientes={recientes.busquedas}
-        onBusquedaRecienteClick={(term) => ejecutarBusqueda(term, 5)}
-        compacta={false}
-      />
-
-      {/* Recordatorio de resurtido — "welcome back" para crónicos. Aparece al
-          volver a la app cuando algún medicamento ya toca resurtir. */}
-      {resurtidosVencidos.length > 0 && (
-        <div className="mt-4 w-full max-w-xl mx-auto rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3">
-          <p className="text-sm font-medium text-emerald-800 flex items-center gap-2">
-            <span aria-hidden="true">🔔</span> Es hora de resurtir
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {resurtidosVencidos.map((r) => (
-              <button
-                key={r.termino}
-                type="button"
-                onClick={() => {
-                  recordatorios.agregar(r.termino); // re-arma otro ciclo
-                  ejecutarBusqueda(r.termino, 5);
-                }}
-                className="rounded-full bg-white border border-emerald-300 text-emerald-800 text-sm px-3 py-1 hover:bg-emerald-100 transition-colors"
-              >
-                Buscar {r.termino}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="mt-2 text-center text-xs text-gray-400">
-        {geo.error ? (
-          <p className="text-amber-600">⚠️ {geo.error}</p>
-        ) : geo.cargando ? (
-          <p>Obteniendo ubicación...</p>
-        ) : (
-          <p>📍 Usando tu ubicación actual</p>
-        )}
-      </div>
-
-      <div className="mt-8 flex items-center gap-3">
-        <label className="text-sm text-gray-600 font-medium">Solo con delivery 🛵</label>
-        <button
-          type="button"
-          onClick={() => setConDelivery(!conDelivery)}
-          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-            conDelivery ? "bg-emerald-500" : "bg-gray-300"
-          }`}
-        >
-          <span
-            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-              conDelivery ? "translate-x-6" : "translate-x-1"
-            }`}
-          />
-        </button>
-      </div>
-    </div>
+    <HeroBusqueda
+      query={query}
+      onQueryChange={setQuery}
+      onSubmit={handleSubmit}
+      cargando={api.cargando}
+      onRecalcularUbicacion={handleRecalcular}
+      busquedasRecientes={recientes.busquedas}
+      onBuscarTermino={(term) => ejecutarBusqueda(term, 5)}
+      resurtidosVencidos={resurtidosVencidos}
+      onResurtir={(term) => {
+        recordatorios.agregar(term); // re-arma otro ciclo de 30 días
+        ejecutarBusqueda(term, 5);
+      }}
+      geoError={geo.error}
+      geoCargando={geo.cargando}
+      conDelivery={conDelivery}
+      onToggleDelivery={() => setConDelivery(!conDelivery)}
+    />
   );
 
   const vistaResultados = (
@@ -203,6 +152,7 @@ export default function App() {
               busquedasRecientes={recientes.busquedas}
               onBusquedaRecienteClick={(term) => ejecutarBusqueda(term, radio / 1000)}
               compacta={true}
+              onEscanearRecipe={() => setEscanerAbierto(true)}
             />
           </div>
         </div>
@@ -348,6 +298,10 @@ export default function App() {
         onOpenChange={setListaAbierta}
         lat={latEfectiva}
         lng={lngEfectiva}
+      />
+      <EscanerRecipe
+        abierto={escanerAbierto}
+        onOpenChange={setEscanerAbierto}
       />
     </>
   );
