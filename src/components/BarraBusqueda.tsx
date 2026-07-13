@@ -1,4 +1,4 @@
-import { Search, Loader2, Clock } from "lucide-react";
+import { Search, Loader2, Clock, Camera } from "lucide-react";
 
 interface BarraBusquedaProps {
   query: string;
@@ -9,6 +9,8 @@ interface BarraBusquedaProps {
   busquedasRecientes: string[];
   onBusquedaRecienteClick: (termino: string) => void;
   compacta?: boolean;
+  /** Callback para abrir el escáner de récipe médico con IA. */
+  onEscanearRecipe?: () => void;
 }
 
 export function BarraBusqueda({
@@ -20,6 +22,7 @@ export function BarraBusqueda({
   busquedasRecientes,
   onBusquedaRecienteClick,
   compacta = false,
+  onEscanearRecipe,
 }: BarraBusquedaProps) {
   return (
     <div className={`w-full ${compacta ? "" : "max-w-xl mx-auto"}`}>
@@ -33,9 +36,23 @@ export function BarraBusqueda({
           onChange={(e) => onQueryChange(e.target.value)}
           placeholder="¿Qué medicamento necesitas? (ej: Losartán, Amoxicilina...)"
           className={`w-full rounded-full border border-gray-200 bg-white text-gray-900 shadow-md outline-none transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 ${
-            compacta ? "h-10 pl-10 pr-12 text-sm" : "h-14 pl-12 pr-14 text-base"
+            compacta ? "h-10 pl-10 pr-20 text-sm" : "h-14 pl-12 pr-24 text-base"
           }`}
         />
+        {/* Botón de escaneo de récipe (cámara IA) */}
+        {onEscanearRecipe && (
+          <button
+            type="button"
+            onClick={onEscanearRecipe}
+            className={`absolute flex items-center justify-center rounded-full text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 transition-colors ${
+              compacta ? "right-9 h-6 w-6" : "right-12 h-10 w-10"
+            }`}
+            title="Escanear récipe médico"
+            aria-label="Escanear récipe médico con IA"
+          >
+            <Camera className={compacta ? "h-4 w-4" : "h-5 w-5"} />
+          </button>
+        )}
         <button
           type="button"
           onClick={onRecalcularUbicacion}
@@ -65,3 +82,4 @@ export function BarraBusqueda({
     </div>
   );
 }
+

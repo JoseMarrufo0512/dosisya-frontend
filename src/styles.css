@@ -89,3 +89,9 @@
 }
 .animate-fade-in-up { animation: fadeInUp 0.4s ease-out both; }
 
+@keyframes scanLine {
+  0%, 100% { top: 0; }
+  50% { top: calc(100% - 4px); }
+}
+.animate-scan-line { animation: scanLine 2s ease-in-out infinite; }
+
