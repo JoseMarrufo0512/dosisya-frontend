@@ -34,3 +34,19 @@ export function construirUrlWhatsApp(
   if (!phone) return null;
   return `https://wa.me/${phone}?text=${encodeURIComponent(mensaje)}`;
 }
+
+/**
+ * Mensaje de un solo producto (comparador de Búsqueda v2): el usuario ya vio
+ * el precio en DosisYa — se cita para que la farmacia reconozca el canal.
+ */
+export function construirMensajeProducto(
+  farmaciaNombre: string,
+  nombre: string,
+  presentacion: string,
+  precioUsd: number,
+): string {
+  return (
+    `Hola ${farmaciaNombre} 👋 Vi en *DosisYa* ${nombre} (${presentacion}) ` +
+    `a $${precioUsd.toFixed(2)}. ¿Lo tienen disponible?`
+  );
+}

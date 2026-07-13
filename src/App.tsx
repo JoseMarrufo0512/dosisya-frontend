@@ -12,6 +12,8 @@ import { CartSummary } from "./components/lista/CartSummary";
 import { ListaMedicaDrawer } from "./components/lista/ListaMedicaDrawer";
 import { EscanerRecipe } from "./components/EscanerRecipe";
 import { BarraFiltros } from "./components/BarraFiltros";
+import { ComparadorBar } from "./components/ComparadorBar";
+import { ComparadorPanel } from "./components/ComparadorPanel";
 import {
   type Filtros,
   FILTROS_INICIALES,
@@ -50,6 +52,29 @@ export default function App() {
   // orden ascendente por precio_usd, solo del lado del cliente y opt-in.
   const [orden, setOrden] = useState<"relevancia" | "precio">("relevancia");
   const [filtros, setFiltros] = useState<Filtros>(FILTROS_INICIALES);
+
+  const MAX_COMPARAR = 3;
+  const [compararClaves, setCompararClaves] = useState<string[]>([]);
+  const [comparadorAbierto, setComparadorAbierto] = useState(false);
+
+  const toggleComparar = (clave: string) => {
+    setCompararClaves((prev) =>
+      prev.includes(clave)
+        ? prev.filter((c) => c !== clave)
+        : prev.length >= MAX_COMPARAR
+          ? prev
+          : [...prev, clave],
+    );
+  };
+
+  // Resultados seleccionados, resueltos contra la respuesta actual de la API.
+  const seleccionados = useMemo(
+    () =>
+      compararClaves
+        .map((c) => api.resultados.find((r) => claveResultado(r) === c))
+        .filter((r): r is NonNullable<typeof r> => r !== undefined),
+    [compararClaves, api.resultados],
+  );
 
   // Resultados ordenados según el toggle, sin mutar el array original.
   const resultadosOrdenados = useMemo(() => {
@@ -105,6 +130,8 @@ export default function App() {
     recientes.agregar(termino);
     setRadio(radioKm * 1000);
     setFiltros(FILTROS_INICIALES); // cada búsqueda arranca sin filtros
+    setCompararClaves([]);
+    setComparadorAbierto(false);
 
     await api.buscar(termino, latEfectiva, lngEfectiva, conDelivery, radioKm * 1000);
   };
@@ -255,6 +282,12 @@ export default function App() {
                   resultado={res}
                   esMasEconomico={claveResultado(res) === claveEconomico}
                   equivalenteDesde={equivalenteDesde}
+                  comparando={compararClaves.includes(claveResultado(res))}
+                  onToggleComparar={() => toggleComparar(claveResultado(res))}
+                  compararDeshabilitado={
+                    compararClaves.length >= MAX_COMPARAR &&
+                    !compararClaves.includes(claveResultado(res))
+                  }
                 />
               );
             })}
@@ -302,6 +335,18 @@ export default function App() {
         lng={lngEfectiva}
       />
       <EscanerRecipe abierto={escanerAbierto} onOpenChange={setEscanerAbierto} />
+
+      <ComparadorBar
+        cantidad={seleccionados.length}
+        onComparar={() => setComparadorAbierto(true)}
+        onLimpiar={() => setCompararClaves([])}
+        elevada={totalDistintos > 0}
+      />
+      <ComparadorPanel
+        abierto={comparadorAbierto}
+        onOpenChange={setComparadorAbierto}
+        seleccionados={seleccionados}
+      />
     </>
   );
 }
