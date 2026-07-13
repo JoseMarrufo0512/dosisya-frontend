@@ -109,6 +109,7 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
       medicamentoId: `recipe-${nombre.toLowerCase().replace(/\s+/g, "-")}`,
       nombre,
       presentacion: cantidad || "según récipe",
+      origen: "escaner_recipe",
     });
     toast.success(`${nombre} añadido a tu lista`, {
       description:
@@ -125,6 +126,7 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
         medicamentoId: `recipe-${med.medicamento.toLowerCase().replace(/\s+/g, "-")}`,
         nombre: med.medicamento,
         presentacion: med.cantidad || "según récipe",
+        origen: "escaner_recipe",
       });
       añadidos++;
     }
