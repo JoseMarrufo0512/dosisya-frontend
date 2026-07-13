@@ -49,12 +49,29 @@ export const Route = createFileRoute("/admin/dashboard")({
 
 type SectionId = "inicio" | "inventario" | "configuracion" | "soporte";
 
+type LeadReciente = {
+  lead_id: string;
+  fecha_hora: string;
+  tipo_interaccion: string;
+  medicamento_buscado_id?: string | null;
+  medicamento_nombre?: string | null;
+  medicamento_marca?: string | null;
+};
+
 type DashboardData = {
   nombre_farmacia?: string;
   pacientes_interesados_hoy?: number;
-  busquedas_zona?: number;
+  busquedas_zona?: number | null;
+  busquedas_zona_disponible?: boolean;
   total_inventario?: number;
   leads_recipe_mes_actual?: number;
+  total_leads_mes_actual?: number;
+  deuda_estimada_usd?: number;
+  tarifa_por_lead_usd?: number;
+  leads_recientes?: LeadReciente[];
+  whatsapp?: string;
+  sector?: string;
+  punto_referencia?: string;
   inventario?: Array<{
     id?: string;
     nombre: string;
@@ -313,7 +330,7 @@ function InicioSection({
   data: DashboardData | null;
   inventoryCount: number | null;
 }) {
-  const totalInv = inventoryCount ?? data?.total_inventario ?? 0;
+  const totalInv = inventoryCount ?? data?.inventario?.length ?? 0;
   return (
     <div className="space-y-6">
       <div>
@@ -358,8 +375,18 @@ function InicioSection({
         />
         <MetricCard
           label="Búsquedas cerca de ti"
-          value={loading ? null : (data?.busquedas_zona?.toString() ?? "—")}
-          hint="Personas buscando medicinas en tu zona"
+          value={
+            loading
+              ? null
+              : data?.busquedas_zona_disponible === false
+                ? "Pronto"
+                : (data?.busquedas_zona?.toString() ?? "—")
+          }
+          hint={
+            data?.busquedas_zona_disponible === false
+              ? "Métrica en camino"
+              : "Personas buscando medicinas en tu zona"
+          }
           icon={<Search className="h-5 w-5" />}
           accent="bg-primary/10 text-primary"
         />
@@ -406,12 +433,7 @@ function InventarioSection({
   data: DashboardData | null;
   onUploaded: (count: number) => void;
 }) {
-  const items = data?.inventario ?? [
-    { nombre: "Acetaminofén 500mg", presentacion: "Tabletas x 10", stock: 45, precio_usd: 1.2 },
-    { nombre: "Ibuprofeno 400mg", presentacion: "Tabletas x 20", stock: 30, precio_usd: 2.5 },
-    { nombre: "Amoxicilina 500mg", presentacion: "Cápsulas x 21", stock: 12, precio_usd: 4.8 },
-    { nombre: "Loratadina 10mg", presentacion: "Tabletas x 10", stock: 28, precio_usd: 1.8 },
-  ];
+  const items = data?.inventario ?? [];
 
   return (
     <div className="space-y-6">
