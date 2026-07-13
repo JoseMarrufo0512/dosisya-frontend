@@ -88,6 +88,12 @@ Explícitamente fuera de A (van en B/C): filtro "abierto ahora" (`horario`, falt
 - **Frontend:** panel `/mi-cuenta`; al iniciar sesión se hace **merge** de lo que ya vive en localStorage (nada se pierde, nada se exige). El flujo anónimo permanece 100% funcional.
 - Sensibilidad: el historial de salud del paciente es dato sensible — el spec de C debe cubrir borrado de cuenta/historial.
 
+### Fase D — Escáner de Récipe con IA (decidido 2026-07-13)
+- Botón "Escanear récipe" (cámara) en `HeroBusqueda`; la UX base ya está especificada en `docs/features/receta-ia-y-carrito.md` (Flujo 2): overlay de escaneo, fallback si la letra es ilegible.
+- **Backend (autorizado, no existe aún):** `POST /api/v1/ia/analizar-recipe` — recibe la imagen (FormData), solo el backend habla con Gemini Vision (regla #5 de CLAUDE.md). Respuesta: `[{ medicamento, cantidad, alternativas }]`.
+- **Diseño pendiente para el spec de D:** cómo se mapea cada nombre extraído al inventario real (match vía `/buscar` por medicamento) y cómo llegan las cantidades a la Lista Médica (`item.cantidad` ya existe).
+- ⚠️ Bloqueador de infra: `GEMINI_API_KEY` sin configurar en Vercel (pendiente desde la sesión del 2026-07-12).
+
 ## 4. Criterios de éxito de A
 
 1. Buscar sigue funcionando exactamente igual para quien ignore lo nuevo (cero regresiones en leads y Lista Médica).
