@@ -103,3 +103,30 @@ coincidencia directa ordena primero y los equivalentes después.
   vivo (las búsquedas existentes siguen devolviendo lo mismo).
 - La aparición de equivalentes NO es demostrable con los datos actuales; requiere
   correr el seed de demo. Limitación reconocida explícitamente.
+
+---
+
+## Track 2: Confianza (señales de licencia + alerta de receta)
+
+**Inspiración:** Cruz Verde ("Vigilado Supersalud"), Amazon Pharmacy (URAC/NABP),
+y la señal de legitimidad #1 del research: exigir récipe para controlados.
+
+### Restricción de datos (verificada)
+El schema NO tiene campos de receta ni de verificación/licencia. La versión
+granular (badge "requiere récipe" por medicamento, licencia por farmacia)
+necesita migración + datos que no existen.
+
+### v1 — zero-data (implementada, frontend puro)
+- **Aviso de récipe** en resultados: nota "Algunos medicamentos requieren récipe
+  médico; la farmacia te lo pedirá". Educacional, sin datos.
+- **Sello de confianza** al pie de resultados: "Farmacias afiliadas y verificadas
+  por DosisYa" — respaldado por que el backend ya filtra `estado_afiliacion =
+  'activa'` (todas las farmacias mostradas están activas).
+- Ambos solo aparecen cuando hay resultados. `tsc`+`build` OK.
+
+### v2 — con datos (pendiente, requiere migración)
+- `inventario_maestro.requiere_receta BOOLEAN` → badge "Requiere récipe" solo en
+  medicamentos controlados.
+- `farmacias.verificada BOOLEAN` / nº de licencia sanitaria → badge de farmacia
+  verificada diferenciado. Requiere una fuente de verdad de licencias.
+- No se implementa como migración dormida sin decisión explícita del usuario.

@@ -204,6 +204,21 @@ export default function App() {
             <EstadoVacio termino={terminoBuscado} />
           )}
 
+          {/* Aviso de récipe — señal de legitimidad. Los medicamentos
+              controlados exigen récipe médico; DosisYa no vende, solo conecta. */}
+          {!api.cargando && resultadosOrdenados.length > 0 && (
+            <div
+              role="note"
+              className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800"
+            >
+              <span aria-hidden="true">📋</span>
+              <p>
+                Algunos medicamentos requieren <strong>récipe médico</strong>. La
+                farmacia te lo pedirá al momento de la compra.
+              </p>
+            </div>
+          )}
+
           {/* Toggle de orden — solo con ≥2 resultados. Default "relevancia"
               preserva el orden del backend (boost premium). */}
           {!api.cargando && resultadosOrdenados.length >= 2 && (
@@ -253,6 +268,15 @@ export default function App() {
               />
             );
           })}
+
+          {/* Sello de confianza — todas las farmacias en resultados están
+              afiliadas y activas (estado_afiliacion = 'activa' en el backend). */}
+          {!api.cargando && resultadosOrdenados.length > 0 && (
+            <p className="flex items-center justify-center gap-1.5 text-center text-xs text-gray-400 pt-1">
+              <span aria-hidden="true">✅</span>
+              Farmacias afiliadas y verificadas por DosisYa
+            </p>
+          )}
         </div>
       </main>
     </div>
