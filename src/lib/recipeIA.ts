@@ -63,7 +63,10 @@ export function validarImagen(file: File): string | null {
 // ── MOCK TEMPORAL — eliminar cuando el backend implemente el endpoint ────────
 // Simula una respuesta exitosa tras 3s de delay para desarrollar la UI.
 
-const MOCK_HABILITADO = true; // ← Cambiar a false cuando el backend esté listo
+// Solo en desarrollo: en producción JAMÁS mostrar medicamentos falsos como si
+// fueran del récipe del paciente. Cuando el endpoint real exista, borrar todo
+// el bloque MOCK.
+const MOCK_HABILITADO = import.meta.env.DEV;
 
 const MOCK_RESPUESTA: RespuestaRecipe = {
   status: "success",

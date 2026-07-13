@@ -15,6 +15,14 @@
 
 import { API_BASE } from "./api";
 
+// leads_interacciones.medicamento_buscado_id es UUID (nullable). Los items
+// añadidos desde el escáner de récipe usan IDs sintéticos ("recipe-losartán")
+// que el backend rechazaría → el lead completo se perdería en silencio.
+// Para esos casos el lead se envía con medicamento_buscado_id = null: la
+// interacción CPC cuenta igual, solo que sin referencia de inventario.
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function registrarLeadLista(
   farmaciaId: string | number,
   medicamentoIds: Array<string | number>,
@@ -32,7 +40,7 @@ export function registrarLeadLista(
       body: JSON.stringify({
         farmacia_id: farmaciaId,
         tipo_interaccion: "clic_whatsapp",
-        medicamento_buscado_id: medId,
+        medicamento_buscado_id: UUID_RE.test(String(medId)) ? medId : null,
       }),
       keepalive: true,
     }).catch(() => {
