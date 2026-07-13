@@ -1,7 +1,7 @@
-import { useMemo, useState, FormEvent } from "react";
+import { useEffect, useMemo, useState, FormEvent } from "react";
 import { useGeolocalizacion } from "./hooks/useGeolocalizacion";
 import { useBuscarMedicamentos } from "./hooks/useBuscarMedicamentos";
-import { useBusquedasRecientes } from "./hooks/useLocalStorage";
+import { useBusquedasRecientes, useRecordatorios } from "./hooks/useLocalStorage";
 import { useListaMedica } from "./hooks/useListaMedica";
 import { BarraBusqueda } from "./components/BarraBusqueda";
 import { TarjetaResultado } from "./components/TarjetaResultado";
@@ -18,7 +18,14 @@ export default function App() {
   const geo = useGeolocalizacion();
   const api = useBuscarMedicamentos();
   const recientes = useBusquedasRecientes();
+  const recordatorios = useRecordatorios();
   const { totalDistintos } = useListaMedica();
+
+  // Los recordatorios dependen de la fecha actual → solo evaluarlos tras montar
+  // en el cliente, para no romper la hidratación SSR.
+  const [montado, setMontado] = useState(false);
+  useEffect(() => setMontado(true), []);
+  const resurtidosVencidos = montado ? recordatorios.vencidos() : [];
 
   const [estado, setEstado] = useState<"hero" | "resultados">("hero");
   const [query, setQuery] = useState("");
@@ -128,6 +135,31 @@ export default function App() {
         compacta={false}
       />
 
+      {/* Recordatorio de resurtido — "welcome back" para crónicos. Aparece al
+          volver a la app cuando algún medicamento ya toca resurtir. */}
+      {resurtidosVencidos.length > 0 && (
+        <div className="mt-4 w-full max-w-xl mx-auto rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3">
+          <p className="text-sm font-medium text-emerald-800 flex items-center gap-2">
+            <span aria-hidden="true">🔔</span> Es hora de resurtir
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {resurtidosVencidos.map((r) => (
+              <button
+                key={r.termino}
+                type="button"
+                onClick={() => {
+                  recordatorios.agregar(r.termino); // re-arma otro ciclo
+                  ejecutarBusqueda(r.termino, 5);
+                }}
+                className="rounded-full bg-white border border-emerald-300 text-emerald-800 text-sm px-3 py-1 hover:bg-emerald-100 transition-colors"
+              >
+                Buscar {r.termino}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="mt-2 text-center text-xs text-gray-400">
         {geo.error ? (
           <p className="text-amber-600">⚠️ {geo.error}</p>
@@ -216,6 +248,29 @@ export default function App() {
                 Algunos medicamentos requieren <strong>récipe médico</strong>. La
                 farmacia te lo pedirá al momento de la compra.
               </p>
+            </div>
+          )}
+
+          {/* Recordatorio de resurtido — opt-in para el término buscado. */}
+          {!api.cargando && resultadosOrdenados.length > 0 && terminoBuscado && (
+            <div className="flex justify-end">
+              {montado && recordatorios.estaActivo(terminoBuscado) ? (
+                <button
+                  type="button"
+                  onClick={() => recordatorios.eliminar(terminoBuscado)}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-medium px-3 py-1.5 hover:bg-emerald-100 transition-colors"
+                >
+                  🔔 Te recordaré resurtir · quitar
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => recordatorios.agregar(terminoBuscado)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 text-gray-600 text-xs font-medium px-3 py-1.5 hover:bg-gray-50 transition-colors"
+                >
+                  🔔 Recordarme resurtir en 30 días
+                </button>
+              )}
             </div>
           )}
 

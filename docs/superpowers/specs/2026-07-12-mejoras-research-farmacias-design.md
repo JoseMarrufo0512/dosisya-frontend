@@ -130,3 +130,30 @@ necesita migración + datos que no existen.
 - `farmacias.verificada BOOLEAN` / nº de licencia sanitaria → badge de farmacia
   verificada diferenciado. Requiere una fuente de verdad de licencias.
 - No se implementa como migración dormida sin decisión explícita del usuario.
+
+---
+
+## Track 3: Recordatorio de resurtido (retención)
+
+**Inspiración:** Pastillero Virtual (Farmatodo), RxPass (Amazon), y el "Welcome
+Back Hook" del roadmap de DosisYa.
+
+### Alcance v1 (implementada, frontend puro, sin login)
+- Hook `useRecordatorios` (localStorage, patrón `useLocalStorage`): `agregar`,
+  `eliminar`, `estaActivo`, `vencidos`. Recordatorio = `{ termino, creadoMs,
+  proximoMs }`, intervalo default 30 días.
+- Chip en resultados: "🔔 Recordarme resurtir en 30 días" (toggle add/quitar
+  para el término buscado).
+- Banner en el hero: al volver a la app, si algún recordatorio venció, muestra
+  "Es hora de resurtir" con chips que re-buscan Y re-arman otro ciclo.
+- SSR-safe: los recordatorios dependen de la fecha → se evalúan solo tras montar
+  en el cliente (`montado` flag), evitando mismatch de hidratación.
+
+### Verificación
+- `tsc`+`build` OK. Lógica de fechas y dedup verificada con test en Node
+  (nuevo→no vencido, 31d→vencido, 29d→no, re-agregar mismo término no duplica).
+
+### v2 — con datos/infra (fuera de alcance)
+- Entrega por push/WhatsApp cuando la app está cerrada: requiere service worker +
+  backend de push o n8n con el teléfono del paciente (rompe "cero fricción" si se
+  pide el teléfono). La v1 recuerda "al volver a la app", sin login.
