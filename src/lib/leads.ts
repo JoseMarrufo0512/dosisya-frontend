@@ -23,6 +23,13 @@ export type TipoInteraccion =
   | "capture_pantalla"; // Botón "Guardar info"
 
 /**
+ * Origen del lead — por dónde entró el medicamento antes de generar el lead.
+ * Debe coincidir EXACTO con origen_lead_enum de PostgreSQL (migración 007).
+ * "escaner_recipe" es el lead premium facturable.
+ */
+export type OrigenLead = "busqueda" | "lista_medica" | "escaner_recipe";
+
+/**
  * Registra un lead CPC en el backend de forma silenciosa.
  * Los errores se capturan internamente para nunca romper el UX.
  *
@@ -34,7 +41,7 @@ export async function registrarLead(
   farmaciaId: string,
   tipo: TipoInteraccion,
   medicamentoId?: string,
-  opts?: { keepalive?: boolean },
+  opts?: { keepalive?: boolean; origen?: OrigenLead },
 ): Promise<void> {
   try {
     await fetch(`${API_BASE}/api/v1/leads/`, {
@@ -44,6 +51,8 @@ export async function registrarLead(
         farmacia_id: farmaciaId,
         tipo_interaccion: tipo,
         medicamento_buscado_id: medicamentoId ?? null,
+        // Clic directo en tarjeta = "busqueda" salvo que el caller diga otra cosa
+        origen: opts?.origen ?? "busqueda",
       }),
       // keepalive: la petición sobrevive si el navegador abandona la página
       // (crítico cuando el clic abre wa.me — ver leadsLista.ts)

@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react";
+import type { OrigenLead } from "@/lib/leads";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Lista Médica — store global con persistencia en localStorage.
@@ -22,6 +23,8 @@ export interface ItemLista {
   precioRefUsd?: number;
   cantidad: number;
   agregadoEn: number;
+  /** Por dónde entró el item. Ausente en items previos a la feature (= lista_medica). */
+  origen?: OrigenLead;
 }
 
 const STORAGE_KEY = "dosisya:lista-medica:v1";
