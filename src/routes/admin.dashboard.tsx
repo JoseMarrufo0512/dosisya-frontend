@@ -20,11 +20,13 @@ import {
   ScanLine,
   Receipt,
   Clock,
+  Loader2,
 } from "lucide-react";
 import { UploadInventory } from "@/components/UploadInventory";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -33,6 +35,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { z } from "zod";
+import { toast } from "sonner";
 
 import { API_BASE } from "@/lib/api";
 
@@ -139,10 +143,15 @@ function AdminDashboard() {
     navigate({ to: "/admin/login" });
   };
 
-  const nombre =
-    data?.nombre_farmacia ??
-    (typeof window !== "undefined" ? localStorage.getItem("nombre_farmacia") : null) ??
-    "tu farmacia";
+  const [nombre, setNombre] = useState<string>(
+    typeof window !== "undefined"
+      ? localStorage.getItem("nombre_farmacia") ?? "tu farmacia"
+      : "tu farmacia",
+  );
+
+  useEffect(() => {
+    if (data?.nombre_farmacia) setNombre(data.nombre_farmacia);
+  }, [data]);
 
   const nav: { id: SectionId; label: string; icon: React.ReactNode }[] = [
     { id: "inicio", label: "Inicio", icon: <Home className="h-4 w-4" /> },
@@ -244,7 +253,9 @@ function AdminDashboard() {
               {section === "facturacion" && (
                 <FacturacionSection loading={loading} data={data} />
               )}
-              {section === "configuracion" && <ConfiguracionSection nombre={nombre} />}
+              {section === "configuracion" && (
+                <ConfiguracionSection data={data} onNombreActualizado={setNombre} />
+              )}
               {section === "soporte" && <SoporteSection />}
             </motion.div>
           </AnimatePresence>
@@ -532,7 +543,122 @@ function InventarioSection({
   );
 }
 
-function ConfiguracionSection({ nombre }: { nombre: string }) {
+const SECTORES_CONFIG: { value: string; label: string }[] = [
+  { value: "acarigua", label: "Acarigua" },
+  { value: "araure", label: "Araure" },
+];
+
+const configSchema = z.object({
+  nombre_farmacia: z
+    .string()
+    .trim()
+    .min(2, "Mínimo 2 caracteres")
+    .max(200, "Máximo 200 caracteres"),
+  whatsapp: z
+    .string()
+    .regex(/^\+58\d{10}$/, "Formato: +58 seguido de 10 dígitos"),
+  sector: z.string().min(1, "Selecciona un sector"),
+  punto_referencia: z
+    .string()
+    .trim()
+    .min(5, "Describe brevemente (mín. 5 caracteres)")
+    .max(180, "Máximo 180 caracteres"),
+});
+
+const formatoTelefonoVE = (raw: string) => {
+  let d = raw.replace(/\D/g, "");
+  if (d.startsWith("58")) d = d.slice(2);
+  if (d.startsWith("0")) d = d.slice(1);
+  d = d.slice(0, 10);
+  return d ? `+58${d}` : "";
+};
+
+function ConfiguracionSection({
+  data,
+  onNombreActualizado,
+}: {
+  data: DashboardData | null;
+  onNombreActualizado: (nombre: string) => void;
+}) {
+  const [nombre, setNombre] = useState(data?.nombre_farmacia ?? "");
+  const [whatsapp, setWhatsapp] = useState(data?.whatsapp ?? "");
+  const [sector, setSector] = useState(data?.sector ?? "");
+  const [referencia, setReferencia] = useState(data?.punto_referencia ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  // Precargar cuando llegue/cambie la data del dashboard.
+  useEffect(() => {
+    if (!data) return;
+    setNombre(data.nombre_farmacia ?? "");
+    setWhatsapp(data.whatsapp ?? "");
+    setSector(data.sector ?? "");
+    setReferencia(data.punto_referencia ?? "");
+  }, [data]);
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    const parsed = configSchema.safeParse({
+      nombre_farmacia: nombre,
+      whatsapp,
+      sector,
+      punto_referencia: referencia,
+    });
+    if (!parsed.success) {
+      const errs: Record<string, string> = {};
+      for (const issue of parsed.error.issues) {
+        const k = issue.path[0] as string;
+        if (k && !errs[k]) errs[k] = issue.message;
+      }
+      setFieldErrors(errs);
+      return;
+    }
+    setFieldErrors({});
+
+    const farmaciaId =
+      typeof window !== "undefined" ? localStorage.getItem("farmacia_id") : null;
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+    if (!farmaciaId) {
+      setError("Sesión no encontrada. Inicia sesión de nuevo.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/farmacias/${farmaciaId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(parsed.data),
+      });
+      if (res.status === 401 || res.status === 403) {
+        setError("Tu sesión expiró. Inicia sesión de nuevo.");
+        return;
+      }
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(
+          json?.detail || json?.error?.message || "No se pudieron guardar los cambios",
+        );
+      }
+      const nombreGuardado: string = json?.data?.nombre_farmacia ?? parsed.data.nombre_farmacia;
+      if (typeof window !== "undefined") {
+        localStorage.setItem("nombre_farmacia", nombreGuardado);
+      }
+      onNombreActualizado(nombreGuardado);
+      toast.success("Datos actualizados con éxito");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al guardar");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
@@ -542,13 +668,98 @@ function ConfiguracionSection({ nombre }: { nombre: string }) {
         </p>
       </div>
 
-      <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 space-y-4 shadow-[0_4px_20px_-12px_rgba(10,36,99,0.15)]">
-        <Field label="Nombre de la farmacia" defaultValue={nombre} />
-        <Field label="WhatsApp" defaultValue="+58 412 000 0000" />
-        <Field label="Sector / Urbanización" defaultValue="Acarigua" />
-        <Field label="Punto de referencia" defaultValue="Av. Principal" />
-        <Button className="w-full sm:w-auto">Guardar cambios</Button>
-      </div>
+      <form
+        onSubmit={onSubmit}
+        className="bg-card border border-border rounded-2xl p-5 sm:p-6 space-y-4 shadow-[0_4px_20px_-12px_rgba(10,36,99,0.15)]"
+        noValidate
+      >
+        <div className="space-y-1.5">
+          <Label htmlFor="cfg-nombre">Nombre de la farmacia</Label>
+          <Input
+            id="cfg-nombre"
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            maxLength={200}
+            aria-invalid={Boolean(fieldErrors.nombre_farmacia)}
+          />
+          {fieldErrors.nombre_farmacia && (
+            <p className="text-xs text-destructive">{fieldErrors.nombre_farmacia}</p>
+          )}
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="cfg-whatsapp">WhatsApp</Label>
+          <Input
+            id="cfg-whatsapp"
+            value={whatsapp}
+            onChange={(e) => setWhatsapp(formatoTelefonoVE(e.target.value))}
+            placeholder="+584121234567"
+            inputMode="tel"
+            maxLength={13}
+            aria-invalid={Boolean(fieldErrors.whatsapp)}
+          />
+          {fieldErrors.whatsapp && (
+            <p className="text-xs text-destructive">{fieldErrors.whatsapp}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label>Sector / Ciudad</Label>
+          <div className="grid grid-cols-2 gap-2">
+            {SECTORES_CONFIG.map((s) => {
+              const active = sector === s.value;
+              return (
+                <button
+                  key={s.value}
+                  type="button"
+                  onClick={() => setSector(s.value)}
+                  className={`h-11 rounded-md border text-sm font-medium transition-colors inline-flex items-center justify-center gap-2 ${
+                    active
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background border-input hover:bg-accent"
+                  }`}
+                >
+                  <MapPin className="h-4 w-4" /> {s.label}
+                </button>
+              );
+            })}
+          </div>
+          {fieldErrors.sector && (
+            <p className="text-xs text-destructive">{fieldErrors.sector}</p>
+          )}
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="cfg-ref">Punto de referencia</Label>
+          <Input
+            id="cfg-ref"
+            value={referencia}
+            onChange={(e) => setReferencia(e.target.value)}
+            placeholder="Ej. A 2 cuadras de la plaza Bolívar"
+            maxLength={180}
+            aria-invalid={Boolean(fieldErrors.punto_referencia)}
+          />
+          {fieldErrors.punto_referencia && (
+            <p className="text-xs text-destructive">{fieldErrors.punto_referencia}</p>
+          )}
+        </div>
+
+        {error && (
+          <div className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
+            {error}
+          </div>
+        )}
+
+        <Button type="submit" disabled={saving} className="w-full sm:w-auto">
+          {saving ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Guardando…
+            </>
+          ) : (
+            "Guardar cambios"
+          )}
+        </Button>
+      </form>
     </div>
   );
 }
@@ -776,17 +987,6 @@ function MetricCard({
           {icon}
         </div>
       </div>
-    </div>
-  );
-}
-
-function Field({ label, defaultValue }: { label: string; defaultValue?: string }) {
-  return (
-    <div className="space-y-1.5">
-      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-        {label}
-      </label>
-      <Input defaultValue={defaultValue} />
     </div>
   );
 }
