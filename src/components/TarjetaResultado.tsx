@@ -181,8 +181,7 @@ export function TarjetaResultado({
           )}
           {equivalenteDesde != null && (
             <span className="text-sky-700 text-xs flex items-center gap-1">
-              💊 Equivalente del mismo principio activo desde $
-              {equivalenteDesde.toFixed(2)}
+              💊 Equivalente del mismo principio activo desde ${equivalenteDesde.toFixed(2)}
             </span>
           )}
         </div>

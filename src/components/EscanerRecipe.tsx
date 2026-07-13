@@ -15,11 +15,7 @@ import {
   ImageOff,
 } from "lucide-react";
 import { useListaMedica } from "@/hooks/useListaMedica";
-import {
-  analizarRecipe,
-  validarImagen,
-  type MedicamentoReceta,
-} from "@/lib/recipeIA";
+import { analizarRecipe, validarImagen, type MedicamentoReceta } from "@/lib/recipeIA";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EscanerRecipe — Drawer que cubre todo el flujo de escaneo de récipe médico.
@@ -82,9 +78,7 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
         setResultados(respuesta.data);
         setEstado("results");
       } else {
-        setErrorMsg(
-          respuesta.message || "No pudimos leer los medicamentos del récipe.",
-        );
+        setErrorMsg(respuesta.message || "No pudimos leer los medicamentos del récipe.");
         setEstado("error");
       }
     } catch {
@@ -153,13 +147,9 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
   // ── Helpers de UI ────────────────────────────────────────────────────────
 
   /** Genera ID consistente para verificar si ya está en lista */
-  const recipeId = (nombre: string) =>
-    `recipe-${nombre.toLowerCase().replace(/\s+/g, "-")}`;
+  const recipeId = (nombre: string) => `recipe-${nombre.toLowerCase().replace(/\s+/g, "-")}`;
 
-  const totalMedicamentos = useMemo(
-    () => resultados.length,
-    [resultados],
-  );
+  const totalMedicamentos = useMemo(() => resultados.length, [resultados]);
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -172,10 +162,7 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
           aria-describedby={undefined}
         >
           {/* Asa del drawer */}
-          <div
-            className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-border"
-            aria-hidden
-          />
+          <div className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-border" aria-hidden />
 
           <AnimatePresence mode="wait">
             {/* ── IDLE: captura ─────────────────────────────────────── */}
@@ -218,9 +205,7 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
                     </div>
                   </div>
                   <div className="text-center">
-                    <p className="font-semibold text-foreground">
-                      Toma una foto de tu récipe
-                    </p>
+                    <p className="font-semibold text-foreground">Toma una foto de tu récipe</p>
                     <p className="mt-1 text-xs text-muted-foreground">
                       o selecciona una imagen de tu galería
                     </p>
@@ -243,9 +228,7 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
                 exit={{ opacity: 0 }}
                 className="flex flex-col items-center px-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-3"
               >
-                <Drawer.Title className="sr-only">
-                  Analizando récipe
-                </Drawer.Title>
+                <Drawer.Title className="sr-only">Analizando récipe</Drawer.Title>
 
                 {/* Preview de la imagen con overlay de escaneo */}
                 <div className="relative mt-2 w-full max-w-sm overflow-hidden rounded-2xl">
@@ -276,9 +259,7 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
                       La IA está descifrando la letra del médico...
                     </p>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Esto puede tardar unos segundos
-                  </p>
+                  <p className="text-xs text-muted-foreground">Esto puede tardar unos segundos</p>
                 </div>
 
                 {/* Barra de progreso indeterminada */}
@@ -308,8 +289,8 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
                 <div className="shrink-0 px-5 pb-2 pt-3">
                   <Drawer.Title className="text-lg font-bold text-foreground flex items-center gap-2">
                     <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                    {totalMedicamentos} medicamento{totalMedicamentos !== 1 ? "s" : ""}{" "}
-                    detectado{totalMedicamentos !== 1 ? "s" : ""}
+                    {totalMedicamentos} medicamento{totalMedicamentos !== 1 ? "s" : ""} detectado
+                    {totalMedicamentos !== 1 ? "s" : ""}
                   </Drawer.Title>
                   <p className="text-xs text-muted-foreground">
                     Añádelos a tu lista y elige farmacia después.
@@ -328,9 +309,7 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
                         <div className="flex items-start gap-3">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
-                              <p className="font-medium text-foreground">
-                                {med.medicamento}
-                              </p>
+                              <p className="font-medium text-foreground">{med.medicamento}</p>
                               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-800">
                                 📋 Receta
                               </span>
@@ -344,9 +323,7 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
 
                           <button
                             type="button"
-                            onClick={() =>
-                              handleAgregarMedicamento(med.medicamento, med.cantidad)
-                            }
+                            onClick={() => handleAgregarMedicamento(med.medicamento, med.cantidad)}
                             className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all active:scale-[0.97] ${
                               enLista
                                 ? "border border-emerald-300 bg-emerald-50 text-emerald-700"
@@ -402,18 +379,14 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
                                           className="flex items-center justify-between"
                                         >
                                           <div className="flex items-center gap-2">
-                                            <p className="text-sm text-foreground">
-                                              {alt}
-                                            </p>
+                                            <p className="text-sm text-foreground">{alt}</p>
                                             <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-800">
                                               🤖 Alternativa IA
                                             </span>
                                           </div>
                                           <button
                                             type="button"
-                                            onClick={() =>
-                                              handleAgregarMedicamento(alt, "")
-                                            }
+                                            onClick={() => handleAgregarMedicamento(alt, "")}
                                             className={`flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-all active:scale-[0.97] ${
                                               altEnLista
                                                 ? "text-emerald-700"
@@ -472,20 +445,14 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
                 exit={{ opacity: 0 }}
                 className="flex flex-col items-center px-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-3 text-center"
               >
-                <Drawer.Title className="sr-only">
-                  Error al analizar récipe
-                </Drawer.Title>
+                <Drawer.Title className="sr-only">Error al analizar récipe</Drawer.Title>
 
                 <div className="mt-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-100 text-amber-600">
                   <ImageOff className="h-8 w-8" />
                 </div>
 
-                <p className="mt-4 font-semibold text-foreground">
-                  No pudimos leer tu récipe
-                </p>
-                <p className="mt-1.5 max-w-xs text-sm text-muted-foreground">
-                  {errorMsg}
-                </p>
+                <p className="mt-4 font-semibold text-foreground">No pudimos leer tu récipe</p>
+                <p className="mt-1.5 max-w-xs text-sm text-muted-foreground">{errorMsg}</p>
 
                 <div className="mt-6 w-full space-y-2">
                   <button

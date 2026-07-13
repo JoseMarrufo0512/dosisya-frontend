@@ -14,12 +14,7 @@ interface ComparadorBarProps {
  * ≥2 seleccionados. Cuando CartSummary (Lista Médica) está visible, esta
  * barra se apila por encima para no solaparse.
  */
-export function ComparadorBar({
-  cantidad,
-  onComparar,
-  onLimpiar,
-  elevada,
-}: ComparadorBarProps) {
+export function ComparadorBar({ cantidad, onComparar, onLimpiar, elevada }: ComparadorBarProps) {
   return (
     <AnimatePresence>
       {cantidad >= 2 && (

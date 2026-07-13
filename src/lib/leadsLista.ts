@@ -20,8 +20,7 @@ import { API_BASE } from "./api";
 // que el backend rechazaría → el lead completo se perdería en silencio.
 // Para esos casos el lead se envía con medicamento_buscado_id = null: la
 // interacción CPC cuenta igual, solo que sin referencia de inventario.
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function registrarLeadLista(
   farmaciaId: string | number,

@@ -1,16 +1,6 @@
 import { useIsMobile } from "@/hooks/use-mobile";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { registrarLead } from "@/lib/leads";
 import { construirMensajeProducto, construirUrlWhatsApp } from "@/lib/whatsapp";
 import { claveResultado, esGenerico } from "@/lib/filtros";
@@ -29,11 +19,7 @@ interface ComparadorPanelProps {
  * modal en desktop. El botón de WhatsApp de cada columna registra su lead
  * clic_whatsapp fire-and-forget con keepalive (después se abre wa.me).
  */
-export function ComparadorPanel({
-  abierto,
-  onOpenChange,
-  seleccionados,
-}: ComparadorPanelProps) {
+export function ComparadorPanel({ abierto, onOpenChange, seleccionados }: ComparadorPanelProps) {
   const esMovil = useIsMobile();
 
   const contactar = (r: ResultadoFarmacia) => {
@@ -97,8 +83,7 @@ export function ComparadorPanel({
               )}
             </p>
             <p className="text-gray-500 text-[11px] mt-0.5">
-              Bs.{" "}
-              {r.precio_ves.toLocaleString("es-VE", { minimumFractionDigits: 2 })}
+              Bs. {r.precio_ves.toLocaleString("es-VE", { minimumFractionDigits: 2 })}
             </p>
           </div>
 

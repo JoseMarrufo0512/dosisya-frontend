@@ -20,6 +20,8 @@ interface HeroBusquedaProps {
   geoCargando: boolean;
   conDelivery: boolean;
   onToggleDelivery: () => void;
+  /** Abre el escáner de récipe con IA (botón de cámara en el buscador). */
+  onEscanearRecipe?: () => void;
 }
 
 /**
@@ -41,6 +43,7 @@ export function HeroBusqueda({
   geoCargando,
   conDelivery,
   onToggleDelivery,
+  onEscanearRecipe,
 }: HeroBusquedaProps) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50">
@@ -49,9 +52,7 @@ export function HeroBusqueda({
           <span className="text-gray-900">Dosis</span>
           <span className="text-emerald-600">Ya</span>
         </h1>
-        <p className="text-gray-400 text-sm mt-1">
-          Encuentra tu medicamento en Acarigua/Araure
-        </p>
+        <p className="text-gray-400 text-sm mt-1">Encuentra tu medicamento en Acarigua/Araure</p>
       </div>
 
       <BarraBusqueda
@@ -63,6 +64,7 @@ export function HeroBusqueda({
         busquedasRecientes={busquedasRecientes}
         onBusquedaRecienteClick={onBuscarTermino}
         compacta={false}
+        onEscanearRecipe={onEscanearRecipe}
       />
 
       {/* Chips de categorías — cada uno dispara una búsqueda real */}
@@ -118,9 +120,7 @@ export function HeroBusqueda({
       </div>
 
       <div className="mt-6 flex items-center gap-3">
-        <label className="text-sm text-gray-600 font-medium">
-          Solo con delivery 🛵
-        </label>
+        <label className="text-sm text-gray-600 font-medium">Solo con delivery 🛵</label>
         <button
           type="button"
           onClick={onToggleDelivery}

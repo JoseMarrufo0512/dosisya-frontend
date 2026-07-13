@@ -14,12 +14,12 @@ import { API_BASE } from "./api";
  *   Compartir  → "compartir"
  */
 export type TipoInteraccion =
-  | "clic_whatsapp"    // Valor CANÓNICO del enum PostgreSQL — usado en TarjetaResultado
-  | "click_whatsapp"   // Alias del frontend (aceptado por backend via normalización)
-  | "clic_llamar"      // Reservado — botón de llamada (próxima iteración)
-  | "ver_mapa"         // Botón "Ver mapa"
-  | "ver_detalle"      // Reservado — expansión de tarjeta (próxima iteración)
-  | "compartir"        // Botón "Compartir"
+  | "clic_whatsapp" // Valor CANÓNICO del enum PostgreSQL — usado en TarjetaResultado
+  | "click_whatsapp" // Alias del frontend (aceptado por backend via normalización)
+  | "clic_llamar" // Reservado — botón de llamada (próxima iteración)
+  | "ver_mapa" // Botón "Ver mapa"
+  | "ver_detalle" // Reservado — expansión de tarjeta (próxima iteración)
+  | "compartir" // Botón "Compartir"
   | "capture_pantalla"; // Botón "Guardar info"
 
 /**

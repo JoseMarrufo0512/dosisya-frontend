@@ -170,6 +170,7 @@ export default function App() {
       geoCargando={geo.cargando}
       conDelivery={conDelivery}
       onToggleDelivery={() => setConDelivery(!conDelivery)}
+      onEscanearRecipe={() => setEscanerAbierto(true)}
     />
   );
 

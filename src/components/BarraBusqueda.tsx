@@ -64,7 +64,7 @@ export function BarraBusqueda({
           📍
         </button>
       </form>
-      
+
       {!compacta && busquedasRecientes.length > 0 && (
         <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
           {busquedasRecientes.slice(0, 3).map((term) => (
@@ -82,4 +82,3 @@ export function BarraBusqueda({
     </div>
   );
 }
-

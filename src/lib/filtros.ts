@@ -55,9 +55,7 @@ export function aplicarFiltros(
 }
 
 /** Rango [min, max] de precios USD de los resultados. null si no hay. */
-export function rangoPrecios(
-  resultados: ResultadoFarmacia[],
-): { min: number; max: number } | null {
+export function rangoPrecios(resultados: ResultadoFarmacia[]): { min: number; max: number } | null {
   if (resultados.length === 0) return null;
   let min = resultados[0].precio_usd;
   let max = resultados[0].precio_usd;
@@ -82,9 +80,7 @@ export function hayFiltrosActivos(filtros: Filtros): boolean {
  * Clave del resultado más barato entre los MOSTRADOS (badge "Más económico").
  * Con <2 resultados no tiene sentido comparar → null.
  */
-export function claveMasEconomico(
-  resultados: ResultadoFarmacia[],
-): string | null {
+export function claveMasEconomico(resultados: ResultadoFarmacia[]): string | null {
   if (resultados.length < 2) return null;
   let min = resultados[0];
   for (const r of resultados) {
