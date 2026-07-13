@@ -3,7 +3,8 @@ import { registrarLead } from "@/lib/leads";
 import { useListaMedica } from "@/hooks/useListaMedica";
 import { BadgePremium } from "./BadgePremium";
 import { BadgeDelivery } from "./BadgeDelivery";
-import { Check, Plus } from "lucide-react";
+import { Check, Plus, Scale } from "lucide-react";
+import { esGenerico as esGenericoFn } from "@/lib/filtros";
 import { toast } from "sonner";
 
 interface TarjetaResultadoProps {
@@ -16,6 +17,12 @@ interface TarjetaResultadoProps {
    * distinto producto. Si viene, se muestra la nota "equivalente desde $X".
    */
   equivalenteDesde?: number | null;
+  /** La tarjeta está seleccionada para comparar. */
+  comparando?: boolean;
+  /** Toggle de selección; si es undefined el botón Comparar no se muestra. */
+  onToggleComparar?: () => void;
+  /** true cuando ya hay 3 seleccionadas y esta no es una de ellas. */
+  compararDeshabilitado?: boolean;
 }
 
 export function TarjetaResultado({
@@ -23,9 +30,11 @@ export function TarjetaResultado({
   onLeadRegistrado,
   esMasEconomico = false,
   equivalenteDesde = null,
+  comparando = false,
+  onToggleComparar,
+  compararDeshabilitado = false,
 }: TarjetaResultadoProps) {
-  // Genérico = sin marca comercial (o vacía).
-  const esGenerico = !resultado.marca_comercial?.trim();
+  const esGenerico = esGenericoFn(resultado);
   const { agregar, estaEnLista } = useListaMedica();
   const enLista = estaEnLista(resultado.medicamento_id);
 
@@ -121,67 +130,79 @@ export function TarjetaResultado({
   return (
     <article
       id={cardId}
-      aria-label={`${resultado.farmacia_nombre} — ${resultado.medicamento_nombre}`}
+      aria-label={`${resultado.medicamento_nombre} — ${resultado.farmacia_nombre}`}
       className={`shadow-sm rounded-xl p-4 bg-white ${
         esMasEconomico
           ? "border-2 border-emerald-400 ring-1 ring-emerald-100"
-          : "border border-gray-100"
+          : comparando
+            ? "border-2 border-sky-400 ring-1 ring-sky-100"
+            : "border border-gray-100"
       }`}
     >
-      {/* HEADER */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex flex-col gap-1">
-          <h2 className="font-semibold text-gray-900 text-base leading-tight">
-            {resultado.farmacia_nombre}
-          </h2>
-          <div className="flex flex-wrap gap-1">
-            {resultado.es_premium && <BadgePremium />}
-            {resultado.tiene_delivery && <BadgeDelivery />}
-          </div>
-          <p className="text-gray-400 text-xs mt-1">
-            {(resultado.distancia_m / 1000).toFixed(1)} km · {resultado.direccion}
+      {/* MEDICAMENTO + PRECIO PROTAGONISTA */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-semibold text-gray-900 leading-snug">
+            {resultado.medicamento_nombre}
+            {resultado.marca_comercial ? (
+              <span className="text-gray-400 text-sm ml-1 font-normal">
+                ({resultado.marca_comercial})
+              </span>
+            ) : (
+              esGenerico && (
+                <span className="ml-2 inline-flex items-center rounded-full bg-sky-100 text-sky-800 text-xs font-medium px-2 py-0.5 align-middle">
+                  Genérico
+                </span>
+              )
+            )}
+          </p>
+          <p className="text-gray-500 text-sm mt-0.5">{resultado.presentacion}</p>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-emerald-700 font-bold text-2xl leading-none">
+            ${resultado.precio_usd.toFixed(2)}
+          </p>
+          <p className="text-gray-500 text-xs mt-1">
+            Bs.{" "}
+            {resultado.precio_ves.toLocaleString("es-VE", {
+              minimumFractionDigits: 2,
+            })}
           </p>
         </div>
       </div>
 
-      {/* MEDICAMENTO */}
-      <div className="mt-4">
-        <p className="font-medium text-gray-800 leading-snug">
-          {resultado.medicamento_nombre}
-          {resultado.marca_comercial ? (
-            <span className="text-gray-400 text-sm ml-1 font-normal">
-              ({resultado.marca_comercial})
+      {/* BADGES + EQUIVALENTE */}
+      {(esMasEconomico || equivalenteDesde != null) && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {esMasEconomico && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold px-2 py-0.5">
+              💰 Más económico
             </span>
-          ) : (
-            esGenerico && (
-              <span className="ml-2 inline-flex items-center rounded-full bg-sky-100 text-sky-800 text-xs font-medium px-2 py-0.5 align-middle">
-                Genérico
-              </span>
-            )
           )}
-        </p>
-        <p className="text-gray-500 text-sm mt-0.5">{resultado.presentacion}</p>
-        {equivalenteDesde != null && (
-          <p className="text-sky-700 text-xs mt-1.5 flex items-center gap-1">
-            💊 Hay un equivalente del mismo principio activo desde $
-            {equivalenteDesde.toFixed(2)}
-          </p>
-        )}
-      </div>
+          {equivalenteDesde != null && (
+            <span className="text-sky-700 text-xs flex items-center gap-1">
+              💊 Equivalente del mismo principio activo desde ${equivalenteDesde.toFixed(2)}
+            </span>
+          )}
+        </div>
+      )}
 
-      {/* PRECIOS */}
-      <div className="mt-3 flex items-baseline flex-wrap gap-x-2 gap-y-1">
-        <span className="text-emerald-700 font-bold text-lg">
-          ${resultado.precio_usd.toFixed(2)} USD
-        </span>
-        <span className="text-gray-500 text-sm">
-          Bs. {resultado.precio_ves.toLocaleString("es-VE", { minimumFractionDigits: 2 })} VES
-        </span>
-        {esMasEconomico && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold px-2 py-0.5">
-            💰 Más económico
-          </span>
-        )}
+      {/* FARMACIA (secundario) */}
+      <div className="mt-3 pt-3 border-t border-gray-50">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <h2 className="font-medium text-gray-700 text-sm truncate">
+              {resultado.farmacia_nombre}
+            </h2>
+            <p className="text-gray-400 text-xs mt-0.5">
+              {(resultado.distancia_m / 1000).toFixed(1)} km · {resultado.direccion}
+            </p>
+          </div>
+          <div className="flex gap-1 shrink-0">
+            {resultado.es_premium && <BadgePremium />}
+            {resultado.tiene_delivery && <BadgeDelivery />}
+          </div>
+        </div>
       </div>
 
       {/* ACCIONES */}
@@ -210,6 +231,26 @@ export function TarjetaResultado({
             </>
           )}
         </button>
+
+        {/* Comparar → selección local, sin lead (aún no hay interacción con farmacia) */}
+        {onToggleComparar && (
+          <button
+            id={`${cardId}-btn-comparar`}
+            type="button"
+            onClick={onToggleComparar}
+            disabled={compararDeshabilitado}
+            aria-pressed={comparando}
+            aria-label={`${comparando ? "Quitar de" : "Añadir a"} comparación: ${resultado.medicamento_nombre} en ${resultado.farmacia_nombre}`}
+            className={`rounded-lg px-3 py-2 flex justify-center items-center gap-1.5 text-sm transition-colors flex-1 sm:flex-initial disabled:opacity-40 disabled:cursor-not-allowed ${
+              comparando
+                ? "border border-sky-300 bg-sky-50 text-sky-700"
+                : "border border-gray-200 text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            <Scale className="h-4 w-4" aria-hidden />
+            {comparando ? "Comparando" : "Comparar"}
+          </button>
+        )}
 
         {/* Ver mapa → lead: ver_mapa */}
         <a

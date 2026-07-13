@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dev-proxy-prod",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "DEV_API_PROXY=https://proyecto-dosis-ya.vercel.app npm run dev"],
+      "port": 5173
+    }
+  ]
+}

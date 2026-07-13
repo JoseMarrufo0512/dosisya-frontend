@@ -14,12 +14,12 @@ import { API_BASE } from "./api";
  *   Compartir  → "compartir"
  */
 export type TipoInteraccion =
-  | "clic_whatsapp"    // Valor CANÓNICO del enum PostgreSQL — usado en TarjetaResultado
-  | "click_whatsapp"   // Alias del frontend (aceptado por backend via normalización)
-  | "clic_llamar"      // Reservado — botón de llamada (próxima iteración)
-  | "ver_mapa"         // Botón "Ver mapa"
-  | "ver_detalle"      // Reservado — expansión de tarjeta (próxima iteración)
-  | "compartir"        // Botón "Compartir"
+  | "clic_whatsapp" // Valor CANÓNICO del enum PostgreSQL — usado en TarjetaResultado
+  | "click_whatsapp" // Alias del frontend (aceptado por backend via normalización)
+  | "clic_llamar" // Reservado — botón de llamada (próxima iteración)
+  | "ver_mapa" // Botón "Ver mapa"
+  | "ver_detalle" // Reservado — expansión de tarjeta (próxima iteración)
+  | "compartir" // Botón "Compartir"
   | "capture_pantalla"; // Botón "Guardar info"
 
 /**
@@ -34,6 +34,7 @@ export async function registrarLead(
   farmaciaId: string,
   tipo: TipoInteraccion,
   medicamentoId?: string,
+  opts?: { keepalive?: boolean },
 ): Promise<void> {
   try {
     await fetch(`${API_BASE}/api/v1/leads/`, {
@@ -44,6 +45,9 @@ export async function registrarLead(
         tipo_interaccion: tipo,
         medicamento_buscado_id: medicamentoId ?? null,
       }),
+      // keepalive: la petición sobrevive si el navegador abandona la página
+      // (crítico cuando el clic abre wa.me — ver leadsLista.ts)
+      keepalive: opts?.keepalive ?? false,
     });
   } catch {
     // Silencio intencional: los leads CPC nunca deben romper el UX

@@ -21,9 +21,12 @@ export default defineConfig({
     // Proxy: en desarrollo local, las llamadas a /api/v1/* se reenvían
     // al backend FastAPI (localhost:8000) para evitar errores de CORS.
     // En producción (Vercel), VITE_API_URL apunta directamente al backend.
+    // DEV_API_PROXY permite apuntar el proxy a otro backend (p. ej. el de
+    // producción) cuando no hay BD local — el proxy es server-side, así que
+    // no depende de la lista CORS del backend.
     proxy: {
       "/api": {
-        target: "http://localhost:8000",
+        target: process.env.DEV_API_PROXY ?? "http://localhost:8000",
         changeOrigin: true,
         secure: false,
       },

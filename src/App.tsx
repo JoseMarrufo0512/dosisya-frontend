@@ -3,12 +3,25 @@ import { useGeolocalizacion } from "./hooks/useGeolocalizacion";
 import { useBuscarMedicamentos } from "./hooks/useBuscarMedicamentos";
 import { useBusquedasRecientes, useRecordatorios } from "./hooks/useLocalStorage";
 import { useListaMedica } from "./hooks/useListaMedica";
+import { HeroBusqueda } from "./components/HeroBusqueda";
 import { BarraBusqueda } from "./components/BarraBusqueda";
 import { TarjetaResultado } from "./components/TarjetaResultado";
 import { EstadoCargando } from "./components/EstadoCargando";
 import { EstadoVacio } from "./components/EstadoVacio";
 import { CartSummary } from "./components/lista/CartSummary";
 import { ListaMedicaDrawer } from "./components/lista/ListaMedicaDrawer";
+import { EscanerRecipe } from "./components/EscanerRecipe";
+import { BarraFiltros } from "./components/BarraFiltros";
+import { ComparadorBar } from "./components/ComparadorBar";
+import { ComparadorPanel } from "./components/ComparadorPanel";
+import {
+  type Filtros,
+  FILTROS_INICIALES,
+  aplicarFiltros,
+  claveMasEconomico,
+  claveResultado,
+  hayFiltrosActivos,
+} from "./lib/filtros";
 
 // Fallback: centro de Acarigua (mismo criterio que la versión anterior)
 const LAT_ACARIGUA = 9.5569;
@@ -33,10 +46,35 @@ export default function App() {
   const [radio, setRadio] = useState(5000);
   const [terminoBuscado, setTerminoBuscado] = useState("");
   const [listaAbierta, setListaAbierta] = useState(false);
+  const [escanerAbierto, setEscanerAbierto] = useState(false);
   // Orden de resultados. "relevancia" = orden del backend (proximidad + boost
   // premium; NO tocar por defecto, es parte de la monetización). "precio" =
   // orden ascendente por precio_usd, solo del lado del cliente y opt-in.
   const [orden, setOrden] = useState<"relevancia" | "precio">("relevancia");
+  const [filtros, setFiltros] = useState<Filtros>(FILTROS_INICIALES);
+
+  const MAX_COMPARAR = 3;
+  const [compararClaves, setCompararClaves] = useState<string[]>([]);
+  const [comparadorAbierto, setComparadorAbierto] = useState(false);
+
+  const toggleComparar = (clave: string) => {
+    setCompararClaves((prev) =>
+      prev.includes(clave)
+        ? prev.filter((c) => c !== clave)
+        : prev.length >= MAX_COMPARAR
+          ? prev
+          : [...prev, clave],
+    );
+  };
+
+  // Resultados seleccionados, resueltos contra la respuesta actual de la API.
+  const seleccionados = useMemo(
+    () =>
+      compararClaves
+        .map((c) => api.resultados.find((r) => claveResultado(r) === c))
+        .filter((r): r is NonNullable<typeof r> => r !== undefined),
+    [compararClaves, api.resultados],
+  );
 
   // Resultados ordenados según el toggle, sin mutar el array original.
   const resultadosOrdenados = useMemo(() => {
@@ -46,18 +84,15 @@ export default function App() {
     return api.resultados;
   }, [api.resultados, orden]);
 
-  // Índice del resultado de menor precio (para el badge "Más económico").
-  // Independiente del orden mostrado. Solo con ≥2 resultados tiene sentido.
-  const idxMasEconomico = useMemo(() => {
-    if (resultadosOrdenados.length < 2) return -1;
-    let idx = 0;
-    for (let i = 1; i < resultadosOrdenados.length; i++) {
-      if (resultadosOrdenados[i].precio_usd < resultadosOrdenados[idx].precio_usd) {
-        idx = i;
-      }
-    }
-    return idx;
-  }, [resultadosOrdenados]);
+  // Resultados visibles = ordenados + filtros client-side (funciones puras).
+  const resultadosVisibles = useMemo(
+    () => aplicarFiltros(resultadosOrdenados, filtros),
+    [resultadosOrdenados, filtros],
+  );
+
+  // Clave del más barato ENTRE LOS VISIBLES (badge "Más económico").
+  // Por clave y no por índice: los filtros reordenan/ocultan posiciones.
+  const claveEconomico = useMemo(() => claveMasEconomico(resultadosVisibles), [resultadosVisibles]);
 
   // Genéricos equivalentes: por cada producto, el precio del equivalente más
   // barato = mismo principio activo (medicamento_nombre) pero DISTINTO producto
@@ -65,9 +100,9 @@ export default function App() {
   // comparación de precio, no equivalencia). key = medicamento_id.
   const equivMasBaratoPorProducto = useMemo(() => {
     const m = new Map<string, number>();
-    for (const a of resultadosOrdenados) {
+    for (const a of resultadosVisibles) {
       let min = Infinity;
-      for (const b of resultadosOrdenados) {
+      for (const b of resultadosVisibles) {
         if (
           b.medicamento_nombre === a.medicamento_nombre &&
           b.medicamento_id !== a.medicamento_id &&
@@ -79,7 +114,7 @@ export default function App() {
       if (min < Infinity) m.set(a.medicamento_id, min);
     }
     return m;
-  }, [resultadosOrdenados]);
+  }, [resultadosVisibles]);
 
   // Coordenadas efectivas: geolocalización real o fallback a Acarigua.
   // Se comparten entre la búsqueda y el selector de farmacia de la lista.
@@ -94,6 +129,9 @@ export default function App() {
     setQuery(termino);
     recientes.agregar(termino);
     setRadio(radioKm * 1000);
+    setFiltros(FILTROS_INICIALES); // cada búsqueda arranca sin filtros
+    setCompararClaves([]);
+    setComparadorAbierto(false);
 
     await api.buscar(termino, latEfectiva, lngEfectiva, conDelivery, radioKm * 1000);
   };
@@ -109,84 +147,31 @@ export default function App() {
         () => {
           // El hook global normalmente reacciona, pero forzamos un refresh visual si fuera necesario.
         },
-        () => {}
+        () => {},
       );
     }
   };
 
   const vistaHero = (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50">
-      <div className="text-center mb-8">
-        <h1 className="font-black text-4xl">
-          <span className="text-gray-900">Dosis</span>
-          <span className="text-emerald-600">Ya</span>
-        </h1>
-        <p className="text-gray-400 text-sm mt-1">Encuentra tu medicamento en Acarigua/Araure</p>
-      </div>
-
-      <BarraBusqueda
-        query={query}
-        onQueryChange={setQuery}
-        onSubmit={handleSubmit}
-        cargando={api.cargando}
-        onRecalcularUbicacion={handleRecalcular}
-        busquedasRecientes={recientes.busquedas}
-        onBusquedaRecienteClick={(term) => ejecutarBusqueda(term, 5)}
-        compacta={false}
-      />
-
-      {/* Recordatorio de resurtido — "welcome back" para crónicos. Aparece al
-          volver a la app cuando algún medicamento ya toca resurtir. */}
-      {resurtidosVencidos.length > 0 && (
-        <div className="mt-4 w-full max-w-xl mx-auto rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3">
-          <p className="text-sm font-medium text-emerald-800 flex items-center gap-2">
-            <span aria-hidden="true">🔔</span> Es hora de resurtir
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {resurtidosVencidos.map((r) => (
-              <button
-                key={r.termino}
-                type="button"
-                onClick={() => {
-                  recordatorios.agregar(r.termino); // re-arma otro ciclo
-                  ejecutarBusqueda(r.termino, 5);
-                }}
-                className="rounded-full bg-white border border-emerald-300 text-emerald-800 text-sm px-3 py-1 hover:bg-emerald-100 transition-colors"
-              >
-                Buscar {r.termino}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="mt-2 text-center text-xs text-gray-400">
-        {geo.error ? (
-          <p className="text-amber-600">⚠️ {geo.error}</p>
-        ) : geo.cargando ? (
-          <p>Obteniendo ubicación...</p>
-        ) : (
-          <p>📍 Usando tu ubicación actual</p>
-        )}
-      </div>
-
-      <div className="mt-8 flex items-center gap-3">
-        <label className="text-sm text-gray-600 font-medium">Solo con delivery 🛵</label>
-        <button
-          type="button"
-          onClick={() => setConDelivery(!conDelivery)}
-          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-            conDelivery ? "bg-emerald-500" : "bg-gray-300"
-          }`}
-        >
-          <span
-            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-              conDelivery ? "translate-x-6" : "translate-x-1"
-            }`}
-          />
-        </button>
-      </div>
-    </div>
+    <HeroBusqueda
+      query={query}
+      onQueryChange={setQuery}
+      onSubmit={handleSubmit}
+      cargando={api.cargando}
+      onRecalcularUbicacion={handleRecalcular}
+      busquedasRecientes={recientes.busquedas}
+      onBuscarTermino={(term) => ejecutarBusqueda(term, 5)}
+      resurtidosVencidos={resurtidosVencidos}
+      onResurtir={(term) => {
+        recordatorios.agregar(term); // re-arma otro ciclo de 30 días
+        ejecutarBusqueda(term, 5);
+      }}
+      geoError={geo.error}
+      geoCargando={geo.cargando}
+      conDelivery={conDelivery}
+      onToggleDelivery={() => setConDelivery(!conDelivery)}
+      onEscanearRecipe={() => setEscanerAbierto(true)}
+    />
   );
 
   const vistaResultados = (
@@ -203,13 +188,15 @@ export default function App() {
               busquedasRecientes={recientes.busquedas}
               onBusquedaRecienteClick={(term) => ejecutarBusqueda(term, radio / 1000)}
               compacta={true}
+              onEscanearRecipe={() => setEscanerAbierto(true)}
             />
           </div>
         </div>
 
         <div className="max-w-4xl mx-auto mt-3 flex items-center justify-between text-sm text-gray-600">
           <p>
-            <span className="font-semibold text-gray-900">{api.totalResultados}</span> resultado(s) para '{terminoBuscado}'
+            <span className="font-semibold text-gray-900">{api.totalResultados}</span> resultado(s)
+            para '{terminoBuscado}'
           </p>
           <div className="flex items-center gap-2">
             <span>Radio: {radio / 1000}km</span>
@@ -232,9 +219,7 @@ export default function App() {
         >
           {api.cargando && <EstadoCargando />}
 
-          {!api.cargando && api.resultados.length === 0 && (
-            <EstadoVacio termino={terminoBuscado} />
-          )}
+          {!api.cargando && api.resultados.length === 0 && <EstadoVacio termino={terminoBuscado} />}
 
           {/* Aviso de récipe — señal de legitimidad. Los medicamentos
               controlados exigen récipe médico; DosisYa no vende, solo conecta. */}
@@ -245,8 +230,8 @@ export default function App() {
             >
               <span aria-hidden="true">📋</span>
               <p>
-                Algunos medicamentos requieren <strong>récipe médico</strong>. La
-                farmacia te lo pedirá al momento de la compra.
+                Algunos medicamentos requieren <strong>récipe médico</strong>. La farmacia te lo
+                pedirá al momento de la compra.
               </p>
             </div>
           )}
@@ -274,55 +259,56 @@ export default function App() {
             </div>
           )}
 
-          {/* Toggle de orden — solo con ≥2 resultados. Default "relevancia"
-              preserva el orden del backend (boost premium). */}
           {!api.cargando && resultadosOrdenados.length >= 2 && (
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-gray-500">Ordenar:</span>
-              <div className="inline-flex rounded-lg border border-gray-200 p-0.5">
-                <button
-                  type="button"
-                  onClick={() => setOrden("relevancia")}
-                  aria-pressed={orden === "relevancia"}
-                  className={`rounded-md px-3 py-1 font-medium transition-colors ${
-                    orden === "relevancia"
-                      ? "bg-primary text-primary-foreground"
-                      : "text-gray-600 hover:bg-gray-100"
-                  }`}
-                >
-                  Relevancia
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setOrden("precio")}
-                  aria-pressed={orden === "precio"}
-                  className={`rounded-md px-3 py-1 font-medium transition-colors ${
-                    orden === "precio"
-                      ? "bg-primary text-primary-foreground"
-                      : "text-gray-600 hover:bg-gray-100"
-                  }`}
-                >
-                  Precio ↑
-                </button>
-              </div>
-            </div>
+            <BarraFiltros
+              resultados={resultadosOrdenados}
+              filtros={filtros}
+              onFiltrosChange={setFiltros}
+              orden={orden}
+              onOrdenChange={setOrden}
+              radioM={radio}
+            />
           )}
 
-          {!api.cargando && resultadosOrdenados.map((res, i) => {
-            // Solo avisamos si el equivalente más barato del mismo principio
-            // activo cuesta MENOS que este producto.
-            const equivMin = equivMasBaratoPorProducto.get(res.medicamento_id);
-            const equivalenteDesde =
-              equivMin !== undefined && equivMin < res.precio_usd ? equivMin : null;
-            return (
-              <TarjetaResultado
-                key={`${res.farmacia_id}-${res.medicamento_id}-${i}`}
-                resultado={res}
-                esMasEconomico={i === idxMasEconomico}
-                equivalenteDesde={equivalenteDesde}
-              />
-            );
-          })}
+          {!api.cargando &&
+            resultadosVisibles.map((res, i) => {
+              // Solo avisamos si el equivalente más barato del mismo principio
+              // activo cuesta MENOS que este producto.
+              const equivMin = equivMasBaratoPorProducto.get(res.medicamento_id);
+              const equivalenteDesde =
+                equivMin !== undefined && equivMin < res.precio_usd ? equivMin : null;
+              return (
+                <TarjetaResultado
+                  key={`${claveResultado(res)}-${i}`}
+                  resultado={res}
+                  esMasEconomico={claveResultado(res) === claveEconomico}
+                  equivalenteDesde={equivalenteDesde}
+                  comparando={compararClaves.includes(claveResultado(res))}
+                  onToggleComparar={() => toggleComparar(claveResultado(res))}
+                  compararDeshabilitado={
+                    compararClaves.length >= MAX_COMPARAR &&
+                    !compararClaves.includes(claveResultado(res))
+                  }
+                />
+              );
+            })}
+
+          {/* Había resultados pero los filtros los ocultan todos */}
+          {!api.cargando &&
+            api.resultados.length > 0 &&
+            resultadosVisibles.length === 0 &&
+            hayFiltrosActivos(filtros) && (
+              <div className="rounded-xl bg-white border border-gray-100 p-8 text-center">
+                <p className="text-sm text-gray-600">Ningún resultado cumple los filtros.</p>
+                <button
+                  type="button"
+                  onClick={() => setFiltros(FILTROS_INICIALES)}
+                  className="mt-3 rounded-lg bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:opacity-90 transition-opacity"
+                >
+                  Limpiar filtros
+                </button>
+              </div>
+            )}
 
           {/* Sello de confianza — todas las farmacias en resultados están
               afiliadas y activas (estado_afiliacion = 'activa' en el backend). */}
@@ -348,6 +334,19 @@ export default function App() {
         onOpenChange={setListaAbierta}
         lat={latEfectiva}
         lng={lngEfectiva}
+      />
+      <EscanerRecipe abierto={escanerAbierto} onOpenChange={setEscanerAbierto} />
+
+      <ComparadorBar
+        cantidad={seleccionados.length}
+        onComparar={() => setComparadorAbierto(true)}
+        onLimpiar={() => setCompararClaves([])}
+        elevada={totalDistintos > 0}
+      />
+      <ComparadorPanel
+        abierto={comparadorAbierto}
+        onOpenChange={setComparadorAbierto}
+        seleccionados={seleccionados}
       />
     </>
   );
