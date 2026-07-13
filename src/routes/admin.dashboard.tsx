@@ -18,6 +18,8 @@ import {
   AlertTriangle,
   RefreshCw,
   ScanLine,
+  Receipt,
+  Clock,
 } from "lucide-react";
 import { UploadInventory } from "@/components/UploadInventory";
 import { Button } from "@/components/ui/button";
@@ -47,7 +49,7 @@ export const Route = createFileRoute("/admin/dashboard")({
   component: AdminDashboard,
 });
 
-type SectionId = "inicio" | "inventario" | "configuracion" | "soporte";
+type SectionId = "inicio" | "inventario" | "facturacion" | "configuracion" | "soporte";
 
 type LeadReciente = {
   lead_id: string;
@@ -145,6 +147,7 @@ function AdminDashboard() {
   const nav: { id: SectionId; label: string; icon: React.ReactNode }[] = [
     { id: "inicio", label: "Inicio", icon: <Home className="h-4 w-4" /> },
     { id: "inventario", label: "Mi Inventario", icon: <Package className="h-4 w-4" /> },
+    { id: "facturacion", label: "Facturación", icon: <Receipt className="h-4 w-4" /> },
     { id: "configuracion", label: "Configuración", icon: <Settings className="h-4 w-4" /> },
     { id: "soporte", label: "Soporte", icon: <LifeBuoy className="h-4 w-4" /> },
   ];
@@ -237,6 +240,9 @@ function AdminDashboard() {
                     setData((prev) => prev ? { ...prev, total_inventario: count } : prev);
                   }}
                 />
+              )}
+              {section === "facturacion" && (
+                <FacturacionSection loading={loading} data={data} />
               )}
               {section === "configuracion" && <ConfiguracionSection nombre={nombre} />}
               {section === "soporte" && <SoporteSection />}
@@ -585,6 +591,154 @@ function SoporteSection() {
               Oficina DosisYa · Lun a Vie · 8am - 5pm
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const ETIQUETA_INTERACCION: Record<string, string> = {
+  clic_whatsapp: "Clic a WhatsApp",
+  click_whatsapp: "Clic a WhatsApp",
+  clic_llamar: "Llamada",
+  ver_mapa: "Vio el mapa",
+  abrir_mapa: "Vio el mapa",
+  ver_detalle: "Vio el detalle",
+  expandir_detalle: "Vio el detalle",
+  compartir: "Compartió",
+  capture_pantalla: "Captura de pantalla",
+};
+
+function etiquetaInteraccion(tipo: string): string {
+  return ETIQUETA_INTERACCION[tipo] ?? tipo;
+}
+
+function formatoFechaLead(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("es-VE", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function FacturacionSection({
+  loading,
+  data,
+}: {
+  loading: boolean;
+  data: DashboardData | null;
+}) {
+  const leadsMes = data?.total_leads_mes_actual ?? 0;
+  const tarifa = data?.tarifa_por_lead_usd ?? 0;
+  const deuda = data?.deuda_estimada_usd ?? 0;
+  const leads = data?.leads_recientes ?? [];
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Facturación</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Lo que has generado este mes en DosisYa.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <MetricCard
+          label="Leads este mes"
+          value={loading ? null : leadsMes.toString()}
+          hint="Interacciones facturables"
+          icon={<TrendingUp className="h-5 w-5" />}
+          accent="bg-primary/10 text-primary"
+        />
+        <MetricCard
+          label="Tarifa por lead"
+          value={loading ? null : `$${tarifa.toFixed(2)}`}
+          hint="Costo por cada interacción"
+          icon={<Receipt className="h-5 w-5" />}
+          accent="bg-secondary/20 text-[#0a2463]"
+        />
+        <MetricCard
+          label="Deuda estimada del mes"
+          value={loading ? null : `$${deuda.toFixed(2)}`}
+          hint="Total a facturar este mes"
+          icon={<MessageCircle className="h-5 w-5" />}
+          accent="bg-[#25d366]/10 text-[#0f7c3a]"
+        />
+      </div>
+
+      <div>
+        <h2 className="text-lg font-bold text-foreground mb-3">Leads recientes</h2>
+        <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-[0_4px_20px_-12px_rgba(10,36,99,0.15)]">
+          {loading ? (
+            <div className="p-6 space-y-3">
+              {[...Array(4)].map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : leads.length === 0 ? (
+            <div className="p-12 text-center">
+              <Clock className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground">
+                Aún no hay leads este período. Aparecerán aquí en cuanto lleguen.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Desktop table */}
+              <div className="hidden sm:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/40">
+                      <TableHead className="px-6">Fecha</TableHead>
+                      <TableHead>Interacción</TableHead>
+                      <TableHead>Medicamento</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {leads.map((l) => (
+                      <TableRow key={l.lead_id}>
+                        <TableCell className="px-6 text-muted-foreground whitespace-nowrap">
+                          {formatoFechaLead(l.fecha_hora)}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {etiquetaInteraccion(l.tipo_interaccion)}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {l.medicamento_nombre
+                            ? `${l.medicamento_nombre}${l.medicamento_marca ? ` · ${l.medicamento_marca}` : ""}`
+                            : "—"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile cards */}
+              <ul className="sm:hidden divide-y divide-border">
+                {leads.map((l) => (
+                  <li key={l.lead_id} className="p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-medium">
+                        {etiquetaInteraccion(l.tipo_interaccion)}
+                      </span>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {formatoFechaLead(l.fecha_hora)}
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1 truncate">
+                      {l.medicamento_nombre
+                        ? `${l.medicamento_nombre}${l.medicamento_marca ? ` · ${l.medicamento_marca}` : ""}`
+                        : "Sin medicamento asociado"}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </div>
       </div>
     </div>
