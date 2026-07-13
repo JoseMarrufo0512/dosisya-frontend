@@ -11,6 +11,15 @@ import { EstadoVacio } from "./components/EstadoVacio";
 import { CartSummary } from "./components/lista/CartSummary";
 import { ListaMedicaDrawer } from "./components/lista/ListaMedicaDrawer";
 import { EscanerRecipe } from "./components/EscanerRecipe";
+import { BarraFiltros } from "./components/BarraFiltros";
+import {
+  type Filtros,
+  FILTROS_INICIALES,
+  aplicarFiltros,
+  claveMasEconomico,
+  claveResultado,
+  hayFiltrosActivos,
+} from "./lib/filtros";
 
 // Fallback: centro de Acarigua (mismo criterio que la versión anterior)
 const LAT_ACARIGUA = 9.5569;
@@ -40,6 +49,7 @@ export default function App() {
   // premium; NO tocar por defecto, es parte de la monetización). "precio" =
   // orden ascendente por precio_usd, solo del lado del cliente y opt-in.
   const [orden, setOrden] = useState<"relevancia" | "precio">("relevancia");
+  const [filtros, setFiltros] = useState<Filtros>(FILTROS_INICIALES);
 
   // Resultados ordenados según el toggle, sin mutar el array original.
   const resultadosOrdenados = useMemo(() => {
@@ -49,18 +59,15 @@ export default function App() {
     return api.resultados;
   }, [api.resultados, orden]);
 
-  // Índice del resultado de menor precio (para el badge "Más económico").
-  // Independiente del orden mostrado. Solo con ≥2 resultados tiene sentido.
-  const idxMasEconomico = useMemo(() => {
-    if (resultadosOrdenados.length < 2) return -1;
-    let idx = 0;
-    for (let i = 1; i < resultadosOrdenados.length; i++) {
-      if (resultadosOrdenados[i].precio_usd < resultadosOrdenados[idx].precio_usd) {
-        idx = i;
-      }
-    }
-    return idx;
-  }, [resultadosOrdenados]);
+  // Resultados visibles = ordenados + filtros client-side (funciones puras).
+  const resultadosVisibles = useMemo(
+    () => aplicarFiltros(resultadosOrdenados, filtros),
+    [resultadosOrdenados, filtros],
+  );
+
+  // Clave del más barato ENTRE LOS VISIBLES (badge "Más económico").
+  // Por clave y no por índice: los filtros reordenan/ocultan posiciones.
+  const claveEconomico = useMemo(() => claveMasEconomico(resultadosVisibles), [resultadosVisibles]);
 
   // Genéricos equivalentes: por cada producto, el precio del equivalente más
   // barato = mismo principio activo (medicamento_nombre) pero DISTINTO producto
@@ -68,9 +75,9 @@ export default function App() {
   // comparación de precio, no equivalencia). key = medicamento_id.
   const equivMasBaratoPorProducto = useMemo(() => {
     const m = new Map<string, number>();
-    for (const a of resultadosOrdenados) {
+    for (const a of resultadosVisibles) {
       let min = Infinity;
-      for (const b of resultadosOrdenados) {
+      for (const b of resultadosVisibles) {
         if (
           b.medicamento_nombre === a.medicamento_nombre &&
           b.medicamento_id !== a.medicamento_id &&
@@ -82,7 +89,7 @@ export default function App() {
       if (min < Infinity) m.set(a.medicamento_id, min);
     }
     return m;
-  }, [resultadosOrdenados]);
+  }, [resultadosVisibles]);
 
   // Coordenadas efectivas: geolocalización real o fallback a Acarigua.
   // Se comparten entre la búsqueda y el selector de farmacia de la lista.
@@ -97,6 +104,7 @@ export default function App() {
     setQuery(termino);
     recientes.agregar(termino);
     setRadio(radioKm * 1000);
+    setFiltros(FILTROS_INICIALES); // cada búsqueda arranca sin filtros
 
     await api.buscar(termino, latEfectiva, lngEfectiva, conDelivery, radioKm * 1000);
   };
@@ -112,7 +120,7 @@ export default function App() {
         () => {
           // El hook global normalmente reacciona, pero forzamos un refresh visual si fuera necesario.
         },
-        () => {}
+        () => {},
       );
     }
   };
@@ -159,7 +167,8 @@ export default function App() {
 
         <div className="max-w-4xl mx-auto mt-3 flex items-center justify-between text-sm text-gray-600">
           <p>
-            <span className="font-semibold text-gray-900">{api.totalResultados}</span> resultado(s) para '{terminoBuscado}'
+            <span className="font-semibold text-gray-900">{api.totalResultados}</span> resultado(s)
+            para '{terminoBuscado}'
           </p>
           <div className="flex items-center gap-2">
             <span>Radio: {radio / 1000}km</span>
@@ -182,9 +191,7 @@ export default function App() {
         >
           {api.cargando && <EstadoCargando />}
 
-          {!api.cargando && api.resultados.length === 0 && (
-            <EstadoVacio termino={terminoBuscado} />
-          )}
+          {!api.cargando && api.resultados.length === 0 && <EstadoVacio termino={terminoBuscado} />}
 
           {/* Aviso de récipe — señal de legitimidad. Los medicamentos
               controlados exigen récipe médico; DosisYa no vende, solo conecta. */}
@@ -195,8 +202,8 @@ export default function App() {
             >
               <span aria-hidden="true">📋</span>
               <p>
-                Algunos medicamentos requieren <strong>récipe médico</strong>. La
-                farmacia te lo pedirá al momento de la compra.
+                Algunos medicamentos requieren <strong>récipe médico</strong>. La farmacia te lo
+                pedirá al momento de la compra.
               </p>
             </div>
           )}
@@ -224,55 +231,50 @@ export default function App() {
             </div>
           )}
 
-          {/* Toggle de orden — solo con ≥2 resultados. Default "relevancia"
-              preserva el orden del backend (boost premium). */}
           {!api.cargando && resultadosOrdenados.length >= 2 && (
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-gray-500">Ordenar:</span>
-              <div className="inline-flex rounded-lg border border-gray-200 p-0.5">
-                <button
-                  type="button"
-                  onClick={() => setOrden("relevancia")}
-                  aria-pressed={orden === "relevancia"}
-                  className={`rounded-md px-3 py-1 font-medium transition-colors ${
-                    orden === "relevancia"
-                      ? "bg-primary text-primary-foreground"
-                      : "text-gray-600 hover:bg-gray-100"
-                  }`}
-                >
-                  Relevancia
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setOrden("precio")}
-                  aria-pressed={orden === "precio"}
-                  className={`rounded-md px-3 py-1 font-medium transition-colors ${
-                    orden === "precio"
-                      ? "bg-primary text-primary-foreground"
-                      : "text-gray-600 hover:bg-gray-100"
-                  }`}
-                >
-                  Precio ↑
-                </button>
-              </div>
-            </div>
+            <BarraFiltros
+              resultados={resultadosOrdenados}
+              filtros={filtros}
+              onFiltrosChange={setFiltros}
+              orden={orden}
+              onOrdenChange={setOrden}
+              radioM={radio}
+            />
           )}
 
-          {!api.cargando && resultadosOrdenados.map((res, i) => {
-            // Solo avisamos si el equivalente más barato del mismo principio
-            // activo cuesta MENOS que este producto.
-            const equivMin = equivMasBaratoPorProducto.get(res.medicamento_id);
-            const equivalenteDesde =
-              equivMin !== undefined && equivMin < res.precio_usd ? equivMin : null;
-            return (
-              <TarjetaResultado
-                key={`${res.farmacia_id}-${res.medicamento_id}-${i}`}
-                resultado={res}
-                esMasEconomico={i === idxMasEconomico}
-                equivalenteDesde={equivalenteDesde}
-              />
-            );
-          })}
+          {!api.cargando &&
+            resultadosVisibles.map((res, i) => {
+              // Solo avisamos si el equivalente más barato del mismo principio
+              // activo cuesta MENOS que este producto.
+              const equivMin = equivMasBaratoPorProducto.get(res.medicamento_id);
+              const equivalenteDesde =
+                equivMin !== undefined && equivMin < res.precio_usd ? equivMin : null;
+              return (
+                <TarjetaResultado
+                  key={`${claveResultado(res)}-${i}`}
+                  resultado={res}
+                  esMasEconomico={claveResultado(res) === claveEconomico}
+                  equivalenteDesde={equivalenteDesde}
+                />
+              );
+            })}
+
+          {/* Había resultados pero los filtros los ocultan todos */}
+          {!api.cargando &&
+            api.resultados.length > 0 &&
+            resultadosVisibles.length === 0 &&
+            hayFiltrosActivos(filtros) && (
+              <div className="rounded-xl bg-white border border-gray-100 p-8 text-center">
+                <p className="text-sm text-gray-600">Ningún resultado cumple los filtros.</p>
+                <button
+                  type="button"
+                  onClick={() => setFiltros(FILTROS_INICIALES)}
+                  className="mt-3 rounded-lg bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:opacity-90 transition-opacity"
+                >
+                  Limpiar filtros
+                </button>
+              </div>
+            )}
 
           {/* Sello de confianza — todas las farmacias en resultados están
               afiliadas y activas (estado_afiliacion = 'activa' en el backend). */}
@@ -299,10 +301,7 @@ export default function App() {
         lat={latEfectiva}
         lng={lngEfectiva}
       />
-      <EscanerRecipe
-        abierto={escanerAbierto}
-        onOpenChange={setEscanerAbierto}
-      />
+      <EscanerRecipe abierto={escanerAbierto} onOpenChange={setEscanerAbierto} />
     </>
   );
 }
