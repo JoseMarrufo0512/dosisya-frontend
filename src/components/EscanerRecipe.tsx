@@ -13,6 +13,7 @@ import {
   ChevronDown,
   ChevronUp,
   ImageOff,
+  Trash2,
 } from "lucide-react";
 import { useListaMedica } from "@/hooks/useListaMedica";
 import { analizarRecipe, validarImagen, type MedicamentoRecetaUI } from "@/lib/recipeIA";
@@ -137,6 +138,12 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
     toast.success(`${añadidos} medicamentos añadidos a tu lista`, {
       style: { background: "#ecfdf5", color: "#065f46", borderColor: "#a7f3d0" },
     });
+  };
+
+  // ── Quitar medicamento ───────────────────────────────────────────────────
+
+  const quitarMedicamento = (id: string) => {
+    setResultados((prev) => prev.filter((m) => m.id !== id));
   };
 
   // ── Toggle alternativas ──────────────────────────────────────────────────
@@ -327,27 +334,38 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
                             )}
                           </div>
 
-                          <button
-                            type="button"
-                            onClick={() => handleAgregarMedicamento(med.medicamento, med.cantidad)}
-                            className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all active:scale-[0.97] ${
-                              enLista
-                                ? "border border-emerald-300 bg-emerald-50 text-emerald-700"
-                                : "bg-primary text-primary-foreground hover:opacity-90"
-                            }`}
-                          >
-                            {enLista ? (
-                              <>
-                                <CheckCircle2 className="h-3.5 w-3.5" />
-                                En lista
-                              </>
-                            ) : (
-                              <>
-                                <Plus className="h-3.5 w-3.5" />
-                                Añadir
-                              </>
-                            )}
-                          </button>
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => quitarMedicamento(med.id)}
+                              aria-label={`Quitar ${med.medicamento} de los resultados`}
+                              className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleAgregarMedicamento(med.medicamento, med.cantidad)}
+                              className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all active:scale-[0.97] ${
+                                enLista
+                                  ? "border border-emerald-300 bg-emerald-50 text-emerald-700"
+                                  : "bg-primary text-primary-foreground hover:opacity-90"
+                              }`}
+                            >
+                              {enLista ? (
+                                <>
+                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                  En lista
+                                </>
+                              ) : (
+                                <>
+                                  <Plus className="h-3.5 w-3.5" />
+                                  Añadir
+                                </>
+                              )}
+                            </button>
+                          </div>
                         </div>
 
                         {/* Alternativas */}
