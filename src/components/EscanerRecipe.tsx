@@ -15,7 +15,7 @@ import {
   ImageOff,
 } from "lucide-react";
 import { useListaMedica } from "@/hooks/useListaMedica";
-import { analizarRecipe, validarImagen, type MedicamentoReceta } from "@/lib/recipeIA";
+import { analizarRecipe, validarImagen, type MedicamentoRecetaUI } from "@/lib/recipeIA";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EscanerRecipe — Drawer que cubre todo el flujo de escaneo de récipe médico.
@@ -37,9 +37,9 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [estado, setEstado] = useState<Estado>("idle");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [resultados, setResultados] = useState<MedicamentoReceta[]>([]);
+  const [resultados, setResultados] = useState<MedicamentoRecetaUI[]>([]);
   const [errorMsg, setErrorMsg] = useState("");
-  const [expandidos, setExpandidos] = useState<Set<number>>(new Set());
+  const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
   const { agregar, estaEnLista } = useListaMedica();
 
   // Resetear al abrir
@@ -75,7 +75,11 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
       const respuesta = await analizarRecipe(file);
 
       if (respuesta.status === "success" && respuesta.data && respuesta.data.length > 0) {
-        setResultados(respuesta.data);
+        const conId: MedicamentoRecetaUI[] = respuesta.data.map((med) => ({
+          ...med,
+          id: crypto.randomUUID(),
+        }));
+        setResultados(conId);
         setEstado("results");
       } else {
         setErrorMsg(respuesta.message || "No pudimos leer los medicamentos del récipe.");
@@ -137,11 +141,11 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
 
   // ── Toggle alternativas ──────────────────────────────────────────────────
 
-  const toggleAlternativas = (idx: number) => {
+  const toggleAlternativas = (id: string) => {
     setExpandidos((prev) => {
       const next = new Set(prev);
-      if (next.has(idx)) next.delete(idx);
-      else next.add(idx);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -301,12 +305,12 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
 
                 {/* Lista scrollable */}
                 <ul className="min-h-0 flex-1 divide-y divide-border overflow-y-auto px-5">
-                  {resultados.map((med, idx) => {
+                  {resultados.map((med) => {
                     const enLista = estaEnLista(recipeId(med.medicamento));
-                    const altExpandidas = expandidos.has(idx);
+                    const altExpandidas = expandidos.has(med.id);
 
                     return (
-                      <li key={idx} className="py-3.5">
+                      <li key={med.id} className="py-3.5">
                         {/* Medicamento original */}
                         <div className="flex items-start gap-3">
                           <div className="min-w-0 flex-1">
@@ -351,7 +355,7 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
                           <div className="mt-2">
                             <button
                               type="button"
-                              onClick={() => toggleAlternativas(idx)}
+                              onClick={() => toggleAlternativas(med.id)}
                               className="flex items-center gap-1 text-xs font-medium text-sky-700 hover:text-sky-800 transition-colors"
                             >
                               {altExpandidas ? (

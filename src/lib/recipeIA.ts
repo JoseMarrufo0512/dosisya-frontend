@@ -25,6 +25,17 @@ export interface MedicamentoReceta {
   alternativas: string[];
 }
 
+/**
+ * Medicamento extraído del récipe, enriquecido con un ID estable de sesión
+ * de escaneo (no persiste, no viene del backend) — usado como `key` de React
+ * y para rastrear qué ítem está en modo edición. No confundir con el ID
+ * derivado del nombre (`recipeId()` en EscanerRecipe.tsx), que se usa para
+ * comparar contra el carrito.
+ */
+export interface MedicamentoRecetaUI extends MedicamentoReceta {
+  id: string;
+}
+
 /** Respuesta envuelta del endpoint POST /api/v1/ia/analizar-recipe */
 export interface RespuestaRecipe {
   status: "success" | "error";
