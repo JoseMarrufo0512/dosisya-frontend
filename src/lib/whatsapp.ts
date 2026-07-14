@@ -8,6 +8,11 @@ export function sanitizarTelefono(telefono?: string | null): string {
 /**
  * Mensaje multi-producto: saludo con branding, lista numerada con cantidades
  * y una pregunta clara. WhatsApp renderiza *asteriscos* como negrita.
+ *
+ * Si algún ítem viene del escáner de récipe con IA (`origen: "escaner_recipe"`),
+ * añade una nota para el farmacéutico — la IA puede leer mal un medicamento
+ * y quien despacha debe confirmar contra la receta física, sin importar si el
+ * paciente reformuló algo o no (spec: quitar-reformular-recipe-design.md).
  */
 export function construirMensajeLista(farmaciaNombre: string, lista: ItemLista[]): string {
   const lineas = lista.map((item, i) => {
@@ -16,10 +21,20 @@ export function construirMensajeLista(farmaciaNombre: string, lista: ItemLista[]
     return `${i + 1}. ${item.nombre}${marca} · ${item.presentacion}${cantidad}`;
   });
 
+  const tieneItemsDeEscaner = lista.some((item) => item.origen === "escaner_recipe");
+  const notaFarmaceutico = tieneItemsDeEscaner
+    ? [
+        "",
+        "⚠️ Algunos productos fueron leídos por IA desde una foto de récipe — " +
+          "por favor confirma contra la receta física antes de despachar.",
+      ]
+    : [];
+
   return [
     `Hola ${farmaciaNombre} 👋 Vengo de *DosisYa* y quiero pedir:`,
     "",
     ...lineas,
+    ...notaFarmaceutico,
     "",
     "¿Tienen disponibilidad? ¡Gracias!",
   ].join("\n");
