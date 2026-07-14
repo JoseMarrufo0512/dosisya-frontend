@@ -14,6 +14,7 @@ import {
   ChevronUp,
   ImageOff,
   Trash2,
+  Pencil,
 } from "lucide-react";
 import { useListaMedica } from "@/hooks/useListaMedica";
 import { analizarRecipe, validarImagen, type MedicamentoRecetaUI } from "@/lib/recipeIA";
@@ -41,6 +42,9 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
   const [resultados, setResultados] = useState<MedicamentoRecetaUI[]>([]);
   const [errorMsg, setErrorMsg] = useState("");
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
+  const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [borradorMedicamento, setBorradorMedicamento] = useState("");
+  const [borradorCantidad, setBorradorCantidad] = useState("");
   const { agregar, estaEnLista } = useListaMedica();
 
   // Resetear al abrir
@@ -52,6 +56,7 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
         setResultados([]);
         setErrorMsg("");
         setExpandidos(new Set());
+        setEditandoId(null);
       }
       onOpenChange(open);
     },
@@ -104,6 +109,7 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
     setResultados([]);
     setErrorMsg("");
     setExpandidos(new Set());
+    setEditandoId(null);
   };
 
   // ── Añadir a lista ───────────────────────────────────────────────────────
@@ -144,6 +150,33 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
 
   const quitarMedicamento = (id: string) => {
     setResultados((prev) => prev.filter((m) => m.id !== id));
+  };
+
+  // ── Reformular medicamento ───────────────────────────────────────────────
+  // Corrección manual del usuario (lo que ÉL ve en la receta física) — NUNCA
+  // una inferencia de la IA a partir de síntomas u otros medicamentos.
+
+  const iniciarReformular = (med: MedicamentoRecetaUI) => {
+    setEditandoId(med.id);
+    setBorradorMedicamento(med.medicamento);
+    setBorradorCantidad(med.cantidad);
+  };
+
+  const cancelarReformular = () => {
+    setEditandoId(null);
+  };
+
+  const guardarReformular = () => {
+    const nombre = borradorMedicamento.trim();
+    if (!nombre) return;
+    setResultados((prev) =>
+      prev.map((m) =>
+        m.id === editandoId
+          ? { ...m, medicamento: nombre, cantidad: borradorCantidad.trim(), alternativas: [] }
+          : m,
+      ),
+    );
+    setEditandoId(null);
   };
 
   // ── Toggle alternativas ──────────────────────────────────────────────────
@@ -318,120 +351,182 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
 
                     return (
                       <li key={med.id} className="py-3.5">
-                        {/* Medicamento original */}
-                        <div className="flex items-start gap-3">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium text-foreground">{med.medicamento}</p>
-                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-800">
-                                📋 Receta
-                              </span>
+                        {editandoId === med.id ? (
+                          /* Modo edición: el usuario corrige lo que ÉL ve en la receta física */
+                          <div className="rounded-xl bg-sky-50/60 p-3">
+                            <label
+                              className="text-xs font-medium text-muted-foreground"
+                              htmlFor={`med-${med.id}`}
+                            >
+                              Medicamento
+                            </label>
+                            <input
+                              id={`med-${med.id}`}
+                              type="text"
+                              value={borradorMedicamento}
+                              onChange={(e) => setBorradorMedicamento(e.target.value)}
+                              placeholder="Nombre del medicamento"
+                              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                            />
+                            <label
+                              className="mt-2 block text-xs font-medium text-muted-foreground"
+                              htmlFor={`cant-${med.id}`}
+                            >
+                              Cantidad (opcional)
+                            </label>
+                            <input
+                              id={`cant-${med.id}`}
+                              type="text"
+                              value={borradorCantidad}
+                              onChange={(e) => setBorradorCantidad(e.target.value)}
+                              placeholder="Ej: 30 tabletas"
+                              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                            />
+                            <div className="mt-3 flex gap-2">
+                              <button
+                                type="button"
+                                onClick={guardarReformular}
+                                disabled={!borradorMedicamento.trim()}
+                                className="flex-1 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-opacity disabled:opacity-40"
+                              >
+                                Guardar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={cancelarReformular}
+                                className="flex-1 rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground"
+                              >
+                                Cancelar
+                              </button>
                             </div>
-                            {med.cantidad && (
-                              <p className="mt-0.5 text-xs text-muted-foreground">
-                                Cantidad: {med.cantidad}
-                              </p>
-                            )}
                           </div>
+                        ) : (
+                          <>
+                            {/* Medicamento original */}
+                            <div className="flex items-start gap-3">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium text-foreground">{med.medicamento}</p>
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-800">
+                                    📋 Receta
+                                  </span>
+                                </div>
+                                {med.cantidad && (
+                                  <p className="mt-0.5 text-xs text-muted-foreground">
+                                    Cantidad: {med.cantidad}
+                                  </p>
+                                )}
+                              </div>
 
-                          <div className="flex shrink-0 items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => quitarMedicamento(med.id)}
-                              aria-label={`Quitar ${med.medicamento} de los resultados`}
-                              className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-red-600"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => handleAgregarMedicamento(med.medicamento, med.cantidad)}
-                              className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all active:scale-[0.97] ${
-                                enLista
-                                  ? "border border-emerald-300 bg-emerald-50 text-emerald-700"
-                                  : "bg-primary text-primary-foreground hover:opacity-90"
-                              }`}
-                            >
-                              {enLista ? (
-                                <>
-                                  <CheckCircle2 className="h-3.5 w-3.5" />
-                                  En lista
-                                </>
-                              ) : (
-                                <>
-                                  <Plus className="h-3.5 w-3.5" />
-                                  Añadir
-                                </>
-                              )}
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Alternativas */}
-                        {med.alternativas.length > 0 && (
-                          <div className="mt-2">
-                            <button
-                              type="button"
-                              onClick={() => toggleAlternativas(med.id)}
-                              className="flex items-center gap-1 text-xs font-medium text-sky-700 hover:text-sky-800 transition-colors"
-                            >
-                              {altExpandidas ? (
-                                <ChevronUp className="h-3.5 w-3.5" />
-                              ) : (
-                                <ChevronDown className="h-3.5 w-3.5" />
-                              )}
-                              {med.alternativas.length} alternativa
-                              {med.alternativas.length !== 1 ? "s" : ""} sugerida
-                              {med.alternativas.length !== 1 ? "s" : ""} por IA
-                            </button>
-
-                            <AnimatePresence>
-                              {altExpandidas && (
-                                <motion.div
-                                  initial={{ height: 0, opacity: 0 }}
-                                  animate={{ height: "auto", opacity: 1 }}
-                                  exit={{ height: 0, opacity: 0 }}
-                                  className="overflow-hidden"
+                              <div className="flex shrink-0 items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => iniciarReformular(med)}
+                                  aria-label={`Reformular ${med.medicamento}`}
+                                  className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-sky-600"
                                 >
-                                  <div className="mt-2 space-y-2 rounded-xl bg-sky-50/60 p-3">
-                                    {med.alternativas.map((alt) => {
-                                      const altEnLista = estaEnLista(recipeId(alt));
-                                      return (
-                                        <div
-                                          key={alt}
-                                          className="flex items-center justify-between"
-                                        >
-                                          <div className="flex items-center gap-2">
-                                            <p className="text-sm text-foreground">{alt}</p>
-                                            <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-800">
-                                              🤖 Alternativa IA
-                                            </span>
-                                          </div>
-                                          <button
-                                            type="button"
-                                            onClick={() => handleAgregarMedicamento(alt, "")}
-                                            className={`flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-all active:scale-[0.97] ${
-                                              altEnLista
-                                                ? "text-emerald-700"
-                                                : "text-sky-700 hover:bg-sky-100"
-                                            }`}
-                                          >
-                                            {altEnLista ? (
-                                              <CheckCircle2 className="h-3 w-3" />
-                                            ) : (
-                                              <Plus className="h-3 w-3" />
-                                            )}
-                                            {altEnLista ? "Añadido" : "Añadir"}
-                                          </button>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-                          </div>
+                                  <Pencil className="h-4 w-4" />
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => quitarMedicamento(med.id)}
+                                  aria-label={`Quitar ${med.medicamento} de los resultados`}
+                                  className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-red-600"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleAgregarMedicamento(med.medicamento, med.cantidad)}
+                                  className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all active:scale-[0.97] ${
+                                    enLista
+                                      ? "border border-emerald-300 bg-emerald-50 text-emerald-700"
+                                      : "bg-primary text-primary-foreground hover:opacity-90"
+                                  }`}
+                                >
+                                  {enLista ? (
+                                    <>
+                                      <CheckCircle2 className="h-3.5 w-3.5" />
+                                      En lista
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Plus className="h-3.5 w-3.5" />
+                                      Añadir
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Alternativas */}
+                            {med.alternativas.length > 0 && (
+                              <div className="mt-2">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleAlternativas(med.id)}
+                                  className="flex items-center gap-1 text-xs font-medium text-sky-700 hover:text-sky-800 transition-colors"
+                                >
+                                  {altExpandidas ? (
+                                    <ChevronUp className="h-3.5 w-3.5" />
+                                  ) : (
+                                    <ChevronDown className="h-3.5 w-3.5" />
+                                  )}
+                                  {med.alternativas.length} alternativa
+                                  {med.alternativas.length !== 1 ? "s" : ""} sugerida
+                                  {med.alternativas.length !== 1 ? "s" : ""} por IA
+                                </button>
+
+                                <AnimatePresence>
+                                  {altExpandidas && (
+                                    <motion.div
+                                      initial={{ height: 0, opacity: 0 }}
+                                      animate={{ height: "auto", opacity: 1 }}
+                                      exit={{ height: 0, opacity: 0 }}
+                                      className="overflow-hidden"
+                                    >
+                                      <div className="mt-2 space-y-2 rounded-xl bg-sky-50/60 p-3">
+                                        {med.alternativas.map((alt) => {
+                                          const altEnLista = estaEnLista(recipeId(alt));
+                                          return (
+                                            <div
+                                              key={alt}
+                                              className="flex items-center justify-between"
+                                            >
+                                              <div className="flex items-center gap-2">
+                                                <p className="text-sm text-foreground">{alt}</p>
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-800">
+                                                  🤖 Alternativa IA
+                                                </span>
+                                              </div>
+                                              <button
+                                                type="button"
+                                                onClick={() => handleAgregarMedicamento(alt, "")}
+                                                className={`flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-all active:scale-[0.97] ${
+                                                  altEnLista
+                                                    ? "text-emerald-700"
+                                                    : "text-sky-700 hover:bg-sky-100"
+                                                }`}
+                                              >
+                                                {altEnLista ? (
+                                                  <CheckCircle2 className="h-3 w-3" />
+                                                ) : (
+                                                  <Plus className="h-3 w-3" />
+                                                )}
+                                                {altEnLista ? "Añadido" : "Añadir"}
+                                              </button>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            )}
+                          </>
                         )}
                       </li>
                     );
