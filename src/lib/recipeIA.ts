@@ -11,6 +11,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { API_BASE } from "./api";
+import { comprimirImagen } from "./comprimirImagen";
 
 // ── Tipos del contrato backend ──────────────────────────────────────────────
 
@@ -66,7 +67,10 @@ export function validarImagen(file: File): string | null {
 // Solo en desarrollo: en producción JAMÁS mostrar medicamentos falsos como si
 // fueran del récipe del paciente. Cuando el endpoint real exista, borrar todo
 // el bloque MOCK.
-const MOCK_HABILITADO = import.meta.env.DEV;
+// Solo en desarrollo, y desactivable con VITE_RECIPE_MOCK=off para probar
+// contra el backend real (uvicorn local vía proxy de Vite).
+const MOCK_HABILITADO =
+  import.meta.env.DEV && import.meta.env.VITE_RECIPE_MOCK !== "off";
 
 const MOCK_RESPUESTA: RespuestaRecipe = {
   status: "success",
@@ -75,17 +79,18 @@ const MOCK_RESPUESTA: RespuestaRecipe = {
     {
       medicamento: "Losartán",
       cantidad: "2 cajas",
-      alternativas: ["Valsartán", "Candesartán"],
+      // REGLA MÉDICA: alternativas = MISMO principio activo (marcas/genéricos).
+      alternativas: ["Losartán genérico 50mg", "Cormac (Losartán)"],
     },
     {
       medicamento: "Metformina",
       cantidad: "1 caja",
-      alternativas: ["Gliclazida"],
+      alternativas: ["Glucofage (Metformina)"],
     },
     {
       medicamento: "Atorvastatina",
       cantidad: "1 caja",
-      alternativas: ["Rosuvastatina", "Simvastatina"],
+      alternativas: ["Lipitor (Atorvastatina)"],
     },
   ],
 };
@@ -110,12 +115,15 @@ export async function analizarRecipe(imagen: File): Promise<RespuestaRecipe> {
   }
   // ── FIN MOCK ──
 
+  // Comprimir primero (nunca lanza): 3-8 MB de cámara → ~300 KB JPEG.
+  const imagenAEnviar = await comprimirImagen(imagen);
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), RECIPE_TIMEOUT_MS);
 
   try {
     const formData = new FormData();
-    formData.append("file", imagen);
+    formData.append("file", imagenAEnviar);
 
     const res = await fetch(`${API_BASE}/api/v1/ia/analizar-recipe`, {
       method: "POST",
