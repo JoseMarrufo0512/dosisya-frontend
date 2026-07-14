@@ -54,6 +54,7 @@ export function TarjetaResultado({
       presentacion: resultado.presentacion,
       marcaComercial: resultado.marca_comercial ?? null,
       precioRefUsd: resultado.precio_usd,
+      origen: "lista_medica",
     });
     toast.success(
       item.cantidad > 1

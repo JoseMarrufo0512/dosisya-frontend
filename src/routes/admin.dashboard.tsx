@@ -17,11 +17,16 @@ import {
   Boxes,
   AlertTriangle,
   RefreshCw,
+  ScanLine,
+  Receipt,
+  Clock,
+  Loader2,
 } from "lucide-react";
 import { UploadInventory } from "@/components/UploadInventory";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -30,6 +35,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { z } from "zod";
+import { toast } from "sonner";
 
 import { API_BASE } from "@/lib/api";
 
@@ -46,13 +53,31 @@ export const Route = createFileRoute("/admin/dashboard")({
   component: AdminDashboard,
 });
 
-type SectionId = "inicio" | "inventario" | "configuracion" | "soporte";
+type SectionId = "inicio" | "inventario" | "facturacion" | "configuracion" | "soporte";
+
+type LeadReciente = {
+  lead_id: string;
+  fecha_hora: string;
+  tipo_interaccion: string;
+  medicamento_buscado_id?: string | null;
+  medicamento_nombre?: string | null;
+  medicamento_marca?: string | null;
+};
 
 type DashboardData = {
   nombre_farmacia?: string;
   pacientes_interesados_hoy?: number;
-  busquedas_zona?: number;
+  busquedas_zona?: number | null;
+  busquedas_zona_disponible?: boolean;
   total_inventario?: number;
+  leads_recipe_mes_actual?: number;
+  total_leads_mes_actual?: number;
+  deuda_estimada_usd?: number;
+  tarifa_por_lead_usd?: number;
+  leads_recientes?: LeadReciente[];
+  whatsapp?: string;
+  sector?: string;
+  punto_referencia?: string;
   inventario?: Array<{
     id?: string;
     nombre: string;
@@ -118,14 +143,20 @@ function AdminDashboard() {
     navigate({ to: "/admin/login" });
   };
 
-  const nombre =
-    data?.nombre_farmacia ??
-    (typeof window !== "undefined" ? localStorage.getItem("nombre_farmacia") : null) ??
-    "tu farmacia";
+  const [nombre, setNombre] = useState<string>(
+    typeof window !== "undefined"
+      ? localStorage.getItem("nombre_farmacia") ?? "tu farmacia"
+      : "tu farmacia",
+  );
+
+  useEffect(() => {
+    if (data?.nombre_farmacia) setNombre(data.nombre_farmacia);
+  }, [data]);
 
   const nav: { id: SectionId; label: string; icon: React.ReactNode }[] = [
     { id: "inicio", label: "Inicio", icon: <Home className="h-4 w-4" /> },
     { id: "inventario", label: "Mi Inventario", icon: <Package className="h-4 w-4" /> },
+    { id: "facturacion", label: "Facturación", icon: <Receipt className="h-4 w-4" /> },
     { id: "configuracion", label: "Configuración", icon: <Settings className="h-4 w-4" /> },
     { id: "soporte", label: "Soporte", icon: <LifeBuoy className="h-4 w-4" /> },
   ];
@@ -219,7 +250,12 @@ function AdminDashboard() {
                   }}
                 />
               )}
-              {section === "configuracion" && <ConfiguracionSection nombre={nombre} />}
+              {section === "facturacion" && (
+                <FacturacionSection loading={loading} data={data} />
+              )}
+              {section === "configuracion" && (
+                <ConfiguracionSection data={data} onNombreActualizado={setNombre} />
+              )}
               {section === "soporte" && <SoporteSection />}
             </motion.div>
           </AnimatePresence>
@@ -311,7 +347,7 @@ function InicioSection({
   data: DashboardData | null;
   inventoryCount: number | null;
 }) {
-  const totalInv = inventoryCount ?? data?.total_inventario ?? 0;
+  const totalInv = inventoryCount ?? data?.inventario?.length ?? 0;
   return (
     <div className="space-y-6">
       <div>
@@ -346,7 +382,7 @@ function InicioSection({
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           label="Pacientes interesados hoy"
           value={loading ? null : (data?.pacientes_interesados_hoy?.toString() ?? "—")}
@@ -356,8 +392,18 @@ function InicioSection({
         />
         <MetricCard
           label="Búsquedas cerca de ti"
-          value={loading ? null : (data?.busquedas_zona?.toString() ?? "—")}
-          hint="Personas buscando medicinas en tu zona"
+          value={
+            loading
+              ? null
+              : data?.busquedas_zona_disponible === false
+                ? "Pronto"
+                : (data?.busquedas_zona?.toString() ?? "—")
+          }
+          hint={
+            data?.busquedas_zona_disponible === false
+              ? "Métrica en camino"
+              : "Personas buscando medicinas en tu zona"
+          }
           icon={<Search className="h-5 w-5" />}
           accent="bg-primary/10 text-primary"
         />
@@ -367,6 +413,13 @@ function InicioSection({
           hint="Medicamentos cargados en tu farmacia"
           icon={<Boxes className="h-5 w-5" />}
           accent="bg-secondary/20 text-[#0a2463]"
+        />
+        <MetricCard
+          label="Pedidos con récipe este mes"
+          value={loading ? null : (data?.leads_recipe_mes_actual?.toString() ?? "—")}
+          hint="Leads que llegaron con récipe digitalizado"
+          icon={<ScanLine className="h-5 w-5" />}
+          accent="bg-emerald-100 text-emerald-700"
         />
       </div>
 
@@ -397,12 +450,7 @@ function InventarioSection({
   data: DashboardData | null;
   onUploaded: (count: number) => void;
 }) {
-  const items = data?.inventario ?? [
-    { nombre: "Acetaminofén 500mg", presentacion: "Tabletas x 10", stock: 45, precio_usd: 1.2 },
-    { nombre: "Ibuprofeno 400mg", presentacion: "Tabletas x 20", stock: 30, precio_usd: 2.5 },
-    { nombre: "Amoxicilina 500mg", presentacion: "Cápsulas x 21", stock: 12, precio_usd: 4.8 },
-    { nombre: "Loratadina 10mg", presentacion: "Tabletas x 10", stock: 28, precio_usd: 1.8 },
-  ];
+  const items = data?.inventario ?? [];
 
   return (
     <div className="space-y-6">
@@ -495,7 +543,122 @@ function InventarioSection({
   );
 }
 
-function ConfiguracionSection({ nombre }: { nombre: string }) {
+const SECTORES_CONFIG: { value: string; label: string }[] = [
+  { value: "acarigua", label: "Acarigua" },
+  { value: "araure", label: "Araure" },
+];
+
+const configSchema = z.object({
+  nombre_farmacia: z
+    .string()
+    .trim()
+    .min(2, "Mínimo 2 caracteres")
+    .max(200, "Máximo 200 caracteres"),
+  whatsapp: z
+    .string()
+    .regex(/^\+58\d{10}$/, "Formato: +58 seguido de 10 dígitos"),
+  sector: z.string().min(1, "Selecciona un sector"),
+  punto_referencia: z
+    .string()
+    .trim()
+    .min(5, "Describe brevemente (mín. 5 caracteres)")
+    .max(180, "Máximo 180 caracteres"),
+});
+
+const formatoTelefonoVE = (raw: string) => {
+  let d = raw.replace(/\D/g, "");
+  if (d.startsWith("58")) d = d.slice(2);
+  if (d.startsWith("0")) d = d.slice(1);
+  d = d.slice(0, 10);
+  return d ? `+58${d}` : "";
+};
+
+function ConfiguracionSection({
+  data,
+  onNombreActualizado,
+}: {
+  data: DashboardData | null;
+  onNombreActualizado: (nombre: string) => void;
+}) {
+  const [nombre, setNombre] = useState(data?.nombre_farmacia ?? "");
+  const [whatsapp, setWhatsapp] = useState(data?.whatsapp ?? "");
+  const [sector, setSector] = useState(data?.sector ?? "");
+  const [referencia, setReferencia] = useState(data?.punto_referencia ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  // Precargar cuando llegue/cambie la data del dashboard.
+  useEffect(() => {
+    if (!data) return;
+    setNombre(data.nombre_farmacia ?? "");
+    setWhatsapp(data.whatsapp ?? "");
+    setSector(data.sector ?? "");
+    setReferencia(data.punto_referencia ?? "");
+  }, [data]);
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    const parsed = configSchema.safeParse({
+      nombre_farmacia: nombre,
+      whatsapp,
+      sector,
+      punto_referencia: referencia,
+    });
+    if (!parsed.success) {
+      const errs: Record<string, string> = {};
+      for (const issue of parsed.error.issues) {
+        const k = issue.path[0] as string;
+        if (k && !errs[k]) errs[k] = issue.message;
+      }
+      setFieldErrors(errs);
+      return;
+    }
+    setFieldErrors({});
+
+    const farmaciaId =
+      typeof window !== "undefined" ? localStorage.getItem("farmacia_id") : null;
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+    if (!farmaciaId) {
+      setError("Sesión no encontrada. Inicia sesión de nuevo.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/farmacias/${farmaciaId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(parsed.data),
+      });
+      if (res.status === 401 || res.status === 403) {
+        setError("Tu sesión expiró. Inicia sesión de nuevo.");
+        return;
+      }
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(
+          json?.detail || json?.error?.message || "No se pudieron guardar los cambios",
+        );
+      }
+      const nombreGuardado: string = json?.data?.nombre_farmacia ?? parsed.data.nombre_farmacia;
+      if (typeof window !== "undefined") {
+        localStorage.setItem("nombre_farmacia", nombreGuardado);
+      }
+      onNombreActualizado(nombreGuardado);
+      toast.success("Datos actualizados con éxito");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al guardar");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
@@ -505,13 +668,98 @@ function ConfiguracionSection({ nombre }: { nombre: string }) {
         </p>
       </div>
 
-      <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 space-y-4 shadow-[0_4px_20px_-12px_rgba(10,36,99,0.15)]">
-        <Field label="Nombre de la farmacia" defaultValue={nombre} />
-        <Field label="WhatsApp" defaultValue="+58 412 000 0000" />
-        <Field label="Sector / Urbanización" defaultValue="Acarigua" />
-        <Field label="Punto de referencia" defaultValue="Av. Principal" />
-        <Button className="w-full sm:w-auto">Guardar cambios</Button>
-      </div>
+      <form
+        onSubmit={onSubmit}
+        className="bg-card border border-border rounded-2xl p-5 sm:p-6 space-y-4 shadow-[0_4px_20px_-12px_rgba(10,36,99,0.15)]"
+        noValidate
+      >
+        <div className="space-y-1.5">
+          <Label htmlFor="cfg-nombre">Nombre de la farmacia</Label>
+          <Input
+            id="cfg-nombre"
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            maxLength={200}
+            aria-invalid={Boolean(fieldErrors.nombre_farmacia)}
+          />
+          {fieldErrors.nombre_farmacia && (
+            <p className="text-xs text-destructive">{fieldErrors.nombre_farmacia}</p>
+          )}
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="cfg-whatsapp">WhatsApp</Label>
+          <Input
+            id="cfg-whatsapp"
+            value={whatsapp}
+            onChange={(e) => setWhatsapp(formatoTelefonoVE(e.target.value))}
+            placeholder="+584121234567"
+            inputMode="tel"
+            maxLength={13}
+            aria-invalid={Boolean(fieldErrors.whatsapp)}
+          />
+          {fieldErrors.whatsapp && (
+            <p className="text-xs text-destructive">{fieldErrors.whatsapp}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label>Sector / Ciudad</Label>
+          <div className="grid grid-cols-2 gap-2">
+            {SECTORES_CONFIG.map((s) => {
+              const active = sector === s.value;
+              return (
+                <button
+                  key={s.value}
+                  type="button"
+                  onClick={() => setSector(s.value)}
+                  className={`h-11 rounded-md border text-sm font-medium transition-colors inline-flex items-center justify-center gap-2 ${
+                    active
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background border-input hover:bg-accent"
+                  }`}
+                >
+                  <MapPin className="h-4 w-4" /> {s.label}
+                </button>
+              );
+            })}
+          </div>
+          {fieldErrors.sector && (
+            <p className="text-xs text-destructive">{fieldErrors.sector}</p>
+          )}
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="cfg-ref">Punto de referencia</Label>
+          <Input
+            id="cfg-ref"
+            value={referencia}
+            onChange={(e) => setReferencia(e.target.value)}
+            placeholder="Ej. A 2 cuadras de la plaza Bolívar"
+            maxLength={180}
+            aria-invalid={Boolean(fieldErrors.punto_referencia)}
+          />
+          {fieldErrors.punto_referencia && (
+            <p className="text-xs text-destructive">{fieldErrors.punto_referencia}</p>
+          )}
+        </div>
+
+        {error && (
+          <div className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
+            {error}
+          </div>
+        )}
+
+        <Button type="submit" disabled={saving} className="w-full sm:w-auto">
+          {saving ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Guardando…
+            </>
+          ) : (
+            "Guardar cambios"
+          )}
+        </Button>
+      </form>
     </div>
   );
 }
@@ -560,6 +808,154 @@ function SoporteSection() {
   );
 }
 
+const ETIQUETA_INTERACCION: Record<string, string> = {
+  clic_whatsapp: "Clic a WhatsApp",
+  click_whatsapp: "Clic a WhatsApp",
+  clic_llamar: "Llamada",
+  ver_mapa: "Vio el mapa",
+  abrir_mapa: "Vio el mapa",
+  ver_detalle: "Vio el detalle",
+  expandir_detalle: "Vio el detalle",
+  compartir: "Compartió",
+  capture_pantalla: "Captura de pantalla",
+};
+
+function etiquetaInteraccion(tipo: string): string {
+  return ETIQUETA_INTERACCION[tipo] ?? tipo;
+}
+
+function formatoFechaLead(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("es-VE", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function FacturacionSection({
+  loading,
+  data,
+}: {
+  loading: boolean;
+  data: DashboardData | null;
+}) {
+  const leadsMes = data?.total_leads_mes_actual ?? 0;
+  const tarifa = data?.tarifa_por_lead_usd ?? 0;
+  const deuda = data?.deuda_estimada_usd ?? 0;
+  const leads = data?.leads_recientes ?? [];
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Facturación</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Lo que has generado este mes en DosisYa.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <MetricCard
+          label="Leads este mes"
+          value={loading ? null : leadsMes.toString()}
+          hint="Interacciones facturables"
+          icon={<TrendingUp className="h-5 w-5" />}
+          accent="bg-primary/10 text-primary"
+        />
+        <MetricCard
+          label="Tarifa por lead"
+          value={loading ? null : `$${tarifa.toFixed(2)}`}
+          hint="Costo por cada interacción"
+          icon={<Receipt className="h-5 w-5" />}
+          accent="bg-secondary/20 text-[#0a2463]"
+        />
+        <MetricCard
+          label="Deuda estimada del mes"
+          value={loading ? null : `$${deuda.toFixed(2)}`}
+          hint="Total a facturar este mes"
+          icon={<MessageCircle className="h-5 w-5" />}
+          accent="bg-[#25d366]/10 text-[#0f7c3a]"
+        />
+      </div>
+
+      <div>
+        <h2 className="text-lg font-bold text-foreground mb-3">Leads recientes</h2>
+        <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-[0_4px_20px_-12px_rgba(10,36,99,0.15)]">
+          {loading ? (
+            <div className="p-6 space-y-3">
+              {[...Array(4)].map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : leads.length === 0 ? (
+            <div className="p-12 text-center">
+              <Clock className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground">
+                Aún no hay leads este período. Aparecerán aquí en cuanto lleguen.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Desktop table */}
+              <div className="hidden sm:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/40">
+                      <TableHead className="px-6">Fecha</TableHead>
+                      <TableHead>Interacción</TableHead>
+                      <TableHead>Medicamento</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {leads.map((l) => (
+                      <TableRow key={l.lead_id}>
+                        <TableCell className="px-6 text-muted-foreground whitespace-nowrap">
+                          {formatoFechaLead(l.fecha_hora)}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {etiquetaInteraccion(l.tipo_interaccion)}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {l.medicamento_nombre
+                            ? `${l.medicamento_nombre}${l.medicamento_marca ? ` · ${l.medicamento_marca}` : ""}`
+                            : "—"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile cards */}
+              <ul className="sm:hidden divide-y divide-border">
+                {leads.map((l) => (
+                  <li key={l.lead_id} className="p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-medium">
+                        {etiquetaInteraccion(l.tipo_interaccion)}
+                      </span>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {formatoFechaLead(l.fecha_hora)}
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1 truncate">
+                      {l.medicamento_nombre
+                        ? `${l.medicamento_nombre}${l.medicamento_marca ? ` · ${l.medicamento_marca}` : ""}`
+                        : "Sin medicamento asociado"}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MetricCard({
   label,
   value,
@@ -591,17 +987,6 @@ function MetricCard({
           {icon}
         </div>
       </div>
-    </div>
-  );
-}
-
-function Field({ label, defaultValue }: { label: string; defaultValue?: string }) {
-  return (
-    <div className="space-y-1.5">
-      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-        {label}
-      </label>
-      <Input defaultValue={defaultValue} />
     </div>
   );
 }

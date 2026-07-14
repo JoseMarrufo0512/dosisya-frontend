@@ -123,7 +123,7 @@ export function SelectorFarmacia({ lista, lat, lng }: SelectorFarmaciaProps) {
     // 1) Lead CPC multi-producto — keepalive sobrevive a la navegación
     registrarLeadLista(
       farmacia.farmaciaId,
-      lista.map((i) => i.medicamentoId),
+      lista.map((i) => ({ medicamentoId: i.medicamentoId, origen: i.origen })),
     );
 
     // 2) Abrir WhatsApp con la lista completa

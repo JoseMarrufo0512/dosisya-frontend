@@ -8,6 +8,7 @@
 #
 # Tipos que se prueban (los mismos que dispara TarjetaResultado.tsx):
 #   clic_whatsapp, ver_mapa, capture_pantalla, compartir
+#   + origen: escaner_recipe, lista_medica, inválido→422
 # ============================================================
 
 set -euo pipefail
@@ -79,8 +80,49 @@ test_lead "ver_mapa"        "Botón Ver mapa"
 test_lead "capture_pantalla" "Botón Guardar info"
 test_lead "compartir"       "Botón Compartir"
 
+# ─── Tests de origen (lead premium — spec 2026-07-13) ───────
+test_lead_origen() {
+  local origen="$1"
+  local desc="$2"
+
+  BODY="{\"farmacia_id\":\"$FARMACIA_ID\",\"tipo_interaccion\":\"clic_whatsapp\",\"origen\":\"$origen\"}"
+  RESPONSE=$(curl -s -w "\n%{http_code}" \
+    -X POST "$API/api/v1/leads/" \
+    -H "Content-Type: application/json" \
+    -d "$BODY")
+  HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+  BODY_RESP=$(echo "$RESPONSE" | head -n -1)
+  ORIGEN_RESP=$(echo "$BODY_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['data'].get('origen','?'))" 2>/dev/null || echo "parse_error")
+
+  if [ "$HTTP_CODE" = "201" ] && [ "$ORIGEN_RESP" = "$origen" ]; then
+    echo -e "  ${GREEN}✅ PASS${NC}  [origen=$origen] $desc → eco correcto"
+  elif [ "$HTTP_CODE" = "429" ]; then
+    echo -e "  ${YELLOW}⚡ RATE-LIMIT${NC}  [origen=$origen] $desc"
+  else
+    echo -e "  ${RED}❌ FAIL${NC}  [origen=$origen] $desc → HTTP $HTTP_CODE, origen eco: $ORIGEN_RESP"
+  fi
+}
+
 echo ""
-echo "3. Valor inválido (debe retornar 400)..."
+echo "3. Leads con origen (premium tracking)..."
+test_lead_origen "escaner_recipe" "Lead premium desde escáner"
+test_lead_origen "lista_medica"   "Lead de lista manual"
+
+# Origen inválido debe rechazarse con 422
+HTTP_INVALIDO=$(curl -s -o /dev/null -w "%{http_code}" \
+  -X POST "$API/api/v1/leads/" \
+  -H "Content-Type: application/json" \
+  -d "{\"farmacia_id\":\"$FARMACIA_ID\",\"tipo_interaccion\":\"clic_whatsapp\",\"origen\":\"recomendacion\"}")
+if [ "$HTTP_INVALIDO" = "422" ]; then
+  echo -e "  ${GREEN}✅ PASS${NC}  [origen inválido] rechazado con 422"
+elif [ "$HTTP_INVALIDO" = "429" ]; then
+  echo -e "  ${YELLOW}⚡ RATE-LIMIT${NC}  [origen inválido]"
+else
+  echo -e "  ${RED}❌ FAIL${NC}  [origen inválido] → HTTP $HTTP_INVALIDO (esperado 422)"
+fi
+
+echo ""
+echo "4. Valor inválido (debe retornar 400)..."
 INVALID=$(curl -s -o /dev/null -w "%{http_code}" \
   -X POST "$API/api/v1/leads/" \
   -H "Content-Type: application/json" \
@@ -92,7 +134,7 @@ else
 fi
 
 echo ""
-echo "4. Farmacia inexistente (debe retornar 404)..."
+echo "5. Farmacia inexistente (debe retornar 404)..."
 NOTFOUND=$(curl -s -o /dev/null -w "%{http_code}" \
   -X POST "$API/api/v1/leads/" \
   -H "Content-Type: application/json" \
