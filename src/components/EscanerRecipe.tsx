@@ -15,6 +15,7 @@ import {
   ImageOff,
   Trash2,
   Pencil,
+  AlertTriangle,
 } from "lucide-react";
 import { useListaMedica } from "@/hooks/useListaMedica";
 import { analizarRecipe, validarImagen, type MedicamentoRecetaUI } from "@/lib/recipeIA";
@@ -340,6 +341,16 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
                   </Drawer.Title>
                   <p className="text-xs text-muted-foreground">
                     Añádelos a tu lista y elige farmacia después.
+                  </p>
+                </div>
+
+                {/* Aviso: resultado generado por IA, requiere verificación humana */}
+                <div className="mx-5 mb-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                  <p>
+                    <strong>Resultado generado por IA.</strong> Puede contener errores —
+                    verifica los medicamentos antes de continuar. El farmacéutico también
+                    debe confirmarlos.
                   </p>
                 </div>
 
