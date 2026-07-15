@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { Drawer } from "vaul";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { API_BASE } from "@/lib/api";
 import type { FarmaciaAdmin } from "@/lib/adminApi";
+import { manejarNoAutorizado } from "@/lib/adminAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +27,7 @@ export function EditarFarmaciaDrawer({
   onOpenChange: (o: boolean) => void;
   onSaved: () => void;
 }) {
+  const navigate = useNavigate();
   const [nombre, setNombre] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [sector, setSector] = useState("");
@@ -58,7 +61,10 @@ export function EditarFarmaciaDrawer({
         }),
       });
       if (res.status === 401 || res.status === 403) {
-        throw new Error("Tu sesión expiró. Inicia sesión de nuevo.");
+        toast.error("Tu sesión expiró. Inicia sesión de nuevo.");
+        manejarNoAutorizado();
+        navigate({ to: "/super/login" });
+        return;
       }
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {

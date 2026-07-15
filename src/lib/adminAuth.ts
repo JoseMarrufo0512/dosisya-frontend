@@ -28,3 +28,12 @@ export function cerrarSesionSuper(): void {
   localStorage.removeItem(K_ROL);
   localStorage.removeItem(K_EMAIL);
 }
+
+/**
+ * Maneja una respuesta 401/403 de la API de superadmin: limpia la sesión local.
+ * La navegación a /super/login queda a cargo del componente que llama a esta
+ * función (requiere useNavigate, solo disponible dentro de componentes React).
+ */
+export function manejarNoAutorizado(): void {
+  cerrarSesionSuper();
+}

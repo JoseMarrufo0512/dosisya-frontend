@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { cambiarEstadoFarmacia, type AdminFarmaciasResponse, type EstadoAfiliacion, type FarmaciaAdmin } from "@/lib/adminApi";
+import { manejarNoAutorizado } from "@/lib/adminAuth";
 import { Button } from "@/components/ui/button";
 import { EditarFarmaciaDrawer } from "@/components/super/EditarFarmaciaDrawer";
 
@@ -22,6 +24,7 @@ export function TablaFarmacias({
   data, token, onReload,
 }: { data: AdminFarmaciasResponse; token: string; onReload: () => void }) {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [filtro, setFiltro] = useState<"todas" | EstadoAfiliacion>("todas");
   const [editar, setEditar] = useState<FarmaciaAdmin | null>(null);
 
@@ -33,7 +36,15 @@ export function TablaFarmacias({
       qc.invalidateQueries({ queryKey: ["admin-farmacias"] });
       onReload();
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Error"),
+    onError: (e) => {
+      if (e instanceof Error && e.message === "UNAUTHORIZED") {
+        toast.error("Tu sesión expiró. Inicia sesión de nuevo.");
+        manejarNoAutorizado();
+        navigate({ to: "/super/login" });
+        return;
+      }
+      toast.error(e instanceof Error ? e.message : "Error");
+    },
   });
 
   const filas = useMemo(
