@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Drawer } from "vaul";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -31,16 +31,16 @@ export function EditarFarmaciaDrawer({
   const [referencia, setReferencia] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Precargar al abrir.
-  const cargar = (f: FarmaciaAdmin) => {
-    setNombre(f.nombre); setWhatsapp(f.whatsapp);
-    setSector(f.sector); setReferencia(f.punto_referencia);
-  };
-
-  const onOpen = (o: boolean) => {
-    if (o && farmacia) cargar(farmacia);
-    onOpenChange(o);
-  };
+  // Precargar cada vez que cambia la farmacia a editar (no depender de onOpenChange:
+  // vaul solo lo dispara desde su propio estado interno, no cuando el padre cambia `open`).
+  useEffect(() => {
+    if (farmacia) {
+      setNombre(farmacia.nombre);
+      setWhatsapp(farmacia.whatsapp);
+      setSector(farmacia.sector);
+      setReferencia(farmacia.punto_referencia);
+    }
+  }, [farmacia?.id]);
 
   const guardar = async () => {
     if (!farmacia) return;
@@ -57,7 +57,13 @@ export function EditarFarmaciaDrawer({
           nombre_farmacia: nombre, whatsapp, sector, punto_referencia: referencia,
         }),
       });
-      if (!res.ok) throw new Error("No se pudo guardar");
+      if (res.status === 401 || res.status === 403) {
+        throw new Error("Tu sesión expiró. Inicia sesión de nuevo.");
+      }
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(json?.detail || json?.error?.message || "No se pudo guardar");
+      }
       toast.success("Farmacia actualizada");
       onSaved();
       onOpenChange(false);
@@ -69,7 +75,7 @@ export function EditarFarmaciaDrawer({
   };
 
   return (
-    <Drawer.Root open={open} onOpenChange={onOpen}>
+    <Drawer.Root open={open} onOpenChange={onOpenChange}>
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 bg-black/40 z-50" />
         <Drawer.Content className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl bg-card p-6 max-h-[90vh] overflow-auto">
