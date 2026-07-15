@@ -485,7 +485,10 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
       if (farmaciaId) localStorage.setItem("farmacia_id", farmaciaId);
       if (json?.data?.auth_token) localStorage.setItem("auth_token", json.data.auth_token);
       setDone(true);
-      setTimeout(() => navigate({ to: "/admin/dashboard" }), 900);
+      // La farmacia entra en estado 'pendiente' (gate de aprobación del súper admin):
+      // no aparece en búsquedas hasta que un superadmin la apruebe. Igual la llevamos
+      // a su panel; el dashboard funciona, solo que aún no recibe leads.
+      setTimeout(() => navigate({ to: "/admin/dashboard" }), 1600);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al registrar");
     } finally {
@@ -500,10 +503,11 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
           <Check className="h-7 w-7 text-secondary-foreground" />
         </div>
         <h2 className="mt-4 text-xl font-bold text-foreground">
-          ¡Bienvenido a DosisYa!
+          ¡Recibimos tu afiliación!
         </h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Llevándote a tu panel…
+          Estamos revisando tu farmacia. Te activaremos pronto para que empieces a
+          recibir pacientes. Mientras, ya puedes preparar tu inventario en el panel.
         </p>
       </div>
     );
