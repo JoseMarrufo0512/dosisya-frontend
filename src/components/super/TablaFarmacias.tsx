@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { cambiarEstadoFarmacia, type AdminFarmaciasResponse, type EstadoAfiliacion, type FarmaciaAdmin } from "@/lib/adminApi";
 import { Button } from "@/components/ui/button";
+import { EditarFarmaciaDrawer } from "@/components/super/EditarFarmaciaDrawer";
 
 const FILTROS: Array<{ value: "todas" | EstadoAfiliacion; label: string }> = [
   { value: "todas", label: "Todas" },
@@ -22,6 +23,7 @@ export function TablaFarmacias({
 }: { data: AdminFarmaciasResponse; token: string; onReload: () => void }) {
   const qc = useQueryClient();
   const [filtro, setFiltro] = useState<"todas" | EstadoAfiliacion>("todas");
+  const [editar, setEditar] = useState<FarmaciaAdmin | null>(null);
 
   const mut = useMutation({
     mutationFn: ({ id, estado }: { id: string; estado: EstadoAfiliacion }) =>
@@ -65,7 +67,8 @@ export function TablaFarmacias({
           <tbody>
             {filas.map((f) => (
               <Fila key={f.id} f={f} pending={mut.isPending}
-                onEstado={(estado) => mut.mutate({ id: f.id, estado })} />
+                onEstado={(estado) => mut.mutate({ id: f.id, estado })}
+                onEditar={() => setEditar(f)} />
             ))}
             {filas.length === 0 && (
               <tr><td colSpan={4} className="px-3 py-6 text-center text-muted-foreground">Sin farmacias en este filtro.</td></tr>
@@ -73,12 +76,20 @@ export function TablaFarmacias({
           </tbody>
         </table>
       </div>
+
+      <EditarFarmaciaDrawer
+        farmacia={editar}
+        token={token}
+        open={editar !== null}
+        onOpenChange={(o) => { if (!o) setEditar(null); }}
+        onSaved={() => { onReload(); }}
+      />
     </div>
   );
 }
 
-function Fila({ f, pending, onEstado }: {
-  f: FarmaciaAdmin; pending: boolean; onEstado: (e: EstadoAfiliacion) => void;
+function Fila({ f, pending, onEstado, onEditar }: {
+  f: FarmaciaAdmin; pending: boolean; onEstado: (e: EstadoAfiliacion) => void; onEditar: () => void;
 }) {
   return (
     <tr className="border-t">
@@ -101,10 +112,16 @@ function Fila({ f, pending, onEstado }: {
             </>
           )}
           {f.estado_afiliacion === "activa" && (
-            <Button size="sm" variant="outline" disabled={pending} onClick={() => onEstado("inactiva")}>Suspender</Button>
+            <>
+              <Button size="sm" variant="outline" disabled={pending} onClick={() => onEstado("inactiva")}>Suspender</Button>
+              <Button size="sm" variant="ghost" disabled={pending} onClick={onEditar}>Editar</Button>
+            </>
           )}
           {f.estado_afiliacion === "inactiva" && (
-            <Button size="sm" disabled={pending} onClick={() => onEstado("activa")}>Reactivar</Button>
+            <>
+              <Button size="sm" disabled={pending} onClick={() => onEstado("activa")}>Reactivar</Button>
+              <Button size="sm" variant="ghost" disabled={pending} onClick={onEditar}>Editar</Button>
+            </>
           )}
         </div>
       </td>
