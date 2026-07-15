@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SuperLoginRouteImport } from './routes/super.login'
+import { Route as SuperDashboardRouteImport } from './routes/super.dashboard'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 
@@ -22,6 +23,11 @@ const IndexRoute = IndexRouteImport.update({
 const SuperLoginRoute = SuperLoginRouteImport.update({
   id: '/super/login',
   path: '/super/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SuperDashboardRoute = SuperDashboardRouteImport.update({
+  id: '/super/dashboard',
+  path: '/super/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminLoginRoute = AdminLoginRouteImport.update({
@@ -39,12 +45,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/login': typeof AdminLoginRoute
+  '/super/dashboard': typeof SuperDashboardRoute
   '/super/login': typeof SuperLoginRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/login': typeof AdminLoginRoute
+  '/super/dashboard': typeof SuperDashboardRoute
   '/super/login': typeof SuperLoginRoute
 }
 export interface FileRoutesById {
@@ -52,20 +60,38 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/login': typeof AdminLoginRoute
+  '/super/dashboard': typeof SuperDashboardRoute
   '/super/login': typeof SuperLoginRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin/dashboard' | '/admin/login' | '/super/login'
+  fullPaths:
+    | '/'
+    | '/admin/dashboard'
+    | '/admin/login'
+    | '/super/dashboard'
+    | '/super/login'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin/dashboard' | '/admin/login' | '/super/login'
-  id: '__root__' | '/' | '/admin/dashboard' | '/admin/login' | '/super/login'
+  to:
+    | '/'
+    | '/admin/dashboard'
+    | '/admin/login'
+    | '/super/dashboard'
+    | '/super/login'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin/dashboard'
+    | '/admin/login'
+    | '/super/dashboard'
+    | '/super/login'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
   AdminLoginRoute: typeof AdminLoginRoute
+  SuperDashboardRoute: typeof SuperDashboardRoute
   SuperLoginRoute: typeof SuperLoginRoute
 }
 
@@ -83,6 +109,13 @@ declare module '@tanstack/react-router' {
       path: '/super/login'
       fullPath: '/super/login'
       preLoaderRoute: typeof SuperLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/super/dashboard': {
+      id: '/super/dashboard'
+      path: '/super/dashboard'
+      fullPath: '/super/dashboard'
+      preLoaderRoute: typeof SuperDashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/login': {
@@ -106,6 +139,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminDashboardRoute: AdminDashboardRoute,
   AdminLoginRoute: AdminLoginRoute,
+  SuperDashboardRoute: SuperDashboardRoute,
   SuperLoginRoute: SuperLoginRoute,
 }
 export const routeTree = rootRouteImport
