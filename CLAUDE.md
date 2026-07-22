@@ -7,7 +7,7 @@ Este archivo es la fuente de verdad para el contexto persistente de Claude Code.
 - **Modelo B2B:** Cobro por "Leads" (interacciones hacia WhatsApp de la farmacia). NO cobramos comisiones por venta.
 - **Filosofía B2C:** "Cero Fricción". El paciente NO se registra (sin login) para buscar, armar su Lista Médica ni contactar.
 - **Logística:** Descentralizada. La "última milla" la asume la farmacia (motorizados propios o Yummy).
-- **IA:** Normalización de inventario B2B con Gemini (ya en backend) y escáner de recetas con Gemini Vision (pendiente — spec en `docs/features/receta-ia-y-carrito.md`).
+- **IA:** Normalización de inventario B2B con Gemini (ya en backend) y escáner de recetas con Gemini Vision — **operativo**: endpoint backend `POST /api/v1/ia/analizar-recipe` (`routers/ia.py`) + cliente frontend `src/lib/recipeIA.ts` (mock eliminado en commit `c85f157`). Spec en `docs/features/receta-ia-y-carrito.md`.
 
 ## 2. Stack Técnico Real
 - **Frontend:** React 19 + TanStack Start (SSR) + TanStack Router (file-based) + Vite 7 + TypeScript. Estilos: TailwindCSS 4 (CSS-first, sin tailwind.config). UI: shadcn/ui + Radix, framer-motion, sonner (toasts), vaul (drawer), lucide-react. HTTP state: TanStack Query. Forms: Zod + React Hook Form.
