@@ -5,9 +5,9 @@
 // Gemini (regla #5 de CLAUDE.md). Este módulo solo transporta la imagen y
 // recibe el JSON de resultados.
 //
-// MOCK TEMPORAL: mientras el endpoint del backend no exista, usamos un mock
-// con datos hardcoded y un delay simulado. Busca "MOCK" para ubicar el código
-// que hay que eliminar cuando el endpoint esté listo.
+// Contrato verificado contra DosisYa-Backend/src/dosisya/routers/ia.py:
+//   POST /api/v1/ia/analizar-recipe — mismos MIME, mismo límite de 10 MB y
+//   mismo envelope {status, message, data:[{medicamento, cantidad, alternativas}]}.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { API_BASE } from "./api";
@@ -61,45 +61,6 @@ export function validarImagen(file: File): string | null {
   return null; // válida
 }
 
-// ── MOCK TEMPORAL — eliminar cuando el backend implemente el endpoint ────────
-// Simula una respuesta exitosa tras 3s de delay para desarrollar la UI.
-
-// Solo en desarrollo: en producción JAMÁS mostrar medicamentos falsos como si
-// fueran del récipe del paciente. Cuando el endpoint real exista, borrar todo
-// el bloque MOCK.
-// Solo en desarrollo, y desactivable con VITE_RECIPE_MOCK=off para probar
-// contra el backend real (uvicorn local vía proxy de Vite).
-const MOCK_HABILITADO =
-  import.meta.env.DEV && import.meta.env.VITE_RECIPE_MOCK !== "off";
-
-const MOCK_RESPUESTA: RespuestaRecipe = {
-  status: "success",
-  message: "Récipe analizado exitosamente.",
-  data: [
-    {
-      medicamento: "Losartán",
-      cantidad: "2 cajas",
-      // REGLA MÉDICA: alternativas = MISMO principio activo (marcas/genéricos).
-      alternativas: ["Losartán genérico 50mg", "Cormac (Losartán)"],
-    },
-    {
-      medicamento: "Metformina",
-      cantidad: "1 caja",
-      alternativas: ["Glucofage (Metformina)"],
-    },
-    {
-      medicamento: "Atorvastatina",
-      cantidad: "1 caja",
-      alternativas: ["Lipitor (Atorvastatina)"],
-    },
-  ],
-};
-
-async function mockAnalizarRecipe(): Promise<RespuestaRecipe> {
-  await new Promise((r) => setTimeout(r, 3000));
-  return MOCK_RESPUESTA;
-}
-
 // ── Función principal ───────────────────────────────────────────────────────
 
 /**
@@ -109,12 +70,6 @@ async function mockAnalizarRecipe(): Promise<RespuestaRecipe> {
  * @returns Respuesta tipada con los medicamentos extraídos.
  */
 export async function analizarRecipe(imagen: File): Promise<RespuestaRecipe> {
-  // ── MOCK: quitar este bloque cuando el endpoint exista ──
-  if (MOCK_HABILITADO) {
-    return mockAnalizarRecipe();
-  }
-  // ── FIN MOCK ──
-
   // Comprimir primero (nunca lanza): 3-8 MB de cámara → ~300 KB JPEG.
   const imagenAEnviar = await comprimirImagen(imagen);
 

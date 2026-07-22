@@ -7,13 +7,16 @@
 //   - lat / lng      → ST_Y/ST_X(f.ubicacion) AS lat/lng
 //   - medicamento_nombre → im.principio_activo AS medicamento_nombre
 
+/** Nivel de suscripción de una farmacia (columna nivel_suscripcion en BD). */
+export type NivelSuscripcion = "gratuita" | "premium";
+
 export interface ResultadoFarmacia {
   farmacia_id: string;
   farmacia_nombre: string;
   direccion: string;
   /** Número de WhatsApp (alias de telefono_whatsapp en el backend) */
   whatsapp: string;
-  nivel_suscripcion: "premium" | "gratuita";
+  nivel_suscripcion: NivelSuscripcion;
   /** Calculado server-side: nivel_suscripcion === 'premium' */
   es_premium: boolean;
   tiene_delivery: boolean;
@@ -71,10 +74,6 @@ if (import.meta.env.DEV) {
     `[DosisYa API] Backend → ${API_BASE || "(proxy Vite → localhost:8000)"}`
   );
 }
-
-// Alias de conveniencia para consumidores existentes
-export type Coords = { lat: number; lng: number };
-export type Resultado = ResultadoFarmacia;
 
 export async function buscarMedicamentos(
   params: ParamsBusqueda,
