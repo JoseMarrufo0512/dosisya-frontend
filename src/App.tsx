@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, FormEvent } from "react";
 import { useGeolocalizacion } from "./hooks/useGeolocalizacion";
 import { useBuscarMedicamentos } from "./hooks/useBuscarMedicamentos";
+import { useDebounce } from "./hooks/useDebounce";
 import { useBusquedasRecientes, useRecordatorios } from "./hooks/useLocalStorage";
 import { useListaMedica } from "./hooks/useListaMedica";
 import { HeroBusqueda } from "./components/HeroBusqueda";
@@ -42,6 +43,8 @@ export default function App() {
 
   const [estado, setEstado] = useState<"hero" | "resultados">("hero");
   const [query, setQuery] = useState("");
+  // Búsqueda mientras se escribe: query "retrasado" ~350ms (ver useEffect abajo).
+  const queryDebounced = useDebounce(query, 350);
   const [conDelivery, setConDelivery] = useState(false);
   const [radio, setRadio] = useState(5000);
   const [terminoBuscado, setTerminoBuscado] = useState("");
@@ -121,13 +124,19 @@ export default function App() {
   const latEfectiva = geo.lat ?? LAT_ACARIGUA;
   const lngEfectiva = geo.lng ?? LNG_ACARIGUA;
 
-  const ejecutarBusqueda = async (termino: string, radioKm: number = 5) => {
+  const ejecutarBusqueda = async (
+    termino: string,
+    radioKm: number = 5,
+    opts?: { guardarReciente?: boolean },
+  ) => {
     if (!termino.trim()) return;
 
     setEstado("resultados");
     setTerminoBuscado(termino);
     setQuery(termino);
-    recientes.agregar(termino);
+    // La búsqueda en vivo NO guarda en "recientes" (llenaría de fragmentos:
+    // los, losa, losart…). Solo el submit explícito (Enter/botón/chip) lo hace.
+    if (opts?.guardarReciente ?? true) recientes.agregar(termino);
     setRadio(radioKm * 1000);
     setFiltros(FILTROS_INICIALES); // cada búsqueda arranca sin filtros
     setCompararClaves([]);
@@ -140,6 +149,17 @@ export default function App() {
     e.preventDefault();
     ejecutarBusqueda(query, 5);
   };
+
+  // ─── Búsqueda mientras se escribe ──────────────────────────────────────────
+  // Dispara ~350ms tras la última tecla, desde 2 caracteres. No guarda en
+  // "recientes" y omite el término ya buscado (evita repetir tras Enter/chip).
+  useEffect(() => {
+    const termino = queryDebounced.trim();
+    if (termino.length < 2 || termino === terminoBuscado) return;
+    void ejecutarBusqueda(queryDebounced, 5, { guardarReciente: false });
+    // ejecutarBusqueda y terminoBuscado se leen frescos en cada disparo del effect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryDebounced]);
 
   const handleRecalcular = () => {
     if (navigator.geolocation) {
