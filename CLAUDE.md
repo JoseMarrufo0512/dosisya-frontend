@@ -34,6 +34,7 @@ Este archivo es la fuente de verdad para el contexto persistente de Claude Code.
 - `leads_interacciones.medicamento_buscado_id` es **un UUID único (nullable), NO un array**. Lista multi-producto = fan-out: un POST por medicamento (commit `ac555ca`).
 - El campo del lead es **`tipo_interaccion`** (no `tipo_accion`). Valores canónicos del enum PG: `clic_whatsapp`, `clic_llamar`, `ver_mapa`, `ver_detalle`, `compartir`, `capture_pantalla`. Existen alias legacy de Lovable (`click_whatsapp`, `abrir_mapa`, `expandir_detalle`) — usar siempre los canónicos.
 - `POST /api/v1/leads/` lleva **trailing slash** (commit `b071fc0`).
+- La sección **Configuración** del panel edita vía `PATCH /api/v1/farmacias/{id}` (sin trailing slash). El body usa **nombres alias del dashboard** (`nombre_farmacia`, `whatsapp`), NO las columnas de BD (`nombre`, `telefono_whatsapp`) — el backend mapea. El dashboard GET devuelve `whatsapp`/`sector`/`punto_referencia` para precargar el form. Antes de 2026-07-13 ese endpoint NO existía en el backend (feature frontend contra contrato fantasma → 404 al guardar).
 - Código pegado desde chats externos (zips, bloques de comandos): pasar por el skill `integrar-codigo-externo` — commit de respaldo primero, validar contra schema y dependencias reales.
 
 ## 6. Comandos
