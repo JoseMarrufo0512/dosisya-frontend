@@ -251,7 +251,6 @@ function LoginCard({ onSwitch }: { onSwitch: () => void }) {
         body: JSON.stringify({ correo: parsed.data.email, password: parsed.data.password }),
       });
       const data = (await response.json()) as LoginResponse;
-      console.log("Respuesta login DosisYa:", data);
 
       if (!response.ok) {
         throw new Error("Credenciales inválidas");
