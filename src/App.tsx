@@ -21,6 +21,7 @@ import NavegacionPaciente, { type TabPaciente } from "@/components/navegacion/Na
 import { MenuMasPaciente } from "@/components/paciente/MenuMasPaciente";
 import { HojaLoginPaciente } from "@/components/paciente/HojaLoginPaciente";
 import { HojaChatIA } from "@/components/paciente/HojaChatIA";
+import { BurbujaAsistenteIA } from "@/components/paciente/BurbujaAsistenteIA";
 import { ChevronRight, MapPin, Pill } from "lucide-react";
 import {
   type Filtros,
@@ -544,6 +545,7 @@ export default function App() {
         onAbrirChatIA={() => setChatIAAbierto(true)}
       />
       <HojaChatIA open={chatIAAbierto} onClose={() => setChatIAAbierto(false)} />
+      <BurbujaAsistenteIA visible={!chatIAAbierto} onAbrir={() => setChatIAAbierto(true)} />
       <HojaLoginPaciente open={loginAbierto} onOpenChange={setLoginAbierto} />
 
       {/* Capa de vuelo (packFly): el paquete arquea del botón "+" al carrito */}
