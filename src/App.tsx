@@ -3,6 +3,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { useGeolocalizacion } from "./hooks/useGeolocalizacion";
 import { useBuscarMedicamentos } from "./hooks/useBuscarMedicamentos";
 import { useDebounce } from "./hooks/useDebounce";
+import { useBackDismiss } from "./hooks/useBackDismiss";
 import { useBusquedasRecientes, useRecordatorios } from "./hooks/useLocalStorage";
 import { useListaMedica } from "./hooks/useListaMedica";
 import { HeroBusqueda } from "./components/HeroBusqueda";
@@ -69,6 +70,13 @@ export default function App() {
   const [tab, setTab] = useState<TabPaciente>("buscar");
   const [masAbierto, setMasAbierto] = useState(false);
   const [loginAbierto, setLoginAbierto] = useState(false);
+
+  // Botón atrás del teléfono → cierra el overlay abierto (uno por capa).
+  useBackDismiss(listaAbierta, () => setListaAbierta(false));
+  useBackDismiss(escanerAbierto, () => setEscanerAbierto(false));
+  useBackDismiss(comparadorAbierto, () => setComparadorAbierto(false));
+  useBackDismiss(loginAbierto, () => setLoginAbierto(false));
+  useBackDismiss(masAbierto, () => setMasAbierto(false));
 
   // packFly: paquete que vuela del botón "+" al ícono de Lista (handoff).
   const reduceMotion = useReducedMotion();

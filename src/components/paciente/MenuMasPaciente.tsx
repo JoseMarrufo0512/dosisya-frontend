@@ -28,6 +28,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useRecordatorios } from "@/hooks/useLocalStorage";
+import { useBackDismiss } from "@/hooks/useBackDismiss";
 
 const WA_SOPORTE =
   "https://wa.me/584120000000?text=Hola%20DosisYa%2C%20necesito%20ayuda";
@@ -42,6 +43,8 @@ export function MenuMasPaciente({
   onOpenChange: (v: boolean) => void;
 }) {
   const [sub, setSub] = useState<SubHoja>(null);
+  // Botón atrás cierra la sub-hoja abierta (Recordatorios/Comparar/Ayuda/IA).
+  useBackDismiss(sub !== null, () => setSub(null));
   const abrir = (s: SubHoja) => {
     onOpenChange(false);
     setSub(s);
