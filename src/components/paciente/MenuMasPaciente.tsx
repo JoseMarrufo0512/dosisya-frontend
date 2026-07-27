@@ -29,8 +29,7 @@ import { useRecordatorios } from "@/hooks/useLocalStorage";
 import { useBackDismiss } from "@/hooks/useBackDismiss";
 import { HojaBase, Asa } from "./_hojaBase";
 
-const WA_SOPORTE =
-  "https://wa.me/584120000000?text=Hola%20DosisYa%2C%20necesito%20ayuda";
+const WA_SOPORTE = "https://wa.me/584120000000?text=Hola%20DosisYa%2C%20necesito%20ayuda";
 
 type SubHoja = "recordatorios" | "comparar" | "ayuda" | null;
 
@@ -63,7 +62,13 @@ export function MenuMasPaciente({
           >
             <Asa />
             <Drawer.Title
-              style={{ fontSize: 17, fontWeight: 500, color: "var(--tinta)", letterSpacing: "-0.02em", padding: "0 2px 6px" }}
+              style={{
+                fontSize: 17,
+                fontWeight: 500,
+                color: "var(--tinta)",
+                letterSpacing: "-0.02em",
+                padding: "0 2px 6px",
+              }}
             >
               Más opciones
             </Drawer.Title>
@@ -125,7 +130,14 @@ function HojaRecordatorios({ open, onClose }: { open: boolean; onClose: () => vo
 
   return (
     <HojaBase open={open} onClose={onClose} titulo="Recordatorios de resurtido">
-      <p style={{ fontSize: 13, color: "var(--tinta-suave)", lineHeight: 1.5, margin: "10px 0 14px" }}>
+      <p
+        style={{
+          fontSize: 13,
+          color: "var(--tinta-suave)",
+          lineHeight: 1.5,
+          margin: "10px 0 14px",
+        }}
+      >
         Guardamos en este dispositivo cuándo reponer tus medicamentos.
       </p>
 
@@ -139,24 +151,50 @@ function HojaRecordatorios({ open, onClose }: { open: boolean; onClose: () => vo
             borderRadius: 16,
           }}
         >
-          <div style={{ fontSize: 14, fontWeight: 500, color: "var(--tinta)" }}>Sin recordatorios aún</div>
+          <div style={{ fontSize: 14, fontWeight: 500, color: "var(--tinta)" }}>
+            Sin recordatorios aún
+          </div>
           <div style={{ fontSize: 12.5, color: "var(--tinta-tenue)", marginTop: 3 }}>
             Agrega un medicamento abajo o desde sus resultados de búsqueda.
           </div>
         </div>
       ) : (
-        <ul style={{ display: "flex", flexDirection: "column", gap: 10, margin: 0, padding: 0, listStyle: "none" }}>
+        <ul
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+            margin: 0,
+            padding: 0,
+            listStyle: "none",
+          }}
+        >
           {recordatorios.map((r) => (
             <li
               key={r.termino}
               className="flex items-center gap-3"
-              style={{ background: "var(--blanco)", border: "1px solid var(--borde)", borderRadius: 14, padding: "13px 14px" }}
+              style={{
+                background: "var(--blanco)",
+                border: "1px solid var(--borde)",
+                borderRadius: 14,
+                padding: "13px 14px",
+              }}
             >
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 500, color: "var(--tinta)", textTransform: "capitalize" }}>
+                <div
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 500,
+                    color: "var(--tinta)",
+                    textTransform: "capitalize",
+                  }}
+                >
                   {r.termino}
                 </div>
-                <div className="dy-num" style={{ fontSize: 12, color: "var(--tinta-tenue)", marginTop: 1 }}>
+                <div
+                  className="dy-num"
+                  style={{ fontSize: 12, color: "var(--tinta-tenue)", marginTop: 1 }}
+                >
                   Próximo el {fmtFecha(r.proximoMs)}
                 </div>
               </div>
@@ -165,7 +203,11 @@ function HojaRecordatorios({ open, onClose }: { open: boolean; onClose: () => vo
                 aria-label={`Eliminar recordatorio de ${r.termino}`}
                 onClick={() => eliminar(r.termino)}
                 className="dy-foco flex h-9 w-9 items-center justify-center rounded-[10px]"
-                style={{ background: "var(--fondo-suave)", border: "1px solid var(--borde)", color: "var(--tinta-tenue)" }}
+                style={{
+                  background: "var(--fondo-suave)",
+                  border: "1px solid var(--borde)",
+                  color: "var(--tinta-tenue)",
+                }}
               >
                 <Trash2 className="h-4 w-4" aria-hidden="true" />
               </button>
@@ -220,13 +262,25 @@ function HojaRecordatorios({ open, onClose }: { open: boolean; onClose: () => vo
 function HojaComparar({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
     <HojaBase open={open} onClose={onClose} titulo="Comparar precios">
-      <p style={{ fontSize: 13, color: "var(--tinta-suave)", lineHeight: 1.55, margin: "10px 0 14px" }}>
-        Busca un medicamento y toca <strong style={{ color: "var(--tinta)" }}>Comparar</strong> en dos o más
-        resultados. Verás el mismo producto entre farmacias, ordenado por precio.
+      <p
+        style={{
+          fontSize: 13,
+          color: "var(--tinta-suave)",
+          lineHeight: 1.55,
+          margin: "10px 0 14px",
+        }}
+      >
+        Busca un medicamento y toca <strong style={{ color: "var(--tinta)" }}>Comparar</strong> en
+        dos o más resultados. Verás el mismo producto entre farmacias, ordenado por precio.
       </p>
       <div
         className="flex items-center gap-3"
-        style={{ background: "var(--blanco)", border: "1px solid var(--borde)", borderRadius: 14, padding: "13px 14px" }}
+        style={{
+          background: "var(--blanco)",
+          border: "1px solid var(--borde)",
+          borderRadius: 14,
+          padding: "13px 14px",
+        }}
       >
         <span
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
@@ -254,7 +308,13 @@ function HojaAyuda({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
     <HojaBase open={open} onClose={onClose} titulo="Ayuda">
       <div
-        style={{ margin: "14px 0 16px", background: "var(--blanco)", border: "1px solid var(--borde)", borderRadius: 16, overflow: "hidden" }}
+        style={{
+          margin: "14px 0 16px",
+          background: "var(--blanco)",
+          border: "1px solid var(--borde)",
+          borderRadius: 16,
+          overflow: "hidden",
+        }}
       >
         {FAQS.map((q, i) => (
           <a
@@ -271,7 +331,11 @@ function HojaAyuda({ open, onClose }: { open: boolean; onClose: () => void }) {
             }}
           >
             <span style={{ flex: 1, fontSize: 14 }}>{q}</span>
-            <ChevronRight className="h-[18px] w-[18px]" style={{ color: "#c3c6c0" }} aria-hidden="true" />
+            <ChevronRight
+              className="h-[18px] w-[18px]"
+              style={{ color: "#c3c6c0" }}
+              aria-hidden="true"
+            />
           </a>
         ))}
       </div>
@@ -316,7 +380,13 @@ function ItemMenu({
       type="button"
       onClick={onClick}
       className="dy-foco flex w-full items-center gap-3 text-left"
-      style={{ background: "none", border: 0, borderRadius: 14, padding: "13px 8px", cursor: "pointer" }}
+      style={{
+        background: "none",
+        border: 0,
+        borderRadius: 14,
+        padding: "13px 8px",
+        cursor: "pointer",
+      }}
     >
       <span
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
@@ -329,8 +399,12 @@ function ItemMenu({
         <Icono className="h-5 w-5" aria-hidden="true" />
       </span>
       <span style={{ flex: 1 }}>
-        <span style={{ display: "block", fontSize: 14.5, fontWeight: 500, color: "var(--tinta)" }}>{titulo}</span>
-        <span style={{ display: "block", fontSize: 12, color: "var(--tinta-tenue)", marginTop: 1 }}>{sub}</span>
+        <span style={{ display: "block", fontSize: 14.5, fontWeight: 500, color: "var(--tinta)" }}>
+          {titulo}
+        </span>
+        <span style={{ display: "block", fontSize: 12, color: "var(--tinta-tenue)", marginTop: 1 }}>
+          {sub}
+        </span>
       </span>
       <ChevronRight className="h-[18px] w-[18px]" style={{ color: "#c3c6c0" }} aria-hidden="true" />
     </button>

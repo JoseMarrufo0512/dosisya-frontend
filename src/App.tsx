@@ -87,7 +87,15 @@ export default function App() {
   // packFly: paquete que vuela del botón "+" al ícono de Lista (handoff).
   const reduceMotion = useReducedMotion();
   const flyerIdRef = useRef(0);
-  type Flyer = { id: number; x0: number; y0: number; x1: number; y1: number; xc: number; yc: number };
+  type Flyer = {
+    id: number;
+    x0: number;
+    y0: number;
+    x1: number;
+    y1: number;
+    xc: number;
+    yc: number;
+  };
   const [flyers, setFlyers] = useState<Flyer[]>([]);
 
   const volarAlCarrito = (desde: DOMRect) => {
@@ -418,7 +426,9 @@ export default function App() {
   const vistaFarmacias = (
     <div className="dosisya-ui min-h-screen" style={{ background: "var(--papel)" }}>
       <div className="mx-auto max-w-2xl px-4 py-6" style={{ paddingBottom: 104 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 500, color: "var(--tinta)", letterSpacing: "-0.02em" }}>
+        <h1
+          style={{ fontSize: 20, fontWeight: 500, color: "var(--tinta)", letterSpacing: "-0.02em" }}
+        >
           Farmacias cerca de ti
         </h1>
         <p style={{ fontSize: 12.5, color: "var(--tinta-tenue)", marginTop: 2 }}>
@@ -486,7 +496,14 @@ export default function App() {
             <div style={{ fontSize: 14.5, fontWeight: 500, color: "var(--tinta)", marginTop: 12 }}>
               Busca un medicamento
             </div>
-            <div style={{ fontSize: 12.5, color: "var(--tinta-tenue)", marginTop: 3, lineHeight: 1.45 }}>
+            <div
+              style={{
+                fontSize: 12.5,
+                color: "var(--tinta-tenue)",
+                marginTop: 3,
+                lineHeight: 1.45,
+              }}
+            >
               Te mostramos las farmacias cercanas que lo tienen disponible.
             </div>
             <button
@@ -536,14 +553,24 @@ export default function App() {
                   <MapPin className="h-[18px] w-[18px]" aria-hidden="true" />
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: "var(--tinta)" }} className="truncate">
+                  <div
+                    style={{ fontSize: 14, fontWeight: 500, color: "var(--tinta)" }}
+                    className="truncate"
+                  >
                     {f.nombre}
                   </div>
-                  <div className="dy-num truncate" style={{ fontSize: 12, color: "var(--tinta-tenue)", marginTop: 1 }}>
+                  <div
+                    className="dy-num truncate"
+                    style={{ fontSize: 12, color: "var(--tinta-tenue)", marginTop: 1 }}
+                  >
                     {fmtKm(f.distancia_m)} · {f.count} resultado{f.count === 1 ? "" : "s"}
                   </div>
                 </div>
-                <ChevronRight className="h-[18px] w-[18px] shrink-0" style={{ color: "#c3c6c0" }} aria-hidden="true" />
+                <ChevronRight
+                  className="h-[18px] w-[18px] shrink-0"
+                  style={{ color: "#c3c6c0" }}
+                  aria-hidden="true"
+                />
               </li>
             ))}
           </ul>

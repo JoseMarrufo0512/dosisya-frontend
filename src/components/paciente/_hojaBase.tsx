@@ -30,7 +30,14 @@ export function HojaBase({
           <Asa />
           <div className="flex items-center justify-between">
             {tituloNodo ?? (
-              <Drawer.Title style={{ fontSize: 17, fontWeight: 500, color: "var(--tinta)", letterSpacing: "-0.02em" }}>
+              <Drawer.Title
+                style={{
+                  fontSize: 17,
+                  fontWeight: 500,
+                  color: "var(--tinta)",
+                  letterSpacing: "-0.02em",
+                }}
+              >
                 {titulo}
               </Drawer.Title>
             )}
@@ -56,7 +63,13 @@ export function Asa() {
   return (
     <div
       aria-hidden="true"
-      style={{ width: 38, height: 4, borderRadius: 999, background: "#d8dad3", margin: "2px auto 14px" }}
+      style={{
+        width: 38,
+        height: 4,
+        borderRadius: 999,
+        background: "#d8dad3",
+        margin: "2px auto 14px",
+      }}
     />
   );
 }
