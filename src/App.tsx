@@ -4,6 +4,7 @@ import { useGeolocalizacion } from "./hooks/useGeolocalizacion";
 import { useBuscarMedicamentos } from "./hooks/useBuscarMedicamentos";
 import { useDebounce } from "./hooks/useDebounce";
 import { useBackDismiss } from "./hooks/useBackDismiss";
+import { useTasa } from "./hooks/useTasa";
 import { useBusquedasRecientes, useRecordatorios } from "./hooks/useLocalStorage";
 import { useListaMedica } from "./hooks/useListaMedica";
 import { HeroBusqueda } from "./components/HeroBusqueda";
@@ -42,6 +43,7 @@ export default function App() {
   const recientes = useBusquedasRecientes();
   const recordatorios = useRecordatorios();
   const { totalDistintos } = useListaMedica();
+  const tasa = useTasa();
 
   // Los recordatorios dependen de la fecha actual → solo evaluarlos tras montar
   // en el cliente, para no romper la hidratación SSR.
@@ -236,6 +238,7 @@ export default function App() {
       onToggleDelivery={() => setConDelivery(!conDelivery)}
       onEscanearRecipe={() => setEscanerAbierto(true)}
       onAbrirCuenta={() => setLoginAbierto(true)}
+      tasa={tasa?.tasa ?? null}
     />
   );
 
