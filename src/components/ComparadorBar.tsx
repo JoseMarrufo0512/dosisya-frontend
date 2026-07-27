@@ -25,8 +25,8 @@ export function ComparadorBar({ cantidad, onComparar, onLimpiar, elevada }: Comp
           transition={{ type: "spring", stiffness: 380, damping: 32 }}
           className={`fixed inset-x-0 z-40 px-4 ${
             elevada
-              ? "bottom-[calc(5.5rem+env(safe-area-inset-bottom))]"
-              : "bottom-0 pb-[calc(1rem+env(safe-area-inset-bottom))]"
+              ? "bottom-[calc(140px+env(safe-area-inset-bottom))]"
+              : "bottom-[calc(76px+env(safe-area-inset-bottom))]"
           }`}
         >
           <div className="mx-auto flex w-full max-w-md items-center gap-2 rounded-full border border-sky-200 bg-white px-2 py-2 shadow-lg">

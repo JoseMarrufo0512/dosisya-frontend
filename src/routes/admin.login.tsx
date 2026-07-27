@@ -128,13 +128,16 @@ function AuthPage() {
   const [mode, setMode] = useState<Mode>("login");
 
   return (
-    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-background">
+    <div
+      className="dosisya-ui min-h-screen w-full flex flex-col lg:flex-row"
+      style={{ background: "var(--papel)" }}
+    >
       {/* LEFT — Value proposition */}
       <aside
         className="relative lg:w-1/2 px-8 py-12 lg:p-16 flex flex-col justify-between overflow-hidden text-white"
         style={{
           background:
-            "linear-gradient(140deg, #0a2463 0%, #11357a 45%, #1f6f5c 100%)",
+            "linear-gradient(140deg, #0f4c3a 0%, #0e5a41 48%, #1d9e75 100%)",
         }}
       >
         {/* glow accents */}
@@ -190,14 +193,17 @@ function AuthPage() {
       </aside>
 
       {/* RIGHT — Glass card */}
-      <main className="lg:w-1/2 flex items-center justify-center px-4 py-12 lg:p-12 bg-gradient-to-br from-muted via-background to-accent">
+      <main
+        className="lg:w-1/2 flex items-center justify-center px-4 py-12 lg:p-12"
+        style={{ background: "var(--fondo-suave)" }}
+      >
         <div className="w-full max-w-md">
           <div
-            className="rounded-2xl border p-6 sm:p-8 backdrop-blur-xl"
+            className="rounded-2xl border p-6 sm:p-8"
             style={{
-              background: "rgba(255,255,255,0.72)",
-              borderColor: "rgba(255,255,255,0.6)",
-              boxShadow: "0 20px 60px -20px rgba(10,36,99,0.25)",
+              background: "var(--blanco)",
+              borderColor: "var(--borde)",
+              boxShadow: "0 20px 60px -24px rgba(22,24,26,0.20)",
             }}
           >
             {mode === "login" ? (

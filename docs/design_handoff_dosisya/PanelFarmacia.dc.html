@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap">
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:'Inter','Outfit',system-ui,-apple-system,sans-serif;background:#e7e6e1;-webkit-font-smoothing:antialiased;color:#16181a}
+button{font-family:inherit}
+input{font-family:inherit}
+a{color:#0f4c3a;text-decoration:none}a:hover{color:#1d9e75}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#d8dad3;border-radius:8px;border:3px solid transparent;background-clip:content-box}
+@keyframes scrIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px 20px;">
+  <div style="width:{{ frameW }};border-radius:{{ frameRadius }};overflow:hidden;box-shadow:0 40px 90px -40px rgba(22,24,26,0.5),0 0 0 1px rgba(22,24,26,0.06);background:#ffffff;">
+
+    <sc-if value="{{ isDesktop }}">
+      <div style="height:44px;background:#f2f3ef;border-bottom:1px solid #e8e9e5;display:flex;align-items:center;gap:8px;padding:0 16px;">
+        <span style="width:12px;height:12px;border-radius:50%;background:#e5484d;"></span>
+        <span style="width:12px;height:12px;border-radius:50%;background:#f5b731;"></span>
+        <span style="width:12px;height:12px;border-radius:50%;background:#1d9e75;"></span>
+        <div style="flex:1;display:flex;justify-content:center;"><div style="display:flex;align-items:center;gap:8px;background:#ffffff;border:1px solid #e8e9e5;border-radius:8px;padding:5px 14px;font-size:12.5px;color:#6b6f6b;min-width:300px;justify-content:center;"><svg viewBox="0 0 24 24" width="12" height="12" style="fill:none;stroke:#1d9e75;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>panel.dosisya.com{{ urlPath }}</div></div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ isMobile }}">
+      <div style="height:44px;background:#ffffff;border-bottom:1px solid #eef0eb;display:flex;align-items:center;justify-content:space-between;padding:0 22px;">
+        <span style="font-size:14px;font-weight:600;">9:41</span>
+        <span style="display:flex;align-items:center;gap:6px;"><svg viewBox="0 0 24 24" width="15" height="15" style="fill:none;stroke:#16181a;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round"><path d="M5 13a10 10 0 0 1 14 0"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M12 20h.01"/></svg><svg viewBox="0 0 26 14" width="23" height="12" style="fill:none;stroke:#16181a;stroke-width:1.4"><rect x="1" y="1" width="20" height="12" rx="3.2"/><rect x="3" y="3" width="14" height="8" rx="1.6" style="fill:#16181a;stroke:none"/></svg></span>
+      </div>
+    </sc-if>
+
+    <div style="display:flex;flex-direction:{{ shellDir }};height:{{ shellH }};background:#fafaf7;">
+
+      <sc-if value="{{ showDesktopNav }}">
+        <aside style="width:250px;flex:none;background:#0f4c3a;display:flex;flex-direction:column;padding:22px 16px;">
+          <div style="display:flex;align-items:center;gap:9px;padding:0 6px 4px;">
+            <div style="font-size:21px;font-weight:800;letter-spacing:-0.03em;color:#ffffff;">Dosis<span style="color:#5fd6a4;">Ya</span></div>
+            <span style="font-size:10px;font-weight:600;color:#0f4c3a;background:#5fd6a4;border-radius:6px;padding:2px 6px;letter-spacing:0.02em;">NEGOCIOS</span>
+          </div>
+          <div style="font-size:11.5px;color:rgba(255,255,255,0.5);padding:0 6px 18px;">{{ roleLabel }}</div>
+          <nav style="display:flex;flex-direction:column;gap:3px;">
+            <sc-for list="{{ navItems }}" as="item" hint-placeholder-count="5">
+              <button onClick="{{ item.onSel }}" style="display:flex;align-items:center;gap:11px;width:100%;border:0;background:{{ item.bg }};color:{{ item.color }};border-radius:11px;padding:10px 12px;cursor:pointer;text-align:left;font-size:13.5px;font-weight:{{ item.weight }};transition:background .18s ease;">
+                <svg viewBox="0 0 24 24" width="19" height="19" style="fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none;"><path d="{{ item.d }}"/></svg>
+                <span style="flex:1;">{{ item.label }}</span>
+                <sc-if value="{{ item.badge }}"><span style="background:#f5b731;color:#3a2a00;font-size:10.5px;font-weight:700;border-radius:999px;padding:1px 7px;">{{ item.badge }}</span></sc-if>
+              </button>
+            </sc-for>
+          </nav>
+          <div style="margin-top:auto;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.07);border-radius:13px;padding:10px 11px;">
+            <div style="width:34px;height:34px;border-radius:10px;background:#5fd6a4;color:#0f4c3a;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex:none;">{{ avatarInitials }}</div>
+            <div style="flex:1;min-width:0;"><div style="font-size:12.5px;font-weight:600;color:#ffffff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ userName }}</div><div style="font-size:11px;color:rgba(255,255,255,0.5);">{{ userMail }}</div></div>
+            <sc-if value="{{ canLogout }}"><button aria-label="Cerrar sesión" onClick="{{ logout }}" style="width:32px;height:32px;border-radius:9px;background:rgba(255,255,255,0.1);border:0;color:rgba(255,255,255,0.8);display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;"><svg viewBox="0 0 24 24" width="17" height="17" style="fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></button></sc-if>
+          </div>
+        </aside>
+      </sc-if>
+
+      <sc-if value="{{ showMobileNav }}">
+        <div style="background:#0f4c3a;padding:12px 12px 12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px 12px;">
+            <div style="font-size:18px;font-weight:800;letter-spacing:-0.03em;color:#ffffff;">Dosis<span style="color:#5fd6a4;">Ya</span> <span style="font-size:10px;font-weight:600;color:#5fd6a4;">NEGOCIOS</span></div>
+            <div style="display:flex;align-items:center;gap:8px;"><div style="width:30px;height:30px;border-radius:9px;background:#5fd6a4;color:#0f4c3a;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;">{{ avatarInitials }}</div><sc-if value="{{ canLogout }}"><button aria-label="Cerrar sesión" onClick="{{ logout }}" style="width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,0.12);border:0;color:rgba(255,255,255,0.85);display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg viewBox="0 0 24 24" width="16" height="16" style="fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></button></sc-if></div>
+          </div>
+          <div style="display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;padding-bottom:2px;">
+            <sc-for list="{{ navItems }}" as="item" hint-placeholder-count="5">
+              <button onClick="{{ item.onSel }}" style="display:flex;align-items:center;gap:7px;border:0;background:{{ item.mbg }};color:{{ item.color }};border-radius:999px;padding:8px 13px;cursor:pointer;font-size:12.5px;font-weight:{{ item.weight }};white-space:nowrap;flex:none;">
+                <svg viewBox="0 0 24 24" width="16" height="16" style="fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none;"><path d="{{ item.d }}"/></svg>{{ item.label }}
+                <sc-if value="{{ item.badge }}"><span style="background:#f5b731;color:#3a2a00;font-size:10px;font-weight:700;border-radius:999px;padding:0 6px;">{{ item.badge }}</span></sc-if>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <main style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;">
+
+        <sc-if value="{{ showTopbar }}">
+          <div style="flex:none;background:#ffffff;border-bottom:1px solid #eef0eb;padding:15px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:18px;font-weight:700;letter-spacing:-0.02em;color:#16181a;">{{ pageTitle }}</div>
+              <div style="font-size:12.5px;color:#8a8e8a;margin-top:1px;">{{ pageSubtitle }}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;background:#f2f3ef;border:1px solid #e8e9e5;border-radius:999px;padding:6px 12px;">
+              <span style="width:6px;height:6px;border-radius:50%;background:#1d9e75;"></span>
+              <span style="font-size:11.5px;color:#6b6f6b;">Tasa</span>
+              <span style="font-size:11.5px;font-weight:600;color:#16181a;font-variant-numeric:tabular-nums;">Bs {{ rate }}/$</span>
+            </div>
+            <div style="display:flex;background:#f2f3ef;border:1px solid #e8e9e5;border-radius:10px;padding:3px;">
+              <button onClick="{{ setFarm }}" style="border:0;background:{{ segFarm.bg }};color:{{ segFarm.color }};border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;">Farmacia</button>
+              <button onClick="{{ setSuper }}" style="border:0;background:{{ segSuper.bg }};color:{{ segSuper.color }};border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;">Superadmin</button>
+            </div>
+            <div style="display:flex;background:#f2f3ef;border:1px solid #e8e9e5;border-radius:10px;padding:3px;">
+              <button aria-label="Vista desktop" onClick="{{ setDesk }}" style="border:0;background:{{ segDesk.bg }};color:{{ segDesk.color }};border-radius:8px;padding:6px 9px;cursor:pointer;display:flex;"><svg viewBox="0 0 24 24" width="16" height="16" style="fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round"><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8M12 17v4"/></svg></button>
+              <button aria-label="Vista móvil" onClick="{{ setMob }}" style="border:0;background:{{ segMob.bg }};color:{{ segMob.color }};border-radius:8px;padding:6px 9px;cursor:pointer;display:flex;"><svg viewBox="0 0 24 24" width="16" height="16" style="fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round"><rect width="14" height="20" x="5" y="2" rx="2.5"/><path d="M12 18h.01"/></svg></button>
+            </div>
+          </div>
+        </sc-if>
+
+        <div style="flex:1;overflow-y:auto;padding:{{ mainPad }};">
+
+          <sc-if value="{{ isDash }}">
+            <div key="dash" style="animation:scrIn .28s ease both;display:flex;flex-direction:column;gap:16px;">
+              <div style="display:flex;flex-wrap:wrap;gap:14px;">
+                <div style="flex:1 1 170px;background:#fff;border:1px solid #e8e9e5;border-radius:16px;padding:16px;">
+                  <div style="font-size:12px;color:#8a8e8a;">Leads este mes</div>
+                  <div style="font-size:28px;font-weight:700;color:#16181a;font-variant-numeric:tabular-nums;margin-top:6px;letter-spacing:-0.02em;">128</div>
+                  <div style="font-size:11.5px;color:#157a5b;font-weight:600;margin-top:4px;">▲ 12% vs. mes anterior</div>
+                </div>
+                <div style="flex:1 1 170px;background:#fff;border:1px solid #e8e9e5;border-radius:16px;padding:16px;">
+                  <div style="font-size:12px;color:#8a8e8a;">Costo por lead</div>
+                  <div style="font-size:28px;font-weight:700;color:#0f4c3a;font-variant-numeric:tabular-nums;margin-top:6px;letter-spacing:-0.02em;">$0,35</div>
+                  <div style="font-size:11.5px;color:#8a8e8a;margin-top:4px;">Bs 50,82 por clic</div>
+                </div>
+                <div style="flex:1 1 170px;background:#fff;border:1px solid #e8e9e5;border-radius:16px;padding:16px;">
+                  <div style="font-size:12px;color:#8a8e8a;">Inversión del mes</div>
+                  <div style="font-size:28px;font-weight:700;color:#16181a;font-variant-numeric:tabular-nums;margin-top:6px;letter-spacing:-0.02em;">$44,80</div>
+                  <div style="font-size:11.5px;color:#8a8e8a;margin-top:4px;">128 leads facturados</div>
+                </div>
+                <div style="flex:1 1 170px;background:#fff;border:1px solid #e8e9e5;border-radius:16px;padding:16px;">
+                  <div style="font-size:12px;color:#8a8e8a;">Conversión</div>
+                  <div style="font-size:28px;font-weight:700;color:#16181a;font-variant-numeric:tabular-nums;margin-top:6px;letter-spacing:-0.02em;">6,4%</div>
+                  <div style="font-size:11.5px;color:#8a8e8a;margin-top:4px;">vistas → WhatsApp</div>
+                </div>
+              </div>
+
+              <div style="display:flex;flex-wrap:wrap;gap:16px;">
+                <div style="flex:2 1 420px;background:#fff;border:1px solid #e8e9e5;border-radius:16px;overflow:hidden;">
+                  <div style="padding:14px 16px;border-bottom:1px solid #eef0eb;display:flex;align-items:center;justify-content:space-between;"><span style="font-size:13.5px;font-weight:600;">Leads recientes</span><span style="font-size:12px;color:#8a8e8a;">Últimas 24 h</span></div>
+                  <div style="overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;min-width:460px;">
+                      <thead><tr style="text-align:left;color:#8a8e8a;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;"><th style="padding:10px 16px;font-weight:600;">Hora</th><th style="padding:10px 8px;font-weight:600;">Medicamento</th><th style="padding:10px 8px;font-weight:600;">Distancia</th><th style="padding:10px 8px;font-weight:600;">Estado</th><th style="padding:10px 16px;font-weight:600;text-align:right;">Costo</th></tr></thead>
+                      <tbody style="font-size:13px;">
+                        <tr style="border-top:1px solid #f1f2ee;"><td style="padding:12px 16px;color:#6b6f6b;font-variant-numeric:tabular-nums;">10:24</td><td style="padding:12px 8px;font-weight:500;">Losartán 50 mg</td><td style="padding:12px 8px;color:#6b6f6b;font-variant-numeric:tabular-nums;">0,8 km</td><td style="padding:12px 8px;"><span style="font-size:11px;font-weight:600;color:#157a5b;background:#eaf7f1;border-radius:999px;padding:3px 9px;">Contactado</span></td><td style="padding:12px 16px;text-align:right;color:#0f4c3a;font-weight:600;font-variant-numeric:tabular-nums;">$0,35</td></tr>
+                        <tr style="border-top:1px solid #f1f2ee;"><td style="padding:12px 16px;color:#6b6f6b;font-variant-numeric:tabular-nums;">09:58</td><td style="padding:12px 8px;font-weight:500;">Amoxicilina 500 mg</td><td style="padding:12px 8px;color:#6b6f6b;font-variant-numeric:tabular-nums;">1,4 km</td><td style="padding:12px 8px;"><span style="font-size:11px;font-weight:600;color:#b45309;background:#fff7ed;border-radius:999px;padding:3px 9px;">Pendiente</span></td><td style="padding:12px 16px;text-align:right;color:#0f4c3a;font-weight:600;font-variant-numeric:tabular-nums;">$0,35</td></tr>
+                        <tr style="border-top:1px solid #f1f2ee;"><td style="padding:12px 16px;color:#6b6f6b;font-variant-numeric:tabular-nums;">09:12</td><td style="padding:12px 8px;font-weight:500;">Metformina 850 mg</td><td style="padding:12px 8px;color:#6b6f6b;font-variant-numeric:tabular-nums;">2,1 km</td><td style="padding:12px 8px;"><span style="font-size:11px;font-weight:600;color:#157a5b;background:#eaf7f1;border-radius:999px;padding:3px 9px;">Contactado</span></td><td style="padding:12px 16px;text-align:right;color:#0f4c3a;font-weight:600;font-variant-numeric:tabular-nums;">$0,35</td></tr>
+                        <tr style="border-top:1px solid #f1f2ee;"><td style="padding:12px 16px;color:#6b6f6b;font-variant-numeric:tabular-nums;">08:40</td><td style="padding:12px 8px;font-weight:500;">Atorvastatina 20 mg</td><td style="padding:12px 8px;color:#6b6f6b;font-variant-numeric:tabular-nums;">0,5 km</td><td style="padding:12px 8px;"><span style="font-size:11px;font-weight:600;color:#8a8e8a;background:#f2f3ef;border-radius:999px;padding:3px 9px;">Perdido</span></td><td style="padding:12px 16px;text-align:right;color:#0f4c3a;font-weight:600;font-variant-numeric:tabular-nums;">$0,35</td></tr>
+                        <tr style="border-top:1px solid #f1f2ee;"><td style="padding:12px 16px;color:#6b6f6b;font-variant-numeric:tabular-nums;">08:03</td><td style="padding:12px 8px;font-weight:500;">Ibuprofeno 400 mg</td><td style="padding:12px 8px;color:#6b6f6b;font-variant-numeric:tabular-nums;">1,1 km</td><td style="padding:12px 8px;"><span style="font-size:11px;font-weight:600;color:#157a5b;background:#eaf7f1;border-radius:999px;padding:3px 9px;">Contactado</span></td><td style="padding:12px 16px;text-align:right;color:#0f4c3a;font-weight:600;font-variant-numeric:tabular-nums;">$0,35</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div style="flex:1 1 240px;display:flex;flex-direction:column;gap:16px;">
+                  <div style="background:#0f4c3a;border-radius:16px;padding:18px;color:#fff;">
+                    <div style="font-size:12px;color:rgba(255,255,255,0.65);">Saldo disponible</div>
+                    <div style="font-size:30px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:6px;letter-spacing:-0.02em;">$12,40</div>
+                    <div style="font-size:11.5px;color:rgba(255,255,255,0.6);margin-top:4px;">Se descuenta por cada clic a WhatsApp · Corte 31 jul</div>
+                    <button style="width:100%;height:40px;background:#5fd6a4;color:#0f4c3a;border:0;border-radius:11px;font-size:13px;font-weight:700;cursor:pointer;margin-top:14px;">Recargar saldo</button>
+                  </div>
+                  <div style="background:#fff;border:1px solid #e8e9e5;border-radius:16px;padding:16px;">
+                    <div style="font-size:13px;font-weight:600;margin-bottom:14px;">Leads por día</div>
+                    <div style="display:flex;align-items:flex-end;gap:8px;height:96px;">
+                      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;"><div style="width:100%;height:44px;background:#d6ede3;border-radius:6px 6px 0 0;"></div><span style="font-size:10px;color:#8a8e8a;">L</span></div>
+                      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;"><div style="width:100%;height:60px;background:#a9dcc6;border-radius:6px 6px 0 0;"></div><span style="font-size:10px;color:#8a8e8a;">M</span></div>
+                      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;"><div style="width:100%;height:38px;background:#d6ede3;border-radius:6px 6px 0 0;"></div><span style="font-size:10px;color:#8a8e8a;">M</span></div>
+                      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;"><div style="width:100%;height:78px;background:#1d9e75;border-radius:6px 6px 0 0;"></div><span style="font-size:10px;color:#8a8e8a;">J</span></div>
+                      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;"><div style="width:100%;height:66px;background:#a9dcc6;border-radius:6px 6px 0 0;"></div><span style="font-size:10px;color:#8a8e8a;">V</span></div>
+                      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;"><div style="width:100%;height:52px;background:#d6ede3;border-radius:6px 6px 0 0;"></div><span style="font-size:10px;color:#8a8e8a;">S</span></div>
+                      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;"><div style="width:100%;height:30px;background:#d6ede3;border-radius:6px 6px 0 0;"></div><span style="font-size:10px;color:#8a8e8a;">D</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isInv }}">
+            <div key="inv" style="animation:scrIn .28s ease both;background:#fff;border:1px solid #e8e9e5;border-radius:16px;overflow:hidden;">
+              <div style="padding:14px 16px;border-bottom:1px solid #eef0eb;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                <div style="display:flex;align-items:center;gap:8px;background:#f7f8f5;border:1px solid #e8e9e5;border-radius:10px;padding:0 12px;height:38px;flex:1;min-width:180px;"><svg viewBox="0 0 24 24" width="16" height="16" style="fill:none;stroke:#8a8e8a;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><span style="color:#8a8e8a;font-size:13px;">Buscar medicamento…</span></div>
+                <button style="display:flex;align-items:center;gap:7px;height:38px;background:#0f4c3a;color:#fafaf7;border:0;border-radius:10px;padding:0 15px;font-size:13px;font-weight:600;cursor:pointer;"><svg viewBox="0 0 24 24" width="17" height="17" style="fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>Agregar medicamento</button>
+              </div>
+              <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;min-width:640px;">
+                  <thead><tr style="text-align:left;color:#8a8e8a;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;"><th style="padding:11px 16px;font-weight:600;">Medicamento</th><th style="padding:11px 8px;font-weight:600;text-align:right;">Precio USD</th><th style="padding:11px 8px;font-weight:600;text-align:right;">Precio Bs</th><th style="padding:11px 8px;font-weight:600;">Stock</th><th style="padding:11px 8px;font-weight:600;">Disponible</th><th style="padding:11px 16px;font-weight:600;text-align:right;">Acciones</th></tr></thead>
+                  <tbody style="font-size:13px;">
+                    <sc-for list="{{ inventory }}" as="row" hint-placeholder-count="5">
+                      <tr style="border-top:1px solid #f1f2ee;">
+                        <td style="padding:13px 16px;"><div style="font-weight:600;color:#16181a;">{{ row.nombre }}</div><div style="font-size:11.5px;color:#8a8e8a;margin-top:1px;">{{ row.pres }}</div></td>
+                        <td style="padding:13px 8px;text-align:right;font-weight:600;color:#0f4c3a;font-variant-numeric:tabular-nums;">${{ row.usd }}</td>
+                        <td style="padding:13px 8px;text-align:right;color:#6b6f6b;font-variant-numeric:tabular-nums;">Bs {{ row.bs }}</td>
+                        <td style="padding:13px 8px;"><span style="font-size:11px;font-weight:600;color:{{ row.stockColor }};background:{{ row.stockBg }};border-radius:999px;padding:3px 9px;font-variant-numeric:tabular-nums;">{{ row.stockLabel }}</span></td>
+                        <td style="padding:13px 8px;"><button aria-label="Disponible" aria-pressed="{{ row.disp }}" onClick="{{ row.toggle }}" style="width:40px;height:24px;border-radius:999px;background:{{ row.dispBg }};border:0;position:relative;cursor:pointer;transition:background .2s ease;"><span style="position:absolute;top:2px;left:{{ row.dispX }};width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:left .22s cubic-bezier(.34,1.56,.64,1);"></span></button></td>
+                        <td style="padding:13px 16px;text-align:right;"><span style="display:inline-flex;gap:6px;color:#8a8e8a;"><svg viewBox="0 0 24 24" width="17" height="17" style="fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><svg viewBox="0 0 24 24" width="17" height="17" style="fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span></td>
+                      </tr>
+                    </sc-for>
+                  </tbody>
+                </table>
+              </div>
+              <div style="padding:12px 16px;border-top:1px solid #eef0eb;font-size:12px;color:#8a8e8a;">{{ invSummary }}</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isCfg }}">
+            <div key="cfg" style="animation:scrIn .28s ease both;display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;">
+              <div style="flex:1 1 340px;display:flex;flex-direction:column;gap:16px;">
+                <div style="background:#fff;border:1px solid #e8e9e5;border-radius:16px;padding:18px;">
+                  <div style="font-size:13.5px;font-weight:600;margin-bottom:14px;">Datos de la farmacia</div>
+                  <div style="display:flex;flex-direction:column;gap:12px;">
+                    <label style="font-size:12px;color:#6b6f6b;">Nombre comercial<div style="margin-top:5px;height:42px;border:1px solid #e8e9e5;border-radius:10px;padding:0 12px;display:flex;align-items:center;font-size:13.5px;color:#16181a;background:#fff;">Farmacia La Cruz</div></label>
+                    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                      <label style="flex:1;min-width:130px;font-size:12px;color:#6b6f6b;">RIF<div style="margin-top:5px;height:42px;border:1px solid #e8e9e5;border-radius:10px;padding:0 12px;display:flex;align-items:center;font-size:13.5px;font-variant-numeric:tabular-nums;">J-40123456-7</div></label>
+                      <label style="flex:1;min-width:130px;font-size:12px;color:#6b6f6b;">WhatsApp<div style="margin-top:5px;height:42px;border:1px solid #e8e9e5;border-radius:10px;padding:0 12px;display:flex;align-items:center;font-size:13.5px;font-variant-numeric:tabular-nums;">+58 424 123 4567</div></label>
+                    </div>
+                    <label style="font-size:12px;color:#6b6f6b;">Dirección<div style="margin-top:5px;height:42px;border:1px solid #e8e9e5;border-radius:10px;padding:0 12px;display:flex;align-items:center;font-size:13.5px;">Av. Libertador, Acarigua</div></label>
+                  </div>
+                </div>
+                <div style="background:#fff;border:1px solid #e8e9e5;border-radius:16px;padding:18px;">
+                  <div style="font-size:13.5px;font-weight:600;margin-bottom:14px;">Horario de atención</div>
+                  <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                    <span style="font-size:12px;color:#16181a;background:#f2f3ef;border-radius:9px;padding:8px 11px;">Lun–Vie · 8:00–20:00</span>
+                    <span style="font-size:12px;color:#16181a;background:#f2f3ef;border-radius:9px;padding:8px 11px;">Sáb · 8:00–18:00</span>
+                    <span style="font-size:12px;color:#16181a;background:#f2f3ef;border-radius:9px;padding:8px 11px;">Dom · 9:00–13:00</span>
+                  </div>
+                </div>
+              </div>
+              <div style="flex:1 1 300px;display:flex;flex-direction:column;gap:16px;">
+                <div style="background:#fff;border:1px solid #e8e9e5;border-radius:16px;padding:18px;">
+                  <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div><div style="font-size:13.5px;font-weight:600;">Delivery propio</div><div style="font-size:12px;color:#8a8e8a;margin-top:2px;">Mostrar la insignia de delivery</div></div>
+                    <button aria-label="Delivery" aria-pressed="{{ cfgDelivery }}" onClick="{{ toggleDelivery }}" style="width:46px;height:27px;border-radius:999px;background:{{ cfgDeliveryBg }};border:0;position:relative;cursor:pointer;transition:background .2s ease;flex:none;"><span style="position:absolute;top:2px;left:{{ cfgDeliveryX }};width:23px;height:23px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .24s cubic-bezier(.34,1.56,.64,1);"></span></button>
+                  </div>
+                  <div style="margin-top:14px;padding-top:14px;border-top:1px solid #eef0eb;">
+                    <div style="font-size:12px;color:#6b6f6b;">Radio de cobertura</div>
+                    <div style="margin-top:5px;height:42px;border:1px solid #e8e9e5;border-radius:10px;padding:0 12px;display:flex;align-items:center;justify-content:space-between;font-size:13.5px;"><span style="font-variant-numeric:tabular-nums;">5 km</span><span style="color:#8a8e8a;font-size:12px;">a la redonda</span></div>
+                  </div>
+                </div>
+                <div style="background:#fff;border:1px solid #e8e9e5;border-radius:16px;padding:18px;">
+                  <div style="font-size:13.5px;font-weight:600;margin-bottom:12px;">Tasa USD → Bs</div>
+                  <div style="display:flex;background:#f2f3ef;border:1px solid #e8e9e5;border-radius:10px;padding:3px;">
+                    <button onClick="{{ setTasaAuto }}" style="flex:1;border:0;background:{{ segTasaAuto.bg }};color:{{ segTasaAuto.color }};border-radius:8px;padding:8px;font-size:12.5px;font-weight:600;cursor:pointer;">Automática (BCV)</button>
+                    <button onClick="{{ setTasaManual }}" style="flex:1;border:0;background:{{ segTasaManual.bg }};color:{{ segTasaManual.color }};border-radius:8px;padding:8px;font-size:12.5px;font-weight:600;cursor:pointer;">Manual</button>
+                  </div>
+                  <div style="margin-top:12px;height:42px;border:1px solid #e8e9e5;border-radius:10px;padding:0 12px;display:flex;align-items:center;justify-content:space-between;background:{{ tasaFieldBg }};"><span style="font-size:13.5px;font-weight:600;font-variant-numeric:tabular-nums;">Bs {{ rate }}</span><span style="font-size:11.5px;color:#8a8e8a;">{{ tasaHint }}</span></div>
+                </div>
+                <button style="height:46px;background:#0f4c3a;color:#fafaf7;border:0;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;">Guardar cambios</button>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isReg }}">
+            <div key="reg" style="animation:scrIn .28s ease both;min-height:100%;display:flex;align-items:center;justify-content:center;padding:20px;">
+              <div style="width:100%;max-width:600px;background:#fff;border:1px solid #e8e9e5;border-radius:20px;padding:26px;box-shadow:0 20px 50px -30px rgba(22,24,26,0.4);">
+                <div style="font-size:20px;font-weight:800;letter-spacing:-0.03em;">Dosis<span style="color:#1d9e75;">Ya</span> <span style="font-size:11px;font-weight:600;color:#6b6f6b;">para farmacias</span></div>
+                <div style="font-size:13px;color:#8a8e8a;margin-top:4px;">Registra tu farmacia. La verificamos y te avisamos por WhatsApp.</div>
+                <div style="display:flex;align-items:center;gap:8px;margin:18px 0 20px;">
+                  <div style="display:flex;align-items:center;gap:7px;"><span style="width:24px;height:24px;border-radius:50%;background:#0f4c3a;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">1</span><span style="font-size:12.5px;font-weight:600;color:#16181a;">Datos</span></div>
+                  <div style="flex:1;height:2px;background:#e8e9e5;"></div>
+                  <div style="display:flex;align-items:center;gap:7px;"><span style="width:24px;height:24px;border-radius:50%;background:#e8e9e5;color:#8a8e8a;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">2</span><span style="font-size:12.5px;color:#8a8e8a;">Ubicación</span></div>
+                  <div style="flex:1;height:2px;background:#e8e9e5;"></div>
+                  <div style="display:flex;align-items:center;gap:7px;"><span style="width:24px;height:24px;border-radius:50%;background:#e8e9e5;color:#8a8e8a;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">3</span><span style="font-size:12.5px;color:#8a8e8a;">Verificación</span></div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:13px;">
+                  <label style="font-size:12px;color:#6b6f6b;">Nombre comercial<div style="margin-top:5px;height:44px;border:1px solid #e8e9e5;border-radius:11px;padding:0 13px;display:flex;align-items:center;color:#b8bcb6;font-size:13.5px;">Ej. Farmacia La Cruz</div></label>
+                  <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                    <label style="flex:1;min-width:150px;font-size:12px;color:#6b6f6b;">RIF<div style="margin-top:5px;height:44px;border:1px solid #e8e9e5;border-radius:11px;padding:0 13px;display:flex;align-items:center;color:#b8bcb6;font-size:13.5px;">J-00000000-0</div></label>
+                    <label style="flex:1;min-width:150px;font-size:12px;color:#6b6f6b;">WhatsApp<div style="margin-top:5px;height:44px;border:1px solid #e8e9e5;border-radius:11px;padding:0 13px;display:flex;align-items:center;color:#b8bcb6;font-size:13.5px;">+58 4xx xxx xxxx</div></label>
+                  </div>
+                  <label style="font-size:12px;color:#6b6f6b;">Dirección<div style="margin-top:5px;height:44px;border:1px solid #e8e9e5;border-radius:11px;padding:0 13px;display:flex;align-items:center;color:#b8bcb6;font-size:13.5px;">Calle / Av. y punto de referencia</div></label>
+                  <div>
+                    <div style="font-size:12px;color:#6b6f6b;margin-bottom:6px;">Ciudad</div>
+                    <div style="display:flex;gap:8px;"><span style="font-size:13px;font-weight:600;color:#0f4c3a;background:#e9f3ef;border:1px solid #cfe6dc;border-radius:10px;padding:9px 16px;">Acarigua</span><span style="font-size:13px;color:#6b6f6b;background:#f7f8f5;border:1px solid #e8e9e5;border-radius:10px;padding:9px 16px;">Araure</span></div>
+                  </div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;background:#f7f8f5;border:1px solid #e8e9e5;border-radius:11px;padding:12px 14px;">
+                    <span style="font-size:13px;color:#16181a;">¿Hacen delivery propio?</span>
+                    <span style="width:46px;height:27px;border-radius:999px;background:#1d9e75;position:relative;flex:none;"><span style="position:absolute;top:2px;right:2px;width:23px;height:23px;border-radius:50%;background:#fff;"></span></span>
+                  </div>
+                </div>
+                <button onClick="{{ doRegister }}" style="width:100%;height:48px;background:#0f4c3a;color:#fafaf7;border:0;border-radius:13px;font-size:14px;font-weight:600;cursor:pointer;margin-top:18px;">Continuar</button>
+                <div style="text-align:center;font-size:12.5px;color:#8a8e8a;margin-top:12px;">¿Ya tienes cuenta? <a onClick="{{ goLogin }}" style="font-weight:600;cursor:pointer;">Inicia sesión</a></div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isLogin }}">
+            <div key="login" style="animation:scrIn .28s ease both;min-height:100%;display:flex;align-items:center;justify-content:center;padding:20px;">
+              <div style="width:100%;max-width:380px;background:#fff;border:1px solid #e8e9e5;border-radius:20px;padding:28px;box-shadow:0 20px 50px -30px rgba(22,24,26,0.4);">
+                <div style="text-align:center;font-size:24px;font-weight:800;letter-spacing:-0.03em;">Dosis<span style="color:#1d9e75;">Ya</span></div>
+                <div style="text-align:center;font-size:12px;font-weight:600;color:#6b6f6b;letter-spacing:0.06em;margin-top:2px;">NEGOCIOS</div>
+                <div style="text-align:center;font-size:13px;color:#8a8e8a;margin:10px 0 22px;">Ingresa al panel de tu farmacia</div>
+                <div style="display:flex;flex-direction:column;gap:12px;">
+                  <label style="font-size:12px;color:#6b6f6b;">Correo<div style="margin-top:5px;height:46px;border:1px solid #e8e9e5;border-radius:11px;padding:0 13px;display:flex;align-items:center;color:#b8bcb6;font-size:13.5px;">tu@farmacia.com</div></label>
+                  <label style="font-size:12px;color:#6b6f6b;">Contraseña<div style="margin-top:5px;height:46px;border:1px solid #e8e9e5;border-radius:11px;padding:0 13px;display:flex;align-items:center;color:#b8bcb6;font-size:16px;letter-spacing:2px;">••••••••</div></label>
+                </div>
+                <button onClick="{{ entrar }}" style="width:100%;height:48px;background:#0f4c3a;color:#fafaf7;border:0;border-radius:13px;font-size:14px;font-weight:600;cursor:pointer;margin-top:18px;">Entrar</button>
+                <div style="text-align:center;font-size:12.5px;color:#8a8e8a;margin-top:12px;"><a style="cursor:pointer;">¿Olvidaste tu contraseña?</a></div>
+                <div style="height:1px;background:#eef0eb;margin:16px 0;"></div>
+                <div style="text-align:center;font-size:12.5px;color:#6b6f6b;">¿Tu farmacia aún no está? <a onClick="{{ goReg }}" style="font-weight:600;cursor:pointer;">Regístrala</a></div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isAprob }}">
+            <div key="aprob" style="animation:scrIn .28s ease both;display:flex;flex-direction:column;gap:14px;">
+              <div style="font-size:13px;color:#6b6f6b;">{{ aprobSummary }}</div>
+              <sc-for list="{{ approvals }}" as="a" hint-placeholder-count="3">
+                <div style="background:#fff;border:1px solid #e8e9e5;border-radius:16px;padding:18px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
+                  <div style="width:48px;height:48px;border-radius:13px;background:#e9f3ef;color:#0f4c3a;display:flex;align-items:center;justify-content:center;flex:none;"><svg viewBox="0 0 24 24" width="24" height="24" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round"><path d="M3 9l1-5h16l1 5M4 9v11h16V9M4 9h16M9 20v-6h6v6"/></svg></div>
+                  <div style="flex:1;min-width:180px;">
+                    <div style="font-size:15px;font-weight:600;color:#16181a;">{{ a.name }}</div>
+                    <div style="font-size:12.5px;color:#8a8e8a;margin-top:2px;font-variant-numeric:tabular-nums;">{{ a.city }} · RIF {{ a.rif }} · {{ a.date }}</div>
+                    <a style="font-size:12.5px;color:#0f4c3a;font-weight:600;cursor:pointer;display:inline-block;margin-top:6px;">Ver documentos →</a>
+                  </div>
+                  <div style="display:flex;gap:8px;flex:none;">
+                    <button onClick="{{ a.reject }}" style="height:40px;padding:0 15px;background:#fff;color:#c1372f;border:1px solid #f0cfcc;border-radius:11px;font-size:13px;font-weight:600;cursor:pointer;">Rechazar</button>
+                    <button onClick="{{ a.approve }}" style="display:flex;align-items:center;gap:6px;height:40px;padding:0 16px;background:#0f4c3a;color:#fafaf7;border:0;border-radius:11px;font-size:13px;font-weight:600;cursor:pointer;"><svg viewBox="0 0 24 24" width="16" height="16" style="fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round"><path d="M20 6 9 17l-5-5"/></svg>Aprobar</button>
+                  </div>
+                </div>
+              </sc-for>
+              <sc-if value="{{ aprobEmpty }}">
+                <div style="text-align:center;padding:48px 20px;background:#fff;border:1px dashed #d8dad3;border-radius:16px;">
+                  <div style="width:56px;height:56px;border-radius:16px;background:#eaf7f1;color:#1d9e75;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;"><svg viewBox="0 0 24 24" width="26" height="26" style="fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg></div>
+                  <div style="font-size:15px;font-weight:600;">Todo al día</div>
+                  <div style="font-size:12.5px;color:#8a8e8a;margin-top:3px;">No hay solicitudes pendientes por revisar.</div>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isFarm }}">
+            <div key="farm" style="animation:scrIn .28s ease both;background:#fff;border:1px solid #e8e9e5;border-radius:16px;overflow:hidden;">
+              <div style="padding:14px 16px;border-bottom:1px solid #eef0eb;display:flex;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:12px;font-weight:600;color:#fff;background:#0f4c3a;border-radius:999px;padding:6px 12px;">Todas · 42</span>
+                <span style="font-size:12px;color:#6b6f6b;background:#f2f3ef;border-radius:999px;padding:6px 12px;">Activas · 36</span>
+                <span style="font-size:12px;color:#6b6f6b;background:#f2f3ef;border-radius:999px;padding:6px 12px;">Pausadas · 3</span>
+                <span style="font-size:12px;color:#6b6f6b;background:#f2f3ef;border-radius:999px;padding:6px 12px;">Pendientes · 3</span>
+              </div>
+              <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;min-width:620px;">
+                  <thead><tr style="text-align:left;color:#8a8e8a;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;"><th style="padding:11px 16px;font-weight:600;">Farmacia</th><th style="padding:11px 8px;font-weight:600;">Ciudad</th><th style="padding:11px 8px;font-weight:600;">Estado</th><th style="padding:11px 8px;font-weight:600;">Plan</th><th style="padding:11px 16px;font-weight:600;text-align:right;">Leads mes</th></tr></thead>
+                  <tbody style="font-size:13px;">
+                    <tr style="border-top:1px solid #f1f2ee;"><td style="padding:12px 16px;font-weight:600;">Farmacia La Cruz</td><td style="padding:12px 8px;color:#6b6f6b;">Acarigua</td><td style="padding:12px 8px;"><span style="font-size:11px;font-weight:600;color:#157a5b;background:#eaf7f1;border-radius:999px;padding:3px 9px;">Activa</span></td><td style="padding:12px 8px;color:#6b6f6b;">Premium</td><td style="padding:12px 16px;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">128</td></tr>
+                    <tr style="border-top:1px solid #f1f2ee;"><td style="padding:12px 16px;font-weight:600;">Farmacia Salud Total</td><td style="padding:12px 8px;color:#6b6f6b;">Araure</td><td style="padding:12px 8px;"><span style="font-size:11px;font-weight:600;color:#157a5b;background:#eaf7f1;border-radius:999px;padding:3px 9px;">Activa</span></td><td style="padding:12px 8px;color:#6b6f6b;">Básico</td><td style="padding:12px 16px;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">94</td></tr>
+                    <tr style="border-top:1px solid #f1f2ee;"><td style="padding:12px 16px;font-weight:600;">Farmacia Bienestar</td><td style="padding:12px 8px;color:#6b6f6b;">Acarigua</td><td style="padding:12px 8px;"><span style="font-size:11px;font-weight:600;color:#b45309;background:#fff7ed;border-radius:999px;padding:3px 9px;">Pausada</span></td><td style="padding:12px 8px;color:#6b6f6b;">Básico</td><td style="padding:12px 16px;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">0</td></tr>
+                    <tr style="border-top:1px solid #f1f2ee;"><td style="padding:12px 16px;font-weight:600;">Farmacia San Rafael</td><td style="padding:12px 8px;color:#6b6f6b;">Araure</td><td style="padding:12px 8px;"><span style="font-size:11px;font-weight:600;color:#157a5b;background:#eaf7f1;border-radius:999px;padding:3px 9px;">Activa</span></td><td style="padding:12px 8px;color:#6b6f6b;">Premium</td><td style="padding:12px 16px;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">76</td></tr>
+                    <tr style="border-top:1px solid #f1f2ee;"><td style="padding:12px 16px;font-weight:600;">Farmacia Los Andes</td><td style="padding:12px 8px;color:#6b6f6b;">Araure</td><td style="padding:12px 8px;"><span style="font-size:11px;font-weight:600;color:#8a8e8a;background:#f2f3ef;border-radius:999px;padding:3px 9px;">Pendiente</span></td><td style="padding:12px 8px;color:#6b6f6b;">—</td><td style="padding:12px 16px;text-align:right;font-variant-numeric:tabular-nums;color:#8a8e8a;">—</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isMet }}">
+            <div key="met" style="animation:scrIn .28s ease both;display:flex;flex-direction:column;gap:16px;">
+              <div style="display:flex;flex-wrap:wrap;gap:14px;">
+                <div style="flex:1 1 170px;background:#fff;border:1px solid #e8e9e5;border-radius:16px;padding:16px;"><div style="font-size:12px;color:#8a8e8a;">Farmacias activas</div><div style="font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:6px;letter-spacing:-0.02em;">42</div><div style="font-size:11.5px;color:#157a5b;font-weight:600;margin-top:4px;">▲ 4 este mes</div></div>
+                <div style="flex:1 1 170px;background:#fff;border:1px solid #e8e9e5;border-radius:16px;padding:16px;"><div style="font-size:12px;color:#8a8e8a;">Leads totales</div><div style="font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:6px;letter-spacing:-0.02em;">3.180</div><div style="font-size:11.5px;color:#8a8e8a;margin-top:4px;">este mes</div></div>
+                <div style="flex:1 1 170px;background:#fff;border:1px solid #e8e9e5;border-radius:16px;padding:16px;"><div style="font-size:12px;color:#8a8e8a;">Ingresos del mes</div><div style="font-size:28px;font-weight:700;color:#0f4c3a;font-variant-numeric:tabular-nums;margin-top:6px;letter-spacing:-0.02em;">$1.113</div><div style="font-size:11.5px;color:#157a5b;font-weight:600;margin-top:4px;">▲ 9%</div></div>
+                <div style="flex:1 1 170px;background:#fff;border:1px solid #e8e9e5;border-radius:16px;padding:16px;"><div style="font-size:12px;color:#8a8e8a;">Ciudades</div><div style="font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:6px;letter-spacing:-0.02em;">2</div><div style="font-size:11.5px;color:#8a8e8a;margin-top:4px;">Acarigua · Araure</div></div>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:16px;">
+                <div style="flex:2 1 420px;background:#fff;border:1px solid #e8e9e5;border-radius:16px;padding:18px;">
+                  <div style="font-size:13.5px;font-weight:600;margin-bottom:16px;">Ingresos por mes (USD)</div>
+                  <div style="display:flex;align-items:flex-end;gap:12px;height:150px;">
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;"><div style="width:100%;height:58px;background:#d6ede3;border-radius:7px 7px 0 0;"></div><span style="font-size:11px;color:#8a8e8a;">Feb</span></div>
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;"><div style="width:100%;height:74px;background:#d6ede3;border-radius:7px 7px 0 0;"></div><span style="font-size:11px;color:#8a8e8a;">Mar</span></div>
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;"><div style="width:100%;height:92px;background:#a9dcc6;border-radius:7px 7px 0 0;"></div><span style="font-size:11px;color:#8a8e8a;">Abr</span></div>
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;"><div style="width:100%;height:84px;background:#a9dcc6;border-radius:7px 7px 0 0;"></div><span style="font-size:11px;color:#8a8e8a;">May</span></div>
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;"><div style="width:100%;height:112px;background:#1d9e75;border-radius:7px 7px 0 0;"></div><span style="font-size:11px;color:#8a8e8a;">Jun</span></div>
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;"><div style="width:100%;height:130px;background:#0f4c3a;border-radius:7px 7px 0 0;"></div><span style="font-size:11px;color:#8a8e8a;">Jul</span></div>
+                  </div>
+                </div>
+                <div style="flex:1 1 240px;background:#fff;border:1px solid #e8e9e5;border-radius:16px;padding:18px;">
+                  <div style="font-size:13.5px;font-weight:600;margin-bottom:16px;">Leads por ciudad</div>
+                  <div style="margin-bottom:14px;"><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px;"><span style="font-weight:500;">Acarigua</span><span style="color:#6b6f6b;font-variant-numeric:tabular-nums;">1.910 · 60%</span></div><div style="height:8px;background:#f2f3ef;border-radius:999px;overflow:hidden;"><div style="width:60%;height:100%;background:#0f4c3a;"></div></div></div>
+                  <div><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px;"><span style="font-weight:500;">Araure</span><span style="color:#6b6f6b;font-variant-numeric:tabular-nums;">1.270 · 40%</span></div><div style="height:8px;background:#f2f3ef;border-radius:999px;overflow:hidden;"><div style="width:40%;height:100%;background:#1d9e75;"></div></div></div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isTasa }}">
+            <div key="tasa" style="animation:scrIn .28s ease both;display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;">
+              <div style="flex:1 1 300px;display:flex;flex-direction:column;gap:16px;">
+                <div style="background:#0f4c3a;border-radius:18px;padding:22px;color:#fff;">
+                  <div style="font-size:12.5px;color:rgba(255,255,255,0.65);">Tasa vigente hoy</div>
+                  <div style="font-size:44px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:8px;letter-spacing:-0.03em;">Bs {{ rate }}</div>
+                  <div style="font-size:12.5px;color:rgba(255,255,255,0.6);margin-top:4px;">por 1 USD · fuente {{ tasaSourceLabel }} · actualizada 08:00</div>
+                </div>
+                <div style="background:#fff;border:1px solid #e8e9e5;border-radius:16px;padding:18px;">
+                  <div style="font-size:13.5px;font-weight:600;margin-bottom:12px;">Fuente de la tasa</div>
+                  <div style="display:flex;background:#f2f3ef;border:1px solid #e8e9e5;border-radius:10px;padding:3px;">
+                    <button onClick="{{ setSrcBcv }}" style="flex:1;border:0;background:{{ segBcv.bg }};color:{{ segBcv.color }};border-radius:8px;padding:9px;font-size:12.5px;font-weight:600;cursor:pointer;">BCV</button>
+                    <button onClick="{{ setSrcPar }}" style="flex:1;border:0;background:{{ segPar.bg }};color:{{ segPar.color }};border-radius:8px;padding:9px;font-size:12.5px;font-weight:600;cursor:pointer;">Paralelo</button>
+                    <button onClick="{{ setSrcMan }}" style="flex:1;border:0;background:{{ segMan.bg }};color:{{ segMan.color }};border-radius:8px;padding:9px;font-size:12.5px;font-weight:600;cursor:pointer;">Manual</button>
+                  </div>
+                  <div style="display:flex;gap:10px;margin-top:12px;">
+                    <div style="flex:1;height:44px;border:1px solid #e8e9e5;border-radius:11px;padding:0 13px;display:flex;align-items:center;background:{{ tasaFieldBg }};font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;">Bs {{ rate }}</div>
+                    <button style="height:44px;padding:0 16px;background:#0f4c3a;color:#fafaf7;border:0;border-radius:11px;font-size:13px;font-weight:600;cursor:pointer;">Actualizar</button>
+                  </div>
+                  <div style="font-size:11.5px;color:#8a8e8a;margin-top:8px;">Todos los precios en Bs de la app se recalculan con esta tasa.</div>
+                </div>
+              </div>
+              <div style="flex:1 1 280px;background:#fff;border:1px solid #e8e9e5;border-radius:16px;overflow:hidden;">
+                <div style="padding:14px 16px;border-bottom:1px solid #eef0eb;font-size:13.5px;font-weight:600;">Historial reciente</div>
+                <div style="font-size:13px;">
+                  <div style="display:flex;justify-content:space-between;padding:12px 16px;border-top:1px solid #f1f2ee;"><span style="color:#6b6f6b;">Hoy</span><span style="font-weight:600;font-variant-numeric:tabular-nums;">Bs 145,20</span></div>
+                  <div style="display:flex;justify-content:space-between;padding:12px 16px;border-top:1px solid #f1f2ee;"><span style="color:#6b6f6b;">Ayer</span><span style="font-weight:600;font-variant-numeric:tabular-nums;">Bs 144,05</span></div>
+                  <div style="display:flex;justify-content:space-between;padding:12px 16px;border-top:1px solid #f1f2ee;"><span style="color:#6b6f6b;">23 jul</span><span style="font-weight:600;font-variant-numeric:tabular-nums;">Bs 143,60</span></div>
+                  <div style="display:flex;justify-content:space-between;padding:12px 16px;border-top:1px solid #f1f2ee;"><span style="color:#6b6f6b;">22 jul</span><span style="font-weight:600;font-variant-numeric:tabular-nums;">Bs 142,88</span></div>
+                  <div style="display:flex;justify-content:space-between;padding:12px 16px;border-top:1px solid #f1f2ee;"><span style="color:#6b6f6b;">21 jul</span><span style="font-weight:600;font-variant-numeric:tabular-nums;">Bs 142,10</span></div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isAnal }}">
+            <div key="anal" style="animation:scrIn .28s ease both;display:flex;flex-direction:column;gap:16px;">
+              <div style="display:flex;flex-wrap:wrap;gap:14px;">
+                <div style="flex:1 1 170px;background:#fff;border:1px solid #e8e9e5;border-radius:16px;padding:16px;"><div style="font-size:12px;color:#8a8e8a;">Usuarios activos</div><div style="font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:6px;letter-spacing:-0.02em;">2.847</div><div style="font-size:11.5px;color:#8a8e8a;margin-top:4px;">últimos 7 días</div></div>
+                <div style="flex:1 1 170px;background:#fff;border:1px solid #e8e9e5;border-radius:16px;padding:16px;"><div style="font-size:12px;color:#8a8e8a;">Búsquedas hoy</div><div style="font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:6px;letter-spacing:-0.02em;">1.204</div><div style="font-size:11.5px;color:#157a5b;font-weight:600;margin-top:4px;">▲ 7%</div></div>
+                <div style="flex:1 1 170px;background:#fff;border:1px solid #e8e9e5;border-radius:16px;padding:16px;"><div style="font-size:12px;color:#8a8e8a;">Sesiones</div><div style="font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:6px;letter-spacing:-0.02em;">5.610</div><div style="font-size:11.5px;color:#8a8e8a;margin-top:4px;">2,1 por usuario</div></div>
+                <div style="flex:1 1 170px;background:#fff;border:1px solid #e8e9e5;border-radius:16px;padding:16px;"><div style="font-size:12px;color:#8a8e8a;">Retención 7 días</div><div style="font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:6px;letter-spacing:-0.02em;">38%</div><div style="font-size:11.5px;color:#8a8e8a;margin-top:4px;">vuelven en la semana</div></div>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:16px;">
+                <div style="flex:1.4 1 360px;background:#fff;border:1px solid #e8e9e5;border-radius:16px;padding:18px;">
+                  <div style="font-size:13.5px;font-weight:600;margin-bottom:16px;">Embudo de conversión</div>
+                  <div style="display:flex;flex-direction:column;gap:12px;">
+                    <div><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px;"><span style="font-weight:500;">Búsquedas</span><span style="color:#6b6f6b;font-variant-numeric:tabular-nums;">1.204 · 100%</span></div><div style="height:12px;background:#f2f3ef;border-radius:999px;overflow:hidden;"><div style="width:100%;height:100%;background:#0f4c3a;"></div></div></div>
+                    <div><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px;"><span style="font-weight:500;">Vieron resultados</span><span style="color:#6b6f6b;font-variant-numeric:tabular-nums;">987 · 82%</span></div><div style="height:12px;background:#f2f3ef;border-radius:999px;overflow:hidden;"><div style="width:82%;height:100%;background:#1d9e75;"></div></div></div>
+                    <div><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px;"><span style="font-weight:500;">Añadieron a la lista</span><span style="color:#6b6f6b;font-variant-numeric:tabular-nums;">612 · 51%</span></div><div style="height:12px;background:#f2f3ef;border-radius:999px;overflow:hidden;"><div style="width:51%;height:100%;background:#5fd6a4;"></div></div></div>
+                    <div><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px;"><span style="font-weight:500;">Clic a WhatsApp</span><span style="color:#6b6f6b;font-variant-numeric:tabular-nums;">409 · 34%</span></div><div style="height:12px;background:#f2f3ef;border-radius:999px;overflow:hidden;"><div style="width:34%;height:100%;background:#25D366;"></div></div></div>
+                  </div>
+                </div>
+                <div style="flex:1 1 240px;background:#fff;border:1px solid #e8e9e5;border-radius:16px;overflow:hidden;">
+                  <div style="padding:14px 16px;border-bottom:1px solid #eef0eb;font-size:13.5px;font-weight:600;">Más buscados</div>
+                  <div style="font-size:13px;">
+                    <div style="display:flex;justify-content:space-between;padding:11px 16px;border-top:1px solid #f1f2ee;"><span>Acetaminofén</span><span style="color:#6b6f6b;font-variant-numeric:tabular-nums;">312</span></div>
+                    <div style="display:flex;justify-content:space-between;padding:11px 16px;border-top:1px solid #f1f2ee;"><span>Losartán</span><span style="color:#6b6f6b;font-variant-numeric:tabular-nums;">241</span></div>
+                    <div style="display:flex;justify-content:space-between;padding:11px 16px;border-top:1px solid #f1f2ee;"><span>Amoxicilina</span><span style="color:#6b6f6b;font-variant-numeric:tabular-nums;">198</span></div>
+                    <div style="display:flex;justify-content:space-between;padding:11px 16px;border-top:1px solid #f1f2ee;"><span>Loratadina</span><span style="color:#6b6f6b;font-variant-numeric:tabular-nums;">176</span></div>
+                    <div style="display:flex;justify-content:space-between;padding:11px 16px;border-top:1px solid #f1f2ee;"><span>Metformina</span><span style="color:#6b6f6b;font-variant-numeric:tabular-nums;">154</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isRep }}">
+            <div key="rep" style="animation:scrIn .28s ease both;display:flex;flex-direction:column;gap:14px;">
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:12px;font-weight:600;color:#fff;background:#0f4c3a;border-radius:999px;padding:6px 12px;">Todos</span>
+                <span style="font-size:12px;color:#6b6f6b;background:#f2f3ef;border-radius:999px;padding:6px 12px;">Errores</span>
+                <span style="font-size:12px;color:#6b6f6b;background:#f2f3ef;border-radius:999px;padding:6px 12px;">Mejoras</span>
+              </div>
+              <div style="background:#fff;border:1px solid #e8e9e5;border-radius:16px;overflow:hidden;">
+                <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #f1f2ee;flex-wrap:wrap;"><span style="font-size:11px;font-weight:600;color:#c1372f;background:#fbe9e7;border-radius:6px;padding:3px 8px;">Error</span><div style="flex:1;min-width:180px;"><div style="font-size:13.5px;font-weight:600;">El escáner de récipe falla con fotos oscuras</div><div style="font-size:12px;color:#8a8e8a;margin-top:1px;">App móvil · reportado por 4 usuarios · hoy</div></div><span style="font-size:11px;font-weight:600;color:#c1372f;background:#fbe9e7;border-radius:999px;padding:3px 9px;">Crítico</span><span style="font-size:11px;font-weight:600;color:#b45309;background:#fff7ed;border-radius:999px;padding:3px 9px;">Abierto</span></div>
+                <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #f1f2ee;flex-wrap:wrap;"><span style="font-size:11px;font-weight:600;color:#0f4c3a;background:#e9f3ef;border-radius:6px;padding:3px 8px;">Mejora</span><div style="flex:1;min-width:180px;"><div style="font-size:13.5px;font-weight:600;">Permitir guardar varias listas médicas</div><div style="font-size:12px;color:#8a8e8a;margin-top:1px;">Sugerencia · 22 votos · ayer</div></div><span style="font-size:11px;font-weight:600;color:#6b6f6b;background:#f2f3ef;border-radius:999px;padding:3px 9px;">Media</span><span style="font-size:11px;font-weight:600;color:#157a5b;background:#eaf7f1;border-radius:999px;padding:3px 9px;">En estudio</span></div>
+                <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #f1f2ee;flex-wrap:wrap;"><span style="font-size:11px;font-weight:600;color:#c1372f;background:#fbe9e7;border-radius:6px;padding:3px 8px;">Error</span><div style="flex:1;min-width:180px;"><div style="font-size:13.5px;font-weight:600;">La tasa no se refresca en algunos equipos</div><div style="font-size:12px;color:#8a8e8a;margin-top:1px;">App móvil · 2 usuarios · 23 jul</div></div><span style="font-size:11px;font-weight:600;color:#b45309;background:#fff7ed;border-radius:999px;padding:3px 9px;">Media</span><span style="font-size:11px;font-weight:600;color:#157a5b;background:#eaf7f1;border-radius:999px;padding:3px 9px;">Resuelto</span></div>
+                <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;flex-wrap:wrap;"><span style="font-size:11px;font-weight:600;color:#0f4c3a;background:#e9f3ef;border-radius:6px;padding:3px 8px;">Mejora</span><div style="flex:1;min-width:180px;"><div style="font-size:13.5px;font-weight:600;">Filtrar farmacias solo con delivery</div><div style="font-size:12px;color:#8a8e8a;margin-top:1px;">Sugerencia · 15 votos · 21 jul</div></div><span style="font-size:11px;font-weight:600;color:#8a8e8a;background:#f2f3ef;border-radius:999px;padding:3px 9px;">Baja</span><span style="font-size:11px;font-weight:600;color:#b45309;background:#fff7ed;border-radius:999px;padding:3px 9px;">Abierto</span></div>
+              </div>
+            </div>
+          </sc-if>
+
+        </div>
+      </main>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:860}}">
+class Component extends DCLogic {
+  state = {
+    role: 'farmacia',
+    authed: true,
+    fScreen: 'dashboard',
+    sScreen: 'aprobaciones',
+    device: 'desktop',
+    cfgDelivery: true,
+    tasaAuto: true,
+    tasaSource: 'bcv',
+    inv: [
+      { id: 1, nombre: 'Losartán 50 mg', pres: '30 tabletas', usd: 2.40, stock: 42, disp: true },
+      { id: 2, nombre: 'Amoxicilina 500 mg', pres: '20 cápsulas', usd: 3.10, stock: 8, disp: true },
+      { id: 3, nombre: 'Metformina 850 mg', pres: '30 tabletas', usd: 1.95, stock: 0, disp: false },
+      { id: 4, nombre: 'Acetaminofén 500 mg', pres: '10 tabletas', usd: 0.80, stock: 120, disp: true },
+      { id: 5, nombre: 'Loratadina 10 mg', pres: '10 tabletas', usd: 1.20, stock: 25, disp: true },
+    ],
+    approvals: [
+      { id: 1, name: 'Farmacia Los Andes', city: 'Araure', rif: 'J-40123456-7', date: 'Hoy, 09:14' },
+      { id: 2, name: 'Farmacia Central Express', city: 'Acarigua', rif: 'J-40987654-3', date: 'Ayer, 16:40' },
+      { id: 3, name: 'Farmacia Vida Plena', city: 'Araure', rif: 'J-41222333-1', date: '23 jul' },
+    ],
+  };
+
+  RATE = 145.20;
+
+  toggleInv = (id) => this.setState((s) => ({ inv: s.inv.map((r) => r.id === id ? { ...r, disp: !r.disp } : r) }));
+  removeApproval = (id) => this.setState((s) => ({ approvals: s.approvals.filter((a) => a.id !== id) }));
+
+  renderVals() {
+    const s = this.state;
+    const isDesktop = s.device === 'desktop';
+    const role = s.role;
+    const screen = role === 'farmacia' ? s.fScreen : s.sScreen;
+    const setScreen = (id) => this.setState((x) => (x.role === 'farmacia' ? { fScreen: id } : { sScreen: id }));
+
+    const fmtBs = (n) => { try { return (n * this.RATE).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); } catch (e) { return (n * this.RATE).toFixed(2).replace('.', ','); } };
+    const fmtUsd = (n) => n.toFixed(2).replace('.', ',');
+
+    const ICON = {
+      dashboard: 'M4 4h7v7H4zM13 4h7v5h-7zM13 13h7v7h-7zM4 15h7v5H4z',
+      inventario: 'M3 7l9-4 9 4-9 4-9-4zM3 7v10l9 4 9-4V7M12 11v10',
+      config: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 8.5a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
+      registro: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M12 12v6M9 15h6',
+      login: 'M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3',
+      aprobaciones: 'M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4 12 14.01l-3-3',
+      farmacias: 'M3 9l1-5h16l1 5M4 9v11h16V9M4 9h16M9 20v-6h6v6',
+      metricas: 'M3 3v18h18M8 17V9M13 17V5M18 17v-7',
+      tasa: 'M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6',
+      analitica: 'M22 12h-4l-3 9L9 3l-3 9H2',
+      reportes: 'M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01',
+    };
+
+    const farmNav = [['dashboard', 'Resumen'], ['inventario', 'Inventario'], ['config', 'Configuración']];
+    const superNav = [['aprobaciones', 'Aprobaciones'], ['farmacias', 'Farmacias'], ['metricas', 'Métricas'], ['tasa', 'Tasa del día'], ['analitica', 'Analítica'], ['reportes', 'Reportes']];
+    const list = role === 'farmacia' ? farmNav : superNav;
+    const navItems = list.map(([id, label]) => {
+      const active = screen === id;
+      return {
+        label, d: ICON[id],
+        active,
+        bg: active ? 'rgba(255,255,255,0.12)' : 'transparent',
+        mbg: active ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.06)',
+        color: active ? '#ffffff' : 'rgba(255,255,255,0.68)',
+        weight: active ? 600 : 500,
+        badge: id === 'aprobaciones' ? s.approvals.length : 0,
+        onSel: () => setScreen(id),
+      };
+    });
+
+    const META = {
+      dashboard: ['Resumen', 'Tu actividad y leads del mes'],
+      inventario: ['Inventario', 'Medicamentos, precios y stock'],
+      config: ['Configuración', 'Datos, horario, delivery y tasa'],
+      registro: ['Registrar farmacia', 'Alta y verificación'],
+      login: ['Ingresar', 'Acceso al panel'],
+      aprobaciones: ['Aprobaciones', 'Solicitudes de farmacias nuevas'],
+      farmacias: ['Farmacias', 'Todas las farmacias de la red'],
+      metricas: ['Métricas globales', 'Desempeño de la plataforma'],
+      tasa: ['Tasa del día', 'Gestión de la tasa USD → Bs'],
+      analitica: ['Analítica de uso', 'Cómo se usa la app'],
+      reportes: ['Reportes', 'Errores y sugerencias de mejora'],
+    };
+    const meta = META[screen] || ['', ''];
+
+    const authScreen = role === 'farmacia' && !s.authed;
+    const showNav = !authScreen;
+
+    const seg = (on) => ({ bg: on ? '#0f4c3a' : 'transparent', color: on ? '#ffffff' : '#6b6f6b' });
+    const segW = (on) => ({ bg: on ? '#ffffff' : 'transparent', color: on ? '#0f4c3a' : '#6b6f6b' });
+
+    const inventory = s.inv.map((r) => {
+      let stockLabel, stockColor, stockBg;
+      if (r.stock === 0) { stockLabel = 'Agotado'; stockColor = '#c1372f'; stockBg = '#fbe9e7'; }
+      else if (r.stock <= 20) { stockLabel = r.stock + ' · bajo'; stockColor = '#b45309'; stockBg = '#fff7ed'; }
+      else { stockLabel = String(r.stock); stockColor = '#157a5b'; stockBg = '#eaf7f1'; }
+      return {
+        nombre: r.nombre, pres: r.pres, usd: fmtUsd(r.usd), bs: fmtBs(r.usd),
+        stockLabel, stockColor, stockBg,
+        disp: r.disp, dispBg: r.disp ? '#1d9e75' : '#d8dad3', dispX: r.disp ? '18px' : '2px',
+        toggle: () => this.toggleInv(r.id),
+      };
+    });
+    const agotados = s.inv.filter((r) => r.stock === 0).length;
+
+    const approvals = s.approvals.map((a) => ({ name: a.name, city: a.city, rif: a.rif, date: a.date, approve: () => this.removeApproval(a.id), reject: () => this.removeApproval(a.id) }));
+
+    const srcLabel = { bcv: 'BCV', paralelo: 'Paralelo', manual: 'Manual' }[s.tasaSource];
+
+    return {
+      isDesktop, isMobile: !isDesktop,
+      frameW: isDesktop ? '1240px' : '390px',
+      frameRadius: isDesktop ? '16px' : '30px',
+      shellDir: isDesktop ? 'row' : 'column',
+      shellH: isDesktop ? '744px' : '720px',
+      mainPad: isDesktop ? '24px' : '16px',
+      urlPath: '/' + (role === 'farmacia' ? '' : 'admin/') + screen,
+      showDesktopNav: isDesktop && showNav,
+      showMobileNav: !isDesktop && showNav,
+      showTopbar: showNav,
+
+      roleLabel: role === 'farmacia' ? 'Panel de farmacia' : 'Superadmin',
+      navItems,
+      pageTitle: meta[0], pageSubtitle: meta[1],
+      rate: fmtUsd(this.RATE),
+      avatarInitials: role === 'farmacia' ? 'LC' : 'SA',
+      userName: role === 'farmacia' ? 'Farmacia La Cruz' : 'Super Admin',
+      userMail: role === 'farmacia' ? 'admin@lacruz.com' : 'ops@dosisya.com',
+
+      setFarm: () => this.setState({ role: 'farmacia' }),
+      setSuper: () => this.setState({ role: 'super' }),
+      setDesk: () => this.setState({ device: 'desktop' }),
+      setMob: () => this.setState({ device: 'mobile' }),
+      segFarm: seg(role === 'farmacia'), segSuper: seg(role === 'super'),
+      segDesk: seg(isDesktop), segMob: seg(!isDesktop),
+
+      isDash: role === 'farmacia' && s.authed && screen === 'dashboard',
+      isInv: role === 'farmacia' && s.authed && screen === 'inventario',
+      isCfg: role === 'farmacia' && s.authed && screen === 'config',
+      isReg: role === 'farmacia' && !s.authed && s.fScreen === 'registro',
+      isLogin: role === 'farmacia' && !s.authed && s.fScreen === 'login',
+      isAprob: role === 'super' && screen === 'aprobaciones',
+      isFarm: role === 'super' && screen === 'farmacias',
+      isMet: role === 'super' && screen === 'metricas',
+      isTasa: role === 'super' && screen === 'tasa',
+      isAnal: role === 'super' && screen === 'analitica',
+      isRep: role === 'super' && screen === 'reportes',
+
+      inventory, invSummary: s.inv.length + ' medicamentos · ' + agotados + ' agotado' + (agotados === 1 ? '' : 's'),
+      approvals, aprobEmpty: s.approvals.length === 0,
+      aprobSummary: s.approvals.length === 0 ? 'Sin solicitudes pendientes' : (s.approvals.length + ' solicitud' + (s.approvals.length === 1 ? '' : 'es') + ' pendiente' + (s.approvals.length === 1 ? '' : 's')),
+
+      cfgDelivery: s.cfgDelivery, cfgDeliveryBg: s.cfgDelivery ? '#1d9e75' : '#d8dad3', cfgDeliveryX: s.cfgDelivery ? '21px' : '2px',
+      toggleDelivery: () => this.setState((x) => ({ cfgDelivery: !x.cfgDelivery })),
+      segTasaAuto: seg(s.tasaAuto), segTasaManual: seg(!s.tasaAuto),
+      setTasaAuto: () => this.setState({ tasaAuto: true }),
+      setTasaManual: () => this.setState({ tasaAuto: false }),
+      tasaFieldBg: s.tasaAuto ? '#f7f8f5' : '#ffffff',
+      tasaHint: s.tasaAuto ? 'Sincronizada' : 'Editable',
+
+      tasaSourceLabel: srcLabel,
+      segBcv: seg(s.tasaSource === 'bcv'), segPar: seg(s.tasaSource === 'paralelo'), segMan: seg(s.tasaSource === 'manual'),
+      setSrcBcv: () => this.setState({ tasaSource: 'bcv' }),
+      setSrcPar: () => this.setState({ tasaSource: 'paralelo' }),
+      setSrcMan: () => this.setState({ tasaSource: 'manual' }),
+
+      goLogin: () => this.setState({ fScreen: 'login' }),
+      goReg: () => this.setState({ fScreen: 'registro' }),
+      entrar: () => this.setState({ authed: true, fScreen: 'dashboard' }),
+      doRegister: () => this.setState({ authed: true, fScreen: 'dashboard' }),
+      logout: () => this.setState({ authed: false, fScreen: 'login' }),
+      canLogout: role === 'farmacia' && s.authed,
+    };
+  }
+}
+</script>
+</body>
+</html>

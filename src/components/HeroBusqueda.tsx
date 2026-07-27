@@ -1,7 +1,13 @@
 import { type FormEvent } from "react";
+import { User } from "lucide-react";
 import { BarraBusqueda } from "./BarraBusqueda";
 import { CATEGORIAS } from "@/lib/categorias";
 import type { Recordatorio } from "@/hooks/useLocalStorage";
+
+const nfTasa = new Intl.NumberFormat("es-VE", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
 
 interface HeroBusquedaProps {
   query: string;
@@ -22,6 +28,10 @@ interface HeroBusquedaProps {
   onToggleDelivery: () => void;
   /** Abre el escáner de récipe con IA (botón de cámara en el buscador). */
   onEscanearRecipe?: () => void;
+  /** Abre la hoja de "Iniciar sesión" (opcional) desde el botón de cuenta. */
+  onAbrirCuenta?: () => void;
+  /** Tasa USD→VES vigente para el chip del header; null la oculta. */
+  tasa?: number | null;
 }
 
 /**
@@ -44,9 +54,41 @@ export function HeroBusqueda({
   conDelivery,
   onToggleDelivery,
   onEscanearRecipe,
+  onAbrirCuenta,
+  tasa,
 }: HeroBusquedaProps) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50">
+    <div className="dosisya-ui relative min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50">
+      {onAbrirCuenta && (
+        <button
+          type="button"
+          aria-label="Iniciar sesión"
+          onClick={onAbrirCuenta}
+          className="dy-foco absolute left-4 top-4 flex h-[34px] w-[34px] items-center justify-center rounded-full"
+          style={{
+            background: "#eef0eb",
+            border: "1px solid var(--borde)",
+            color: "var(--verde-cruz)",
+          }}
+        >
+          <User className="h-[18px] w-[18px]" strokeWidth={1.75} aria-hidden="true" />
+        </button>
+      )}
+      {tasa != null && (
+        <div
+          className="absolute right-4 top-4 flex items-center gap-1.5 rounded-full px-2.5 py-1.5"
+          style={{ background: "#f2f3ef", border: "1px solid var(--borde)" }}
+        >
+          <span
+            aria-hidden="true"
+            style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--verde-vivo)" }}
+          />
+          <span style={{ fontSize: 11, color: "var(--tinta-suave)" }}>Tasa</span>
+          <span className="dy-num" style={{ fontSize: 11, fontWeight: 600, color: "var(--tinta)" }}>
+            Bs {nfTasa.format(tasa)}/$
+          </span>
+        </div>
+      )}
       <div className="text-center mb-6">
         <h1 className="font-black text-4xl">
           <span className="text-gray-900">Dosis</span>

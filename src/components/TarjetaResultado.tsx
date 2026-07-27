@@ -23,6 +23,8 @@ interface TarjetaResultadoProps {
   onToggleComparar?: () => void;
   /** true cuando ya hay 3 seleccionadas y esta no es una de ellas. */
   compararDeshabilitado?: boolean;
+  /** Al añadir, reporta el rect del botón "+" para la animación packFly. */
+  onAgregado?: (desde: DOMRect) => void;
 }
 
 export function TarjetaResultado({
@@ -33,6 +35,7 @@ export function TarjetaResultado({
   comparando = false,
   onToggleComparar,
   compararDeshabilitado = false,
+  onAgregado,
 }: TarjetaResultadoProps) {
   const esGenerico = esGenericoFn(resultado);
   const { agregar, estaEnLista } = useListaMedica();
@@ -47,7 +50,8 @@ export function TarjetaResultado({
   // OJO: aquí NO se registra lead. El lead CPC multi-producto se dispara al
   // CONTACTAR desde la lista — añadir todavía no es una interacción facturable.
 
-  const handleAgregar = () => {
+  const handleAgregar = (e?: React.MouseEvent<HTMLButtonElement>) => {
+    if (e) onAgregado?.(e.currentTarget.getBoundingClientRect());
     const item = agregar({
       medicamentoId: resultado.medicamento_id,
       nombre: resultado.medicamento_nombre,

@@ -53,7 +53,7 @@ function SuperDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="dosisya-ui min-h-screen bg-background">
       <header className="border-b bg-card">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="font-bold">DosisYa · Súper Admin</div>
