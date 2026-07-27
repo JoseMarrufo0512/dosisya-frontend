@@ -19,28 +19,29 @@ import {
   ArrowLeftRight,
   HelpCircle,
   Sparkles,
-  X,
   ChevronRight,
   Plus,
   Trash2,
-  Send,
   MessageCircle,
   type LucideIcon,
 } from "lucide-react";
 import { useRecordatorios } from "@/hooks/useLocalStorage";
 import { useBackDismiss } from "@/hooks/useBackDismiss";
+import { HojaBase, Asa } from "./_hojaBase";
 
 const WA_SOPORTE =
   "https://wa.me/584120000000?text=Hola%20DosisYa%2C%20necesito%20ayuda";
 
-type SubHoja = "recordatorios" | "comparar" | "ayuda" | "ia" | null;
+type SubHoja = "recordatorios" | "comparar" | "ayuda" | null;
 
 export function MenuMasPaciente({
   open,
   onOpenChange,
+  onAbrirChatIA,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  onAbrirChatIA: () => void;
 }) {
   const [sub, setSub] = useState<SubHoja>(null);
   // Botón atrás cierra la sub-hoja abierta (Recordatorios/Comparar/Ayuda/IA).
@@ -90,7 +91,10 @@ export function MenuMasPaciente({
               titulo="Asistente IA"
               sub="Pregunta sobre dosis, usos y alternativas"
               destacado
-              onClick={() => abrir("ia")}
+              onClick={() => {
+                onOpenChange(false);
+                onAbrirChatIA();
+              }}
             />
           </Drawer.Content>
         </Drawer.Portal>
@@ -99,7 +103,6 @@ export function MenuMasPaciente({
       <HojaRecordatorios open={sub === "recordatorios"} onClose={() => setSub(null)} />
       <HojaComparar open={sub === "comparar"} onClose={() => setSub(null)} />
       <HojaAyuda open={sub === "ayuda"} onClose={() => setSub(null)} />
-      <HojaChatIA open={sub === "ia"} onClose={() => setSub(null)} />
     </>
   );
 }
@@ -293,136 +296,7 @@ function HojaAyuda({ open, onClose }: { open: boolean; onClose: () => void }) {
   );
 }
 
-/* ───────────────────────── Sub-hoja: Chat IA ─────────────────────────────── */
-
-type Mensaje = { de: "ia" | "yo"; texto: string };
-
-const CHAT_SEED: Mensaje[] = [
-  { de: "ia", texto: "Hola, soy tu asistente. Pregúntame por dosis, usos o alternativas de un medicamento." },
-];
-
-function HojaChatIA({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [mensajes, setMensajes] = useState<Mensaje[]>(CHAT_SEED);
-  const [texto, setTexto] = useState("");
-
-  const enviar = () => {
-    const t = texto.trim();
-    if (!t) return;
-    setMensajes((m) => [
-      ...m,
-      { de: "yo", texto: t },
-      { de: "ia", texto: "Función en desarrollo — pronto podré responder tus dudas sobre este medicamento." },
-    ]);
-    setTexto("");
-  };
-
-  return (
-    <HojaBase open={open} onClose={onClose} tituloNodo={
-      <span className="flex items-center gap-2" style={{ fontSize: 17, fontWeight: 500, color: "var(--tinta)", letterSpacing: "-0.02em" }}>
-        <span className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px]" style={{ background: "var(--verde-cruz)", color: "var(--papel)" }}>
-          <Sparkles className="h-[17px] w-[17px]" aria-hidden="true" />
-        </span>
-        Asistente IA
-      </span>
-    }>
-      <div className="flex flex-col gap-2.5" style={{ marginTop: 14, maxHeight: "46dvh", overflowY: "auto" }}>
-        {mensajes.map((m, i) => (
-          <div
-            key={i}
-            style={
-              m.de === "ia"
-                ? { alignSelf: "flex-start", maxWidth: "82%", background: "var(--blanco)", border: "1px solid var(--borde)", borderRadius: "16px 16px 16px 5px", padding: "11px 13px", fontSize: 13, color: "var(--tinta)", lineHeight: 1.45 }
-                : { alignSelf: "flex-end", maxWidth: "82%", background: "var(--verde-cruz)", color: "#eaf3ef", borderRadius: "16px 16px 5px 16px", padding: "11px 13px", fontSize: 13, lineHeight: 1.45 }
-            }
-          >
-            {m.texto}
-          </div>
-        ))}
-      </div>
-      <div
-        className="flex items-center gap-2"
-        style={{ background: "var(--blanco)", border: "1px solid var(--borde)", borderRadius: 14, padding: "0 6px 0 14px", height: 48, marginTop: 14 }}
-      >
-        <input
-          value={texto}
-          onChange={(e) => setTexto(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && enviar()}
-          placeholder="Escribe tu pregunta…"
-          aria-label="Escribe tu pregunta al asistente"
-          className="flex-1"
-          style={{ border: 0, outline: "none", background: "transparent", fontSize: 13.5, color: "var(--tinta)" }}
-        />
-        <button
-          type="button"
-          aria-label="Enviar"
-          onClick={enviar}
-          className="dy-foco flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px]"
-          style={{ background: "var(--verde-cruz)", color: "var(--papel)", border: 0 }}
-        >
-          <Send className="h-[18px] w-[18px]" aria-hidden="true" />
-        </button>
-      </div>
-    </HojaBase>
-  );
-}
-
-/* ───────────────────────── Piezas compartidas ────────────────────────────── */
-
-function HojaBase({
-  open,
-  onClose,
-  titulo,
-  tituloNodo,
-  children,
-}: {
-  open: boolean;
-  onClose: () => void;
-  titulo?: string;
-  tituloNodo?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <Drawer.Root open={open} onOpenChange={(v) => !v && onClose()}>
-      <Drawer.Portal>
-        <Drawer.Overlay className="fixed inset-0 z-40 bg-black/40" />
-        <Drawer.Content
-          className="dosisya-ui fixed inset-x-0 bottom-0 z-50 mx-auto flex max-w-md flex-col rounded-t-3xl outline-none"
-          style={{ background: "var(--papel)", padding: "10px 18px 24px" }}
-          aria-describedby={undefined}
-        >
-          <Asa />
-          <div className="flex items-center justify-between">
-            {tituloNodo ?? (
-              <Drawer.Title style={{ fontSize: 17, fontWeight: 500, color: "var(--tinta)", letterSpacing: "-0.02em" }}>
-                {titulo}
-              </Drawer.Title>
-            )}
-            {tituloNodo && <Drawer.Title className="sr-only">{titulo ?? "Detalle"}</Drawer.Title>}
-            <button
-              type="button"
-              aria-label="Cerrar"
-              onClick={onClose}
-              className="dy-foco flex h-[34px] w-[34px] items-center justify-center rounded-[11px]"
-              style={{ background: "var(--fondo-suave)", border: 0, color: "var(--tinta-suave)" }}
-            >
-              <X className="h-[18px] w-[18px]" aria-hidden="true" />
-            </button>
-          </div>
-          {children}
-        </Drawer.Content>
-      </Drawer.Portal>
-    </Drawer.Root>
-  );
-}
-
-function Asa() {
-  return (
-    <div
-      aria-hidden="true"
-      style={{ width: 38, height: 4, borderRadius: 999, background: "#d8dad3", margin: "2px auto 14px" }}
-    />
-  );
-}
+/* ───────────────────────── Pieza compartida ─────────────────────────────── */
 
 function ItemMenu({
   icono: Icono,

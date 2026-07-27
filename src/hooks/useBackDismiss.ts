@@ -1,43 +1,100 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Hace que el botón "atrás" del navegador/teléfono cierre un overlay controlado
- * en vez de navegar fuera de la app.
+ * Hace que el botón "atrás" del navegador/teléfono cierre el overlay abierto en
+ * vez de navegar fuera de la app.
  *
- * Al pasar `open` de false→true empuja una entrada "trampa" en el history. Si el
- * usuario presiona atrás (popstate) estando abierto, se llama `onClose`. Si el
- * overlay se cierra por otra vía (botón X, backdrop, tecla Esc), se consume la
- * entrada trampa con history.back() para no dejar basura en el historial.
- *
- * Con varios overlays apilados, cada instancia empuja su propia entrada, así que
- * "atrás" cierra el de más arriba primero (comportamiento tipo pila, como nativo).
+ * Modelo (a prueba de transiciones A→B):
+ *  - Un contador global de overlays abiertos y UNA sola "entrada trampa" en el
+ *    history: la trampa existe mientras el contador sea > 0.
+ *  - Los cambios de history se reconcilian en un microtask, no en el acto. Así,
+ *    al cerrar un overlay y abrir otro en el mismo tick (p. ej. "Más" → Chat),
+ *    el contador nunca llega a 0 y NO se toca el historial: la trampa se reusa y
+ *    no hay carrera entre history.back() y pushState.
+ *  - En esta app solo hay un overlay visible a la vez, así que "atrás" cierra el
+ *    que esté abierto (cierra todos los registrados, que es a lo sumo uno).
  */
+
+type Closer = () => void;
+
+const closers = new Set<Closer>();
+let openCount = 0;
+let trapActive = false;
+let programmaticBack = false;
+let scheduled = false;
+let listening = false;
+
+function onPop() {
+  if (programmaticBack) {
+    // Fue nuestro history.back() programático (cierre por X/backdrop/Esc).
+    programmaticBack = false;
+    return;
+  }
+  // Atrás del usuario: el navegador ya consumió la trampa.
+  trapActive = false;
+  const fns = [...closers];
+  closers.clear();
+  openCount = 0;
+  fns.forEach((fn) => fn());
+}
+
+function reconcile() {
+  scheduled = false;
+  if (typeof window === "undefined") return;
+
+  if (openCount > 0 && !trapActive) {
+    trapActive = true;
+    if (!listening) {
+      window.addEventListener("popstate", onPop);
+      listening = true;
+    }
+    window.history.pushState({ dosisyaOverlay: true }, "");
+  } else if (openCount === 0 && trapActive) {
+    trapActive = false;
+    programmaticBack = true;
+    window.history.back();
+  }
+}
+
+function schedule() {
+  if (scheduled || typeof window === "undefined") return;
+  scheduled = true;
+  queueMicrotask(reconcile);
+}
+
 export function useBackDismiss(open: boolean, onClose: () => void) {
-  const pushedRef = useRef(false);
-  // onClose siempre fresco sin re-suscribir el listener en cada render.
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  // Closer registrado por ESTA instancia mientras está abierta (null si cerrada).
+  const closerRef = useRef<Closer | null>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    if (open && !pushedRef.current) {
-      window.history.pushState({ dosisyaOverlay: true }, "");
-      pushedRef.current = true;
-
-      const onPop = () => {
-        // El usuario presionó atrás: la entrada trampa ya fue consumida.
-        pushedRef.current = false;
+    if (open && !closerRef.current) {
+      const closer: Closer = () => {
+        closerRef.current = null;
         onCloseRef.current();
       };
-      window.addEventListener("popstate", onPop);
-      return () => window.removeEventListener("popstate", onPop);
-    }
-
-    if (!open && pushedRef.current) {
-      // Cierre programático (X / backdrop / Esc): consumimos nuestra trampa.
-      pushedRef.current = false;
-      window.history.back();
+      closerRef.current = closer;
+      closers.add(closer);
+      openCount += 1;
+      schedule();
+    } else if (!open && closerRef.current) {
+      closers.delete(closerRef.current);
+      closerRef.current = null;
+      openCount = Math.max(0, openCount - 1);
+      schedule();
     }
   }, [open]);
+
+  // Al desmontar estando abierto, liberar el registro.
+  useEffect(() => {
+    return () => {
+      if (closerRef.current) {
+        closers.delete(closerRef.current);
+        closerRef.current = null;
+        openCount = Math.max(0, openCount - 1);
+        schedule();
+      }
+    };
+  }, []);
 }

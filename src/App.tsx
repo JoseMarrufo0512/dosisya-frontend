@@ -20,6 +20,7 @@ import { ComparadorPanel } from "./components/ComparadorPanel";
 import NavegacionPaciente, { type TabPaciente } from "@/components/navegacion/NavegacionPaciente";
 import { MenuMasPaciente } from "@/components/paciente/MenuMasPaciente";
 import { HojaLoginPaciente } from "@/components/paciente/HojaLoginPaciente";
+import { HojaChatIA } from "@/components/paciente/HojaChatIA";
 import { ChevronRight, MapPin, Pill } from "lucide-react";
 import {
   type Filtros,
@@ -70,6 +71,7 @@ export default function App() {
   const [tab, setTab] = useState<TabPaciente>("buscar");
   const [masAbierto, setMasAbierto] = useState(false);
   const [loginAbierto, setLoginAbierto] = useState(false);
+  const [chatIAAbierto, setChatIAAbierto] = useState(false);
 
   // Botón atrás del teléfono → cierra el overlay abierto (uno por capa).
   useBackDismiss(listaAbierta, () => setListaAbierta(false));
@@ -77,6 +79,7 @@ export default function App() {
   useBackDismiss(comparadorAbierto, () => setComparadorAbierto(false));
   useBackDismiss(loginAbierto, () => setLoginAbierto(false));
   useBackDismiss(masAbierto, () => setMasAbierto(false));
+  useBackDismiss(chatIAAbierto, () => setChatIAAbierto(false));
 
   // packFly: paquete que vuela del botón "+" al ícono de Lista (handoff).
   const reduceMotion = useReducedMotion();
@@ -535,7 +538,12 @@ export default function App() {
         seleccionados={seleccionados}
       />
 
-      <MenuMasPaciente open={masAbierto} onOpenChange={setMasAbierto} />
+      <MenuMasPaciente
+        open={masAbierto}
+        onOpenChange={setMasAbierto}
+        onAbrirChatIA={() => setChatIAAbierto(true)}
+      />
+      <HojaChatIA open={chatIAAbierto} onClose={() => setChatIAAbierto(false)} />
       <HojaLoginPaciente open={loginAbierto} onOpenChange={setLoginAbierto} />
 
       {/* Capa de vuelo (packFly): el paquete arquea del botón "+" al carrito */}
