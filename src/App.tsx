@@ -427,6 +427,45 @@ export default function App() {
             : "Aliadas verificadas en Acarigua/Araure"}
         </p>
 
+        {/* Placeholder de mapa (handoff): superficie visual, no un mapa real. */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: "relative",
+            height: 196,
+            marginTop: 16,
+            borderRadius: 18,
+            border: "1px solid var(--borde)",
+            overflow: "hidden",
+            background:
+              "repeating-linear-gradient(45deg,#f2f3ef,#f2f3ef 11px,#ecefe9 11px,#ecefe9 22px)",
+          }}
+        >
+          <span style={{ position: "absolute", left: 64, top: 56, color: "var(--verde-cruz)" }}>
+            <MapPin className="h-[30px] w-[30px]" strokeWidth={1.4} />
+          </span>
+          <span style={{ position: "absolute", right: 70, top: 96, color: "var(--verde-vivo)" }}>
+            <MapPin className="h-[26px] w-[26px]" strokeWidth={1.4} />
+          </span>
+          <span
+            className="dy-num"
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              transform: "translate(-50%,-50%)",
+              fontFamily: "ui-monospace,Menlo,monospace",
+              fontSize: 11,
+              color: "var(--tinta-tenue)",
+              background: "rgba(250,250,247,0.82)",
+              padding: "5px 9px",
+              borderRadius: 7,
+            }}
+          >
+            mapa · farmacias cercanas
+          </span>
+        </div>
+
         {farmaciasCercanas.length === 0 ? (
           <div
             style={{
