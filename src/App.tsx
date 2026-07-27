@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState, FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, FormEvent } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { useGeolocalizacion } from "./hooks/useGeolocalizacion";
 import { useBuscarMedicamentos } from "./hooks/useBuscarMedicamentos";
 import { useDebounce } from "./hooks/useDebounce";
@@ -15,6 +16,10 @@ import { EscanerRecipe } from "./components/EscanerRecipe";
 import { BarraFiltros } from "./components/BarraFiltros";
 import { ComparadorBar } from "./components/ComparadorBar";
 import { ComparadorPanel } from "./components/ComparadorPanel";
+import NavegacionPaciente, { type TabPaciente } from "@/components/navegacion/NavegacionPaciente";
+import { MenuMasPaciente } from "@/components/paciente/MenuMasPaciente";
+import { HojaLoginPaciente } from "@/components/paciente/HojaLoginPaciente";
+import { ChevronRight, MapPin, Pill } from "lucide-react";
 import {
   type Filtros,
   FILTROS_INICIALES,
@@ -59,6 +64,33 @@ export default function App() {
   const MAX_COMPARAR = 3;
   const [compararClaves, setCompararClaves] = useState<string[]>([]);
   const [comparadorAbierto, setComparadorAbierto] = useState(false);
+
+  // Navegación inferior del paciente (handoff): pestaña activa + hoja "Más".
+  const [tab, setTab] = useState<TabPaciente>("buscar");
+  const [masAbierto, setMasAbierto] = useState(false);
+  const [loginAbierto, setLoginAbierto] = useState(false);
+
+  // packFly: paquete que vuela del botón "+" al ícono de Lista (handoff).
+  const reduceMotion = useReducedMotion();
+  const flyerIdRef = useRef(0);
+  type Flyer = { id: number; x0: number; y0: number; x1: number; y1: number; xc: number; yc: number };
+  const [flyers, setFlyers] = useState<Flyer[]>([]);
+
+  const volarAlCarrito = (desde: DOMRect) => {
+    if (reduceMotion) return; // reduced-motion: sin vuelo (el ícono igual rebota al subir el contador)
+    const objetivo = document.querySelector('[data-tab="lista"]');
+    if (!objetivo) return;
+    const t = objetivo.getBoundingClientRect();
+    const x0 = desde.left + desde.width / 2;
+    const y0 = desde.top + desde.height / 2;
+    const x1 = t.left + t.width / 2;
+    const y1 = t.top + t.height / 2;
+    const xc = (x0 + x1) / 2;
+    const yc = Math.min(y0, y1) - 70; // punto de control del arco (mismo criterio del handoff)
+    const id = (flyerIdRef.current += 1);
+    setFlyers((f) => [...f, { id, x0, y0, x1, y1, xc, yc }]);
+    window.setTimeout(() => setFlyers((f) => f.filter((x) => x.id !== id)), 700);
+  };
 
   const toggleComparar = (clave: string) => {
     setCompararClaves((prev) =>
@@ -191,6 +223,7 @@ export default function App() {
       conDelivery={conDelivery}
       onToggleDelivery={() => setConDelivery(!conDelivery)}
       onEscanearRecipe={() => setEscanerAbierto(true)}
+      onAbrirCuenta={() => setLoginAbierto(true)}
     />
   );
 
@@ -235,7 +268,7 @@ export default function App() {
       <main className="flex-1 overflow-y-auto">
         {/* pb-28 evita que la barra flotante de la lista tape la última tarjeta */}
         <div
-          className={`max-w-2xl mx-auto px-4 py-4 space-y-3 ${totalDistintos > 0 ? "pb-28" : ""}`}
+          className={`max-w-2xl mx-auto px-4 py-4 space-y-3 ${totalDistintos > 0 ? "pb-44" : "pb-24"}`}
         >
           {api.cargando && <EstadoCargando />}
 
@@ -309,6 +342,7 @@ export default function App() {
                     compararClaves.length >= MAX_COMPARAR &&
                     !compararClaves.includes(claveResultado(res))
                   }
+                  onAgregado={volarAlCarrito}
                 />
               );
             })}
@@ -343,9 +377,133 @@ export default function App() {
     </div>
   );
 
+  // Farmacias cercanas derivadas de los resultados actuales (únicas por id).
+  const farmaciasCercanas = useMemo(() => {
+    const map = new Map<
+      string,
+      { id: string; nombre: string; direccion: string; distancia_m: number; count: number }
+    >();
+    for (const r of api.resultados) {
+      const cur = map.get(r.farmacia_id);
+      if (cur) cur.count += 1;
+      else
+        map.set(r.farmacia_id, {
+          id: r.farmacia_id,
+          nombre: r.farmacia_nombre,
+          direccion: r.direccion,
+          distancia_m: r.distancia_m,
+          count: 1,
+        });
+    }
+    return [...map.values()].sort((a, b) => a.distancia_m - b.distancia_m);
+  }, [api.resultados]);
+
+  const fmtKm = (m: number) => (m / 1000).toFixed(1).replace(".", ",") + " km";
+
+  const vistaFarmacias = (
+    <div className="dosisya-ui min-h-screen" style={{ background: "var(--papel)" }}>
+      <div className="mx-auto max-w-2xl px-4 py-6" style={{ paddingBottom: 104 }}>
+        <h1 style={{ fontSize: 20, fontWeight: 500, color: "var(--tinta)", letterSpacing: "-0.02em" }}>
+          Farmacias cerca de ti
+        </h1>
+        <p style={{ fontSize: 12.5, color: "var(--tinta-tenue)", marginTop: 2 }}>
+          {farmaciasCercanas.length > 0
+            ? `${farmaciasCercanas.length} aliada(s) que tienen tu búsqueda`
+            : "Aliadas verificadas en Acarigua/Araure"}
+        </p>
+
+        {farmaciasCercanas.length === 0 ? (
+          <div
+            style={{
+              marginTop: 16,
+              textAlign: "center",
+              padding: "34px 20px",
+              background: "var(--blanco)",
+              border: "1px dashed var(--borde)",
+              borderRadius: 16,
+            }}
+          >
+            <span
+              className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl"
+              style={{ background: "var(--fondo-suave)", color: "var(--verde-cruz)" }}
+            >
+              <MapPin className="h-6 w-6" aria-hidden="true" />
+            </span>
+            <div style={{ fontSize: 14.5, fontWeight: 500, color: "var(--tinta)", marginTop: 12 }}>
+              Busca un medicamento
+            </div>
+            <div style={{ fontSize: 12.5, color: "var(--tinta-tenue)", marginTop: 3, lineHeight: 1.45 }}>
+              Te mostramos las farmacias cercanas que lo tienen disponible.
+            </div>
+            <button
+              type="button"
+              onClick={() => setTab("buscar")}
+              className="dy-foco"
+              style={{
+                marginTop: 16,
+                height: 44,
+                padding: "0 18px",
+                background: "var(--verde-cruz)",
+                color: "var(--papel)",
+                border: 0,
+                borderRadius: 12,
+                fontSize: 14,
+                fontWeight: 500,
+              }}
+            >
+              Ir a buscar
+            </button>
+          </div>
+        ) : (
+          <ul
+            style={{
+              marginTop: 16,
+              listStyle: "none",
+              padding: 0,
+              background: "var(--blanco)",
+              border: "1px solid var(--borde)",
+              borderRadius: 16,
+              overflow: "hidden",
+            }}
+          >
+            {farmaciasCercanas.map((f, i) => (
+              <li
+                key={f.id}
+                className="flex items-center gap-3"
+                style={{
+                  padding: "13px 14px",
+                  borderBottom: i < farmaciasCercanas.length - 1 ? "1px solid #eef0eb" : "none",
+                }}
+              >
+                <span
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+                  style={{ background: "var(--fondo-suave)", color: "var(--verde-cruz)" }}
+                >
+                  <MapPin className="h-[18px] w-[18px]" aria-hidden="true" />
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: "var(--tinta)" }} className="truncate">
+                    {f.nombre}
+                  </div>
+                  <div className="dy-num truncate" style={{ fontSize: 12, color: "var(--tinta-tenue)", marginTop: 1 }}>
+                    {fmtKm(f.distancia_m)} · {f.count} resultado{f.count === 1 ? "" : "s"}
+                  </div>
+                </div>
+                <ChevronRight className="h-[18px] w-[18px] shrink-0" style={{ color: "#c3c6c0" }} aria-hidden="true" />
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+
+  const contenido =
+    tab === "farmacias" ? vistaFarmacias : estado === "hero" ? vistaHero : vistaResultados;
+
   return (
     <>
-      {estado === "hero" ? vistaHero : vistaResultados}
+      {contenido}
 
       {/* Lista Médica — visible sobre ambas vistas (spec receta-ia-y-carrito) */}
       <CartSummary onVerLista={() => setListaAbierta(true)} />
@@ -368,6 +526,61 @@ export default function App() {
         onOpenChange={setComparadorAbierto}
         seleccionados={seleccionados}
       />
+
+      <MenuMasPaciente open={masAbierto} onOpenChange={setMasAbierto} />
+      <HojaLoginPaciente open={loginAbierto} onOpenChange={setLoginAbierto} />
+
+      {/* Capa de vuelo (packFly): el paquete arquea del botón "+" al carrito */}
+      <div className="pointer-events-none fixed inset-0 z-[60]" aria-hidden="true">
+        {flyers.map((f) => (
+          <motion.div
+            key={f.id}
+            initial={{ x: f.x0, y: f.y0, scale: 0.5, opacity: 0 }}
+            animate={{
+              x: [f.x0, f.x0, f.x0, f.xc, f.x1],
+              y: [f.y0, f.y0, f.y0, f.yc, f.y1],
+              scale: [0.5, 1.14, 0.96, 0.6, 0.16],
+              opacity: [0, 1, 1, 1, 0.2],
+            }}
+            transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1], times: [0, 0.14, 0.26, 0.62, 1] }}
+            style={{
+              position: "fixed",
+              left: 0,
+              top: 0,
+              width: 46,
+              height: 46,
+              marginLeft: -23,
+              marginTop: -23,
+              borderRadius: 14,
+              background: "var(--verde-cruz)",
+              color: "var(--papel)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 10px 22px -6px rgba(15,76,58,0.6)",
+            }}
+          >
+            <Pill className="h-6 w-6" strokeWidth={1.8} />
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Barra de navegación inferior (handoff) */}
+      <div className="fixed inset-x-0 bottom-0 z-40">
+        <div className="mx-auto max-w-md">
+          <NavegacionPaciente
+            activo={masAbierto ? "mas" : tab === "farmacias" ? "farmacias" : "buscar"}
+            onSeleccionar={(id) => {
+              if (id === "buscar") setTab("buscar");
+              else if (id === "farmacias") setTab("farmacias");
+              else if (id === "lista") setListaAbierta(true);
+              else if (id === "mas") setMasAbierto(true);
+            }}
+            onEscanear={() => setEscanerAbierto(true)}
+            listaCount={totalDistintos}
+          />
+        </div>
+      </div>
     </>
   );
 }

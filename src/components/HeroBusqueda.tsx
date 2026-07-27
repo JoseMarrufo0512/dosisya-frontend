@@ -1,4 +1,5 @@
 import { type FormEvent } from "react";
+import { User } from "lucide-react";
 import { BarraBusqueda } from "./BarraBusqueda";
 import { CATEGORIAS } from "@/lib/categorias";
 import type { Recordatorio } from "@/hooks/useLocalStorage";
@@ -22,6 +23,8 @@ interface HeroBusquedaProps {
   onToggleDelivery: () => void;
   /** Abre el escáner de récipe con IA (botón de cámara en el buscador). */
   onEscanearRecipe?: () => void;
+  /** Abre la hoja de "Iniciar sesión" (opcional) desde el botón de cuenta. */
+  onAbrirCuenta?: () => void;
 }
 
 /**
@@ -44,9 +47,21 @@ export function HeroBusqueda({
   conDelivery,
   onToggleDelivery,
   onEscanearRecipe,
+  onAbrirCuenta,
 }: HeroBusquedaProps) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50">
+    <div className="dosisya-ui relative min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50">
+      {onAbrirCuenta && (
+        <button
+          type="button"
+          aria-label="Iniciar sesión"
+          onClick={onAbrirCuenta}
+          className="dy-foco absolute left-4 top-4 flex h-[34px] w-[34px] items-center justify-center rounded-full"
+          style={{ background: "#eef0eb", border: "1px solid var(--borde)", color: "var(--verde-cruz)" }}
+        >
+          <User className="h-[18px] w-[18px]" strokeWidth={1.75} aria-hidden="true" />
+        </button>
+      )}
       <div className="text-center mb-6">
         <h1 className="font-black text-4xl">
           <span className="text-gray-900">Dosis</span>

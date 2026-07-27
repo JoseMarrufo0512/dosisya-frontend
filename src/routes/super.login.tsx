@@ -35,8 +35,14 @@ function SuperLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-muted via-background to-accent px-4">
-      <div className="w-full max-w-sm rounded-2xl border bg-card p-6 sm:p-8 shadow-[0_20px_60px_-20px_rgba(10,36,99,0.25)]">
+    <div
+      className="dosisya-ui min-h-screen flex items-center justify-center px-4"
+      style={{ background: "var(--fondo-suave)" }}
+    >
+      <div
+        className="w-full max-w-sm rounded-2xl border bg-card p-6 sm:p-8"
+        style={{ boxShadow: "0 20px 60px -24px rgba(22,24,26,0.20)" }}
+      >
         <div className="flex items-center gap-3">
           <div className="h-11 w-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
             <Shield className="h-5 w-5" />

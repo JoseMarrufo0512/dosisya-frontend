@@ -10,6 +10,7 @@ import {
 import { Toaster } from "@/components/ui/sonner";
 
 import appCss from "../styles.css?url";
+import tokensUiCss from "../styles/dosisya-ui.css?url";
 
 function NotFoundComponent() {
   return (
@@ -97,6 +98,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         rel: "stylesheet",
         href: appCss,
+      },
+      {
+        rel: "stylesheet",
+        href: tokensUiCss,
       },
     ],
   }),

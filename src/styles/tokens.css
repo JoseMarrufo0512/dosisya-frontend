@@ -1,0 +1,55 @@
+/*
+ * tokens.css — Estilos específicos de la pantalla de búsqueda del paciente.
+ *
+ * La PALETA ya no vive aquí: es única y global en styles/dosisya-ui.css
+ * (cargado en __root.tsx). Este archivo solo aporta lo propio del paciente:
+ * la familia tipográfica Archivo y las utilidades de esa pantalla.
+ */
+
+/*
+ * Raíz de la pantalla de búsqueda. Fija superficie y color; la tipografía es
+ * la única de la app (Inter, cargada global en __root), igual que el panel.
+ */
+.busqueda-root {
+  font-family: "Inter", "Outfit", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, sans-serif;
+  background-color: var(--papel);
+  color: var(--tinta);
+  font-weight: 400;
+}
+
+/* Cifras alineadas: obligatorio en precios, distancias y tasas */
+.num-tab {
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Pulso de opacidad para skeletons. Un solo canal (opacity) es más barato
+ * en CPU de gama baja que un shimmer con gradiente animado.
+ */
+@keyframes pulso-opacidad {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+.pulso-carga {
+  animation: pulso-opacidad 1.4s ease-in-out infinite;
+}
+
+/* Foco visible por teclado, consistente en toda la pantalla */
+.foco-anillo:focus-visible {
+  outline: 2px solid var(--verde-cruz);
+  outline-offset: 2px;
+}
+
+/* Respeta la preferencia del sistema de reducir movimiento */
+@media (prefers-reduced-motion: reduce) {
+  .pulso-carga {
+    animation: none;
+    opacity: 0.7;
+  }
+}
