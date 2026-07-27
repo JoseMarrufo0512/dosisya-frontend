@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Sparkles, Send } from "lucide-react";
 import { HojaBase } from "./_hojaBase";
 import { useBackDismiss } from "@/hooks/useBackDismiss";
+import { enviarMensajeChat, type MensajeChat } from "@/lib/chatIA";
 
 type Mensaje = { de: "ia" | "yo"; texto: string };
 
@@ -20,21 +21,32 @@ const CHAT_SEED: Mensaje[] = [
 export function HojaChatIA({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [mensajes, setMensajes] = useState<Mensaje[]>(CHAT_SEED);
   const [texto, setTexto] = useState("");
+  const [enviando, setEnviando] = useState(false);
 
   useBackDismiss(open, onClose);
 
-  const enviar = () => {
+  const enviar = async () => {
     const t = texto.trim();
-    if (!t) return;
-    setMensajes((m) => [
-      ...m,
-      { de: "yo", texto: t },
-      {
-        de: "ia",
-        texto: "Función en desarrollo — pronto podré responder tus dudas sobre este medicamento.",
-      },
-    ]);
+    if (!t || enviando) return;
+    const nuevos: Mensaje[] = [...mensajes, { de: "yo", texto: t }];
+    setMensajes(nuevos);
     setTexto("");
+    setEnviando(true);
+    try {
+      const historial: MensajeChat[] = nuevos.map((m) => ({
+        rol: m.de === "yo" ? "usuario" : "asistente",
+        texto: m.texto,
+      }));
+      const respuesta = await enviarMensajeChat(historial);
+      setMensajes((m) => [...m, { de: "ia", texto: respuesta }]);
+    } catch {
+      setMensajes((m) => [
+        ...m,
+        { de: "ia", texto: "No pude responder ahora, intenta de nuevo." },
+      ]);
+    } finally {
+      setEnviando(false);
+    }
   };
 
   return (
@@ -93,6 +105,18 @@ export function HojaChatIA({ open, onClose }: { open: boolean; onClose: () => vo
           </div>
         ))}
       </div>
+      {enviando && (
+        <div
+          style={{
+            alignSelf: "flex-start",
+            fontSize: 12,
+            color: "var(--tinta-tenue)",
+            marginTop: 6,
+          }}
+        >
+          escribiendo…
+        </div>
+      )}
       <div
         className="flex items-center gap-2"
         style={{
@@ -111,6 +135,7 @@ export function HojaChatIA({ open, onClose }: { open: boolean; onClose: () => vo
           placeholder="Escribe tu pregunta…"
           aria-label="Escribe tu pregunta al asistente"
           className="flex-1"
+          disabled={enviando}
           style={{
             border: 0,
             outline: "none",
@@ -123,8 +148,14 @@ export function HojaChatIA({ open, onClose }: { open: boolean; onClose: () => vo
           type="button"
           aria-label="Enviar"
           onClick={enviar}
+          disabled={enviando}
           className="dy-foco flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px]"
-          style={{ background: "var(--verde-cruz)", color: "var(--papel)", border: 0 }}
+          style={{
+            background: "var(--verde-cruz)",
+            color: "var(--papel)",
+            border: 0,
+            opacity: enviando ? 0.6 : 1,
+          }}
         >
           <Send className="h-[18px] w-[18px]" aria-hidden="true" />
         </button>
