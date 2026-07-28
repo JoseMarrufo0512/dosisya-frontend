@@ -2,7 +2,8 @@ import { type ResultadoFarmacia } from "@/lib/api";
 import { registrarLead } from "@/lib/leads";
 import { construirMensajeProducto, construirUrlWhatsApp } from "@/lib/whatsapp";
 import { useListaMedica } from "@/hooks/useListaMedica";
-import { MapPin, Star, Plus, Check } from "lucide-react";
+import { useFavoritos } from "@/hooks/useFavoritos";
+import { MapPin, Star, Plus, Check, Heart, Pill } from "lucide-react";
 import { toast } from "sonner";
 
 interface TarjetaResultadoProps {
@@ -26,14 +27,16 @@ function IconoWhatsApp({ className }: { className?: string }) {
 }
 
 /**
- * Tarjeta de resultado (rediseño handoff). Estructura: bloque de información
- * arriba (farmacia + precio protagonista + disponibilidad) y una fila de
- * acciones abajo (WhatsApp full-width + botón "+").
+ * Tarjeta de resultado (rediseño handoff, versión compacta). Fila superior:
+ * información (farmacia + medicamento + precio protagonista) a la izquierda e
+ * imagen del producto con botón de favorito a la derecha. Debajo, la fila de
+ * acciones (WhatsApp full-width + "+").
  *
- * Leads: el botón "+" (Añadir a la Lista Médica) NO registra lead — el CPC
- * multi-producto se dispara al CONTACTAR desde la lista. El botón WhatsApp sí
- * registra un lead clic_whatsapp de un solo producto (mismo patrón que
- * ComparadorPanel) antes de abrir wa.me.
+ * Leads: el "+" (Añadir a la Lista Médica) NO registra lead — el CPC se cobra
+ * al CONTACTAR desde la lista. WhatsApp registra un lead clic_whatsapp de un
+ * solo producto (mismo patrón que ComparadorPanel) antes de abrir wa.me. El
+ * favorito es local (localStorage), sin lead: guardar para después no es una
+ * interacción con la farmacia.
  */
 export function TarjetaResultado({
   resultado,
@@ -42,6 +45,9 @@ export function TarjetaResultado({
 }: TarjetaResultadoProps) {
   const { agregar, estaEnLista } = useListaMedica();
   const enLista = estaEnLista(resultado.medicamento_id);
+
+  const { esFavorito, alternar } = useFavoritos();
+  const favorito = esFavorito(resultado.farmacia_id, resultado.medicamento_id);
 
   // ID base para elementos únicos en la tarjeta (requerido para testing y a11y)
   const cardId = `tarjeta-${resultado.farmacia_id}-${resultado.medicamento_id}`;
@@ -95,73 +101,85 @@ export function TarjetaResultado({
     <article
       id={cardId}
       aria-label={`${resultado.medicamento_nombre} — ${resultado.farmacia_nombre}`}
-      className={`flex flex-col gap-3 rounded-[18px] border bg-white p-3.5 shadow-[0_1px_2px_rgba(22,24,26,0.04)] ${
+      className={`flex flex-col gap-2.5 rounded-[16px] border bg-white p-3 shadow-[0_1px_2px_rgba(22,24,26,0.04)] ${
         esMasEconomico ? "border-[var(--verde-cruz)]" : "border-[var(--borde)]"
       }`}
     >
-      <div className="min-w-0">
-        {/* farmacia + premium + "más barato"  ·  distancia */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-1.5">
-            <h2 className="truncate text-[13.5px] font-semibold text-[color:var(--tinta)]">
-              {resultado.farmacia_nombre}
-            </h2>
-            {resultado.es_premium && (
-              <Star
-                size={15}
-                className="shrink-0 fill-[var(--verde-cruz)] text-[var(--verde-cruz)]"
-                aria-label="Farmacia premium"
-              />
-            )}
-            {esMasEconomico && (
-              <span className="shrink-0 rounded-full bg-[var(--disp-fondo)] px-1.5 py-0.5 text-[10.5px] font-semibold text-[color:var(--disp-text)]">
-                Más barato
+      <div className="flex items-stretch gap-3">
+        <div className="min-w-0 flex-1">
+          {/* farmacia + premium + "más barato"  ·  distancia */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <h2 className="truncate text-[13px] font-semibold text-[color:var(--tinta)]">
+                {resultado.farmacia_nombre}
+              </h2>
+              {resultado.es_premium && (
+                <Star
+                  size={14}
+                  className="shrink-0 fill-[var(--verde-cruz)] text-[var(--verde-cruz)]"
+                  aria-label="Farmacia premium"
+                />
+              )}
+              {esMasEconomico && (
+                <span className="shrink-0 rounded-full bg-[var(--disp-fondo)] px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--disp-text)]">
+                  Más barato
+                </span>
+              )}
+            </div>
+            <span className="flex shrink-0 items-center gap-0.5 text-[11px] text-[color:var(--tinta-tenue)]">
+              <MapPin size={12} aria-hidden="true" />
+              <span className="tabular-nums">
+                {(resultado.distancia_m / 1000).toFixed(1).replace(".", ",")} km
               </span>
-            )}
-          </div>
-          <span className="flex shrink-0 items-center gap-0.5 text-xs text-[color:var(--tinta-tenue)]">
-            <MapPin size={13} aria-hidden="true" />
-            <span className="tabular-nums">
-              {(resultado.distancia_m / 1000).toFixed(1).replace(".", ",")} km
             </span>
-          </span>
-        </div>
+          </div>
 
-        {/* medicamento + presentación */}
-        <p className="mt-2.5 text-[15px] font-semibold text-[color:var(--tinta)]">
-          {resultado.medicamento_nombre}{" "}
-          <span className="font-normal text-[color:var(--tinta-suave)]">
-            {resultado.presentacion}
-          </span>
-        </p>
+          {/* medicamento + presentación */}
+          <p className="mt-2 text-[14px] font-semibold leading-snug text-[color:var(--tinta)]">
+            {resultado.medicamento_nombre}{" "}
+            <span className="font-normal text-[color:var(--tinta-suave)]">
+              {resultado.presentacion}
+            </span>
+          </p>
 
-        {/* precio protagonista + disponibilidad */}
-        <div className="mt-2.5 flex items-end justify-between">
-          <div>
-            <div className="text-[23px] font-bold tabular-nums tracking-tight text-[color:var(--verde-cruz)]">
+          {/* precio protagonista */}
+          <div className="mt-2">
+            <div className="text-[21px] font-bold leading-none tabular-nums tracking-tight text-[color:var(--verde-cruz)]">
               ${resultado.precio_usd.toFixed(2)}
             </div>
-            <div className="mt-0.5 text-[13px] tabular-nums text-[color:var(--tinta-suave)]">
+            <div className="mt-1 text-[12.5px] tabular-nums text-[color:var(--tinta-suave)]">
               Bs {resultado.precio_ves.toLocaleString("es-VE", { minimumFractionDigits: 2 })}
             </div>
           </div>
-          {resultado.stock_disponible ? (
-            <span className="flex items-center gap-1.5 text-xs font-semibold text-[color:var(--disp-text)]">
-              <span
-                className="h-1.5 w-1.5 rounded-full bg-[var(--verde-vivo)]"
-                aria-hidden="true"
-              />
-              Disponible
-            </span>
-          ) : (
-            <span className="flex items-center gap-1.5 text-xs font-semibold text-[color:var(--tinta-tenue)]">
-              <span
-                className="h-1.5 w-1.5 rounded-full bg-[var(--tinta-tenue)]"
-                aria-hidden="true"
-              />
-              Agotado
-            </span>
-          )}
+        </div>
+
+        {/* imagen del producto (placeholder — sin foto en la API) + favorito */}
+        <div className="relative w-[60px] shrink-0 self-start">
+          <div className="flex h-[60px] w-[60px] items-center justify-center rounded-[12px] border border-[var(--borde)] bg-[var(--fondo-suave)] text-[#c3c6c0]">
+            <Pill size={22} strokeWidth={1.5} aria-hidden="true" />
+          </div>
+          <button
+            id={`${cardId}-btn-favorito`}
+            type="button"
+            onClick={() => alternar(resultado.farmacia_id, resultado.medicamento_id)}
+            aria-pressed={favorito}
+            aria-label={
+              favorito
+                ? `Quitar ${resultado.medicamento_nombre} de favoritos`
+                : `Guardar ${resultado.medicamento_nombre} en favoritos`
+            }
+            className="absolute -right-1.5 -top-1.5 flex h-[24px] w-[24px] items-center justify-center rounded-full border border-[var(--borde)] bg-white shadow-[0_1px_3px_rgba(22,24,26,0.12)] transition-transform active:scale-90"
+          >
+            <Heart
+              size={13}
+              className={
+                favorito
+                  ? "fill-[var(--verde-cruz)] text-[var(--verde-cruz)]"
+                  : "text-[color:var(--tinta-tenue)]"
+              }
+              aria-hidden="true"
+            />
+          </button>
         </div>
       </div>
 
@@ -172,9 +190,9 @@ export function TarjetaResultado({
           type="button"
           onClick={handleWhatsApp}
           aria-label={`Contactar a ${resultado.farmacia_nombre} por WhatsApp`}
-          className="flex h-[42px] flex-1 items-center justify-center gap-1.5 rounded-xl bg-[var(--whatsapp)] text-[13.5px] font-semibold text-white transition-transform active:scale-[0.98]"
+          className="flex h-[40px] flex-1 items-center justify-center gap-1.5 rounded-xl bg-[var(--whatsapp)] text-[13px] font-semibold text-white transition-transform active:scale-[0.98]"
         >
-          <IconoWhatsApp className="h-[18px] w-[18px]" />
+          <IconoWhatsApp className="h-[17px] w-[17px]" />
           WhatsApp
         </button>
         <button
@@ -186,13 +204,13 @@ export function TarjetaResultado({
               ? `${resultado.medicamento_nombre} ya está en tu lista (${enLista.cantidad}). Añadir otra`
               : `Añadir ${resultado.medicamento_nombre} a tu lista médica`
           }
-          className={`flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl border text-[var(--verde-cruz)] transition-transform active:scale-[0.95] ${
+          className={`flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-xl border text-[var(--verde-cruz)] transition-transform active:scale-[0.95] ${
             enLista
               ? "border-[var(--verde-cruz)] bg-[var(--disp-fondo)]"
               : "border-[var(--borde)] bg-white"
           }`}
         >
-          {enLista ? <Check size={20} aria-hidden="true" /> : <Plus size={20} aria-hidden="true" />}
+          {enLista ? <Check size={19} aria-hidden="true" /> : <Plus size={19} aria-hidden="true" />}
         </button>
       </div>
     </article>

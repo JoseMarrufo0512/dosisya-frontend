@@ -29,6 +29,7 @@ import {
   Search,
   X,
   Info,
+  SlidersHorizontal,
 } from "lucide-react";
 import {
   type Filtros,
@@ -71,6 +72,8 @@ export default function App() {
   // orden ascendente por precio_usd, solo del lado del cliente y opt-in.
   const [orden, setOrden] = useState<"relevancia" | "precio">("relevancia");
   const [filtros, setFiltros] = useState<Filtros>(FILTROS_INICIALES);
+  // Filtros ocultos por defecto: se abren desde el ícono discreto del encabezado.
+  const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
 
   // Navegación inferior del paciente (handoff): pestaña activa + hoja "Más".
   const [tab, setTab] = useState<TabPaciente>("buscar");
@@ -81,6 +84,7 @@ export default function App() {
   // Botón atrás del teléfono → cierra el overlay abierto (uno por capa).
   useBackDismiss(listaAbierta, () => setListaAbierta(false));
   useBackDismiss(escanerAbierto, () => setEscanerAbierto(false));
+  useBackDismiss(filtrosAbiertos, () => setFiltrosAbiertos(false));
   useBackDismiss(loginAbierto, () => setLoginAbierto(false));
   useBackDismiss(masAbierto, () => setMasAbierto(false));
   useBackDismiss(chatIAAbierto, () => setChatIAAbierto(false));
@@ -243,23 +247,48 @@ export default function App() {
             </div>
           </form>
 
-          {/* conteo + orden (el orden se movió aquí desde BarraFiltros) */}
-          <div className="mt-2.5 flex items-baseline justify-between">
+          {/* conteo + filtro discreto + orden (ambos movidos aquí desde la
+              antigua BarraFiltros siempre visible) */}
+          <div className="mt-2.5 flex items-center justify-between">
             <span className="text-[13px] font-semibold text-[color:var(--tinta)]">
               {api.totalResultados} resultado{api.totalResultados === 1 ? "" : "s"} cerca
             </span>
-            <button
-              type="button"
-              onClick={() => setOrden(orden === "precio" ? "relevancia" : "precio")}
-              aria-label={`Ordenar por ${orden === "precio" ? "relevancia" : "precio"}`}
-              className="flex items-center gap-1 text-xs text-[color:var(--tinta-suave)]"
-            >
-              Ordenar:{" "}
-              <span className="font-semibold text-[color:var(--verde-cruz)]">
-                {orden === "precio" ? "precio" : "relevancia"}
-              </span>
-              <ChevronDown size={13} className="text-[var(--verde-cruz)]" aria-hidden="true" />
-            </button>
+            <div className="flex items-center gap-3.5">
+              {resultadosOrdenados.length >= 2 && (
+                <button
+                  type="button"
+                  onClick={() => setFiltrosAbiertos((v) => !v)}
+                  aria-expanded={filtrosAbiertos}
+                  aria-label="Filtros"
+                  className={`relative flex items-center gap-1 text-xs ${
+                    filtrosAbiertos
+                      ? "text-[color:var(--verde-cruz)]"
+                      : "text-[color:var(--tinta-suave)]"
+                  }`}
+                >
+                  <SlidersHorizontal size={15} aria-hidden="true" />
+                  Filtrar
+                  {hayFiltrosActivos(filtros) && (
+                    <span
+                      className="absolute -right-1 -top-0.5 h-1.5 w-1.5 rounded-full bg-[var(--verde-cruz)]"
+                      aria-hidden="true"
+                    />
+                  )}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setOrden(orden === "precio" ? "relevancia" : "precio")}
+                aria-label={`Ordenar por ${orden === "precio" ? "relevancia" : "precio"}`}
+                className="flex items-center gap-1 text-xs text-[color:var(--tinta-suave)]"
+              >
+                Ordenar:{" "}
+                <span className="font-semibold text-[color:var(--verde-cruz)]">
+                  {orden === "precio" ? "precio" : "relevancia"}
+                </span>
+                <ChevronDown size={13} className="text-[var(--verde-cruz)]" aria-hidden="true" />
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -311,7 +340,7 @@ export default function App() {
             </div>
           )}
 
-          {!api.cargando && resultadosOrdenados.length >= 2 && (
+          {!api.cargando && filtrosAbiertos && resultadosOrdenados.length >= 2 && (
             <BarraFiltros
               resultados={resultadosOrdenados}
               filtros={filtros}
