@@ -1012,16 +1012,27 @@ function FacturacionSection({
   data: DashboardData | null;
 }) {
   const leadsMes = data?.total_leads_mes_actual ?? 0;
+  const leadsRecipe = data?.leads_recipe_mes_actual ?? 0;
   const tarifa = data?.tarifa_por_lead_usd ?? 0;
   const deuda = data?.deuda_estimada_usd ?? 0;
   const leads = data?.leads_recientes ?? [];
   const fmt = (n: number) => "$" + n.toFixed(2).replace(".", ",");
+  // Corte = último día del mes en curso (la facturación es post-pago al cierre).
+  const corte = (() => {
+    const hoy = new Date();
+    const ultimoDia = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+    return ultimoDia.toLocaleDateString("es-VE", { day: "numeric", month: "short" });
+  })();
 
   return (
     <div className="space-y-6">
       {/* KPIs */}
       <div className="flex flex-wrap gap-3.5">
-        <KpiFact etiqueta="Leads este mes" valor={loading ? null : String(leadsMes)} nota="Interacciones facturables" />
+        <KpiFact
+          etiqueta="Leads este mes"
+          valor={loading ? null : String(leadsMes)}
+          nota={leadsRecipe > 0 ? `${leadsRecipe} con récipe (premium)` : "Interacciones facturables"}
+        />
         <KpiFact etiqueta="Tarifa por lead" valor={loading ? null : fmt(tarifa)} nota="Costo por interacción" verde />
         {/* Deuda destacada (verde-cruz) */}
         <div style={{ background: "var(--dy-verde-cruz)", borderRadius: 16, padding: 18, color: "#fff", flex: "1 1 200px" }}>
@@ -1034,7 +1045,7 @@ function FacturacionSection({
             </div>
           )}
           <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.6)", marginTop: 4 }}>
-            Se factura al corte del mes
+            Se factura al corte · {corte}
           </div>
         </div>
       </div>
@@ -1046,7 +1057,11 @@ function FacturacionSection({
           style={{ padding: "14px 16px", borderBottom: "1px solid #eef0eb" }}
         >
           <span style={{ fontSize: 13.5, fontWeight: 600 }}>Leads recientes</span>
-          <span style={{ fontSize: 12, color: "var(--dy-tinta-tenue)" }}>Detalle de interacciones</span>
+          <span style={{ fontSize: 12, color: "var(--dy-tinta-tenue)" }}>
+            {leads.length > 0 && leads.length < leadsMes
+              ? `Muestra · ${leads.length} de ${leadsMes} este mes`
+              : "Detalle de interacciones"}
+          </span>
         </header>
 
         {loading ? (
