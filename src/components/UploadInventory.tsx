@@ -103,7 +103,7 @@ export function UploadInventory({ onUploaded }: Props) {
   };
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 shadow-[0_4px_20px_-12px_rgba(10,36,99,0.15)]">
+    <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 shadow-[0_4px_20px_-12px_rgba(22,24,26,0.12)]">
       <div
         onDragOver={(e) => {
           e.preventDefault();

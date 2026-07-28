@@ -75,11 +75,11 @@ de Gemini. Diagnóstico:
 
 **`src/lib/recipeIA.ts`:**
 - `analizarRecipe()` comprime antes de armar el FormData (la UI no cambia).
-- **Corregir el mock**: hoy sugiere Valsartán/Candesartán como alternativas a
-  Losartán — viola la regla médica (mismo principio activo solamente). Nuevos
-  datos mock cumplen la regla (ej. Losartán → "Losartán genérico 50mg").
-- Flag `VITE_RECIPE_MOCK=off` para desactivar el mock en dev y probar contra
-  el backend real (default actual: mock activo solo en DEV).
+- **Mock eliminado** (commit `c85f157`): el mock de desarrollo y su flag
+  `VITE_RECIPE_MOCK` se borraron una vez que `POST /api/v1/ia/analizar-recipe`
+  quedó operativo en el backend (`routers/ia.py`). `analizarRecipe()` ahora
+  siempre llama al backend real. _(Histórico: mientras existió, el mock respetaba
+  la regla médica de mismo principio activo, ej. Losartán → "Losartán genérico 50mg".)_
 
 **`src/components/EscanerRecipe.tsx`:** sin cambios funcionales (la compresión
 vive en la capa lib).
@@ -107,8 +107,8 @@ palabra por palabra; la migración de SDK no toca el texto del prompt.
    flash-lite + que el usuario recibe respuesta normal.
 3. Frontend: `npx tsc --noEmit && npm run build` (regla pre-commit del repo).
 4. Preview del navegador: comprobar que una foto grande se comprime (~300 KB)
-   y que el flujo completo idle → scanning → results funciona con
-   `VITE_RECIPE_MOCK=off` contra el backend local.
+   y que el flujo completo idle → scanning → results funciona contra el
+   backend local (uvicorn + `GEMINI_API_KEY`).
 
 ## Fuera de alcance (YAGNI)
 

@@ -3,7 +3,7 @@
 ## Estilo
 - **Formato:** Prettier (Frontend) / Black o PEP8 (Backend).
 - **Naming:** `camelCase` para variables/funciones TS, `PascalCase` para Componentes React, `snake_case` para Python (FastAPI).
-- **Diseño UI:** Estética "Glassmorphism" sutil. Colores de confianza: Blanco, Verde Menta oscuro y Azul Médico.
+- **Diseño UI:** Identidad **verde-cruz + Inter**, una sola en toda la app. Fuente única de tokens y reglas en [sistema-de-diseno.md](sistema-de-diseno.md). El verde de WhatsApp (`#25D366`) es exclusivo de su acción. (El "Azul Médico / Glassmorphism" quedó descartado en la migración 2026-07-26.)
 
 ## Patrones que SÍ usamos
 - **Tareas en Segundo Plano (BackgroundTasks):** Llamadas a servicios externos (n8n, Gemini) DEBEN hacerse asíncronamente para no bloquear.

@@ -2,22 +2,17 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Pill,
   LogOut,
   Home,
   Package,
   Settings,
   LifeBuoy,
-  Menu,
-  X,
+  Search,
   MessageCircle,
   MapPin,
-  Search,
-  TrendingUp,
   Boxes,
   AlertTriangle,
   RefreshCw,
-  ScanLine,
   Receipt,
   Clock,
   Loader2,
@@ -27,18 +22,12 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { z } from "zod";
 import { toast } from "sonner";
 
 import { API_BASE } from "@/lib/api";
+import DashboardFarmacia from "@/components/panel/DashboardFarmacia";
+import { mapearDashboard } from "@/lib/dashboardFarmacia";
 
 export const Route = createFileRoute("/admin/dashboard")({
   head: () => ({
@@ -81,8 +70,10 @@ type DashboardData = {
   inventario?: Array<{
     id?: string;
     nombre: string;
+    marca_comercial?: string | null;
     presentacion?: string;
-    stock?: number;
+    /** El backend envía COALESCE(stock_disponible, false): es un booleano, no un conteo. */
+    stock?: boolean;
     precio_usd?: number;
   }>;
 };
@@ -90,7 +81,6 @@ type DashboardData = {
 function AdminDashboard() {
   const navigate = useNavigate();
   const [section, setSection] = useState<SectionId>("inicio");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -161,67 +151,123 @@ function AdminDashboard() {
     { id: "soporte", label: "Soporte", icon: <LifeBuoy className="h-4 w-4" /> },
   ];
 
+  const iniciales =
+    nombre
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase() ?? "")
+      .join("") || "F";
+  const { titulo, subtitulo } = TITULOS[section];
+
   return (
-    <div className="min-h-screen bg-[#f6f8fb] flex">
-      {/* Sidebar — desktop */}
-      <aside className="hidden md:flex w-64 bg-white border-r border-border flex-col sticky top-0 h-screen">
-        <SidebarContent nav={nav} section={section} setSection={setSection} logout={logout} />
+    <div
+      className="dosisya-ui min-h-screen flex flex-col md:flex-row"
+      style={{ background: "var(--dy-papel)" }}
+    >
+      {/* Sidebar — desktop (verde-cruz) */}
+      <aside
+        className="hidden md:flex w-[250px] flex-none flex-col sticky top-0 h-screen"
+        style={{ background: "var(--dy-verde-cruz)", padding: "22px 16px" }}
+      >
+        <LogoNegocios />
+        <div
+          className="px-1.5 pb-4 text-[11.5px]"
+          style={{ color: "rgba(255,255,255,0.5)" }}
+        >
+          Panel de tu farmacia
+        </div>
+        <nav className="flex flex-col gap-0.5">
+          {nav.map((item) => (
+            <SidebarItem
+              key={item.id}
+              item={item}
+              active={section === item.id}
+              onSelect={() => setSection(item.id)}
+            />
+          ))}
+        </nav>
+        <UsuarioCard iniciales={iniciales} nombre={nombre} logout={logout} />
       </aside>
 
-      {/* Sidebar — mobile drawer */}
-      <AnimatePresence>
-        {sidebarOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setSidebarOpen(false)}
-              className="fixed inset-0 bg-black/40 z-40 md:hidden"
-            />
-            <motion.aside
-              initial={{ x: -280 }}
-              animate={{ x: 0 }}
-              exit={{ x: -280 }}
-              transition={{ type: "spring", damping: 25, stiffness: 220 }}
-              className="fixed left-0 top-0 bottom-0 w-64 bg-white z-50 md:hidden flex flex-col"
+      {/* Nav — móvil (verde-cruz, pills con scroll horizontal) */}
+      <div
+        className="md:hidden sticky top-0 z-30"
+        style={{ background: "var(--dy-verde-cruz)", padding: "12px 12px" }}
+      >
+        <div className="flex items-center justify-between px-1 pb-3">
+          <LogoNegocios compact />
+          <div className="flex items-center gap-2">
+            <div
+              className="h-[30px] w-[30px] rounded-[9px] flex items-center justify-center text-[12px] font-bold"
+              style={{ background: "var(--dy-verde-claro)", color: "var(--dy-verde-cruz)" }}
             >
-              <SidebarContent
-                nav={nav}
-                section={section}
-                setSection={(s) => {
-                  setSection(s);
-                  setSidebarOpen(false);
+              {iniciales}
+            </div>
+            <button
+              onClick={logout}
+              aria-label="Cerrar sesión"
+              className="h-[30px] w-[30px] rounded-[9px] flex items-center justify-center"
+              style={{ background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.85)" }}
+            >
+              <LogOut className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+        <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          {nav.map((item) => {
+            const active = section === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setSection(item.id)}
+                aria-current={active ? "page" : undefined}
+                className="flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[12.5px] whitespace-nowrap flex-none transition-colors"
+                style={{
+                  background: active ? "#fff" : "rgba(255,255,255,0.1)",
+                  color: active ? "var(--dy-verde-cruz)" : "rgba(255,255,255,0.85)",
+                  fontWeight: active ? 600 : 500,
                 }}
-                logout={logout}
-                onClose={() => setSidebarOpen(false)}
-              />
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
+              >
+                <span className="[&>svg]:h-4 [&>svg]:w-4">{item.icon}</span>
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Mobile header */}
-        <header className="md:hidden sticky top-0 z-30 bg-white border-b border-border h-14 flex items-center justify-between px-4">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 -ml-2 rounded-lg hover:bg-muted"
-            aria-label="Abrir menú"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-              <Pill className="h-4 w-4 text-primary-foreground" />
+        {/* Topbar — desktop */}
+        <div
+          className="hidden md:flex items-center gap-4 flex-none"
+          style={{ background: "#fff", borderBottom: "1px solid #eef0eb", padding: "15px 24px" }}
+        >
+          <div className="flex-1 min-w-0">
+            <div
+              className="text-[18px] font-bold"
+              style={{ letterSpacing: "-0.02em", color: "var(--dy-tinta)" }}
+            >
+              {titulo}
             </div>
-            <span className="font-bold">DosisYa</span>
+            <div className="text-[12.5px] mt-px" style={{ color: "var(--dy-tinta-tenue)" }}>
+              {subtitulo}
+            </div>
           </div>
-          <div className="w-9" />
-        </header>
+        </div>
 
         <main className="flex-1 px-4 sm:px-6 lg:px-10 py-6 sm:py-8 max-w-6xl w-full mx-auto">
+          {/* Título en móvil (sin topbar) */}
+          <div className="md:hidden mb-5">
+            <div className="text-[20px] font-bold" style={{ letterSpacing: "-0.02em", color: "var(--dy-tinta)" }}>
+              {titulo}
+            </div>
+            <div className="text-[12.5px] mt-px" style={{ color: "var(--dy-tinta-tenue)" }}>
+              {subtitulo}
+            </div>
+          </div>
+
           <AnimatePresence mode="wait">
             <motion.div
               key={section}
@@ -232,7 +278,6 @@ function AdminDashboard() {
             >
               {section === "inicio" && (
                 <InicioSection
-                  nombre={nombre}
                   loading={loading}
                   error={error}
                   onRetry={cargarDashboard}
@@ -265,82 +310,113 @@ function AdminDashboard() {
   );
 }
 
-function SidebarContent({
-  nav,
-  section,
-  setSection,
-  logout,
-  onClose,
+// Título y subtítulo del topbar por sección.
+const TITULOS: Record<SectionId, { titulo: string; subtitulo: string }> = {
+  inicio: { titulo: "Resumen", subtitulo: "Tu actividad y leads del mes" },
+  inventario: { titulo: "Inventario", subtitulo: "Gestiona tus medicamentos y precios" },
+  facturacion: { titulo: "Facturación", subtitulo: "Tus leads y consumo del mes" },
+  configuracion: { titulo: "Configuración", subtitulo: "Datos de tu farmacia" },
+  soporte: { titulo: "Soporte", subtitulo: "Ayuda y preguntas frecuentes" },
+};
+
+function LogoNegocios({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className={`flex items-center gap-2.5 ${compact ? "" : "px-1.5 pb-1"}`}>
+      <div
+        className={`font-extrabold ${compact ? "text-[18px]" : "text-[21px]"}`}
+        style={{ letterSpacing: "-0.03em", color: "#fff" }}
+      >
+        Dosis<span style={{ color: "var(--dy-verde-claro)" }}>Ya</span>
+      </div>
+      <span
+        className="text-[10px] font-semibold rounded-md px-1.5 py-0.5"
+        style={{ background: "var(--dy-verde-claro)", color: "var(--dy-verde-cruz)", letterSpacing: "0.02em" }}
+      >
+        NEGOCIOS
+      </span>
+    </div>
+  );
+}
+
+function SidebarItem({
+  item,
+  active,
+  onSelect,
 }: {
-  nav: { id: SectionId; label: string; icon: React.ReactNode }[];
-  section: SectionId;
-  setSection: (s: SectionId) => void;
-  logout: () => void;
-  onClose?: () => void;
+  item: { id: SectionId; label: string; icon: React.ReactNode };
+  active: boolean;
+  onSelect: () => void;
 }) {
   return (
-    <>
-      <div className="h-16 flex items-center justify-between px-5 border-b border-border">
-        <div className="flex items-center gap-2">
-          <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center">
-            <Pill className="h-4 w-4 text-primary-foreground" />
-          </div>
-          <div>
-            <div className="text-sm font-bold leading-none">DosisYa</div>
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mt-1">
-              B2B Panel
-            </div>
-          </div>
+    <button
+      onClick={onSelect}
+      aria-current={active ? "page" : undefined}
+      className="flex items-center gap-2.5 w-full rounded-[11px] px-3 py-2.5 text-left text-[13.5px] transition-colors"
+      style={{
+        background: active ? "rgba(255,255,255,0.12)" : "transparent",
+        color: active ? "#fff" : "rgba(255,255,255,0.62)",
+        fontWeight: active ? 600 : 500,
+      }}
+      onMouseEnter={(e) => {
+        if (!active) e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+      }}
+      onMouseLeave={(e) => {
+        if (!active) e.currentTarget.style.background = "transparent";
+      }}
+    >
+      <span className="flex-none [&>svg]:h-[19px] [&>svg]:w-[19px]">{item.icon}</span>
+      <span className="flex-1">{item.label}</span>
+    </button>
+  );
+}
+
+function UsuarioCard({
+  iniciales,
+  nombre,
+  logout,
+}: {
+  iniciales: string;
+  nombre: string;
+  logout: () => void;
+}) {
+  return (
+    <div
+      className="mt-auto flex items-center gap-2.5 rounded-[13px] p-2.5"
+      style={{ background: "rgba(255,255,255,0.07)" }}
+    >
+      <div
+        className="h-[34px] w-[34px] rounded-[10px] flex items-center justify-center text-[14px] font-bold flex-none"
+        style={{ background: "var(--dy-verde-claro)", color: "var(--dy-verde-cruz)" }}
+      >
+        {iniciales}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-[12.5px] font-semibold truncate" style={{ color: "#fff" }}>
+          {nombre}
         </div>
-        {onClose && (
-          <button onClick={onClose} className="p-1 rounded-md hover:bg-muted" aria-label="Cerrar">
-            <X className="h-4 w-4" />
-          </button>
-        )}
+        <div className="text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>
+          Panel B2B
+        </div>
       </div>
-
-      <nav className="flex-1 p-3 space-y-1">
-        {nav.map((item) => {
-          const active = section === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setSection(item.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                active
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-foreground/70 hover:bg-muted hover:text-foreground"
-              }`}
-            >
-              {item.icon}
-              {item.label}
-            </button>
-          );
-        })}
-      </nav>
-
-      <div className="p-3 border-t border-border">
-        <button
-          onClick={logout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-        >
-          <LogOut className="h-4 w-4" />
-          Cerrar sesión
-        </button>
-      </div>
-    </>
+      <button
+        onClick={logout}
+        aria-label="Cerrar sesión"
+        className="h-8 w-8 rounded-[9px] flex items-center justify-center flex-none"
+        style={{ background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.8)" }}
+      >
+        <LogOut className="h-[17px] w-[17px]" aria-hidden="true" />
+      </button>
+    </div>
   );
 }
 
 function InicioSection({
-  nombre,
   loading,
   error,
   onRetry,
   data,
   inventoryCount,
 }: {
-  nombre: string;
   loading: boolean;
   error: boolean;
   onRetry: () => void;
@@ -350,15 +426,6 @@ function InicioSection({
   const totalInv = inventoryCount ?? data?.inventario?.length ?? 0;
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-          Hola, {nombre} <span className="inline-block">👋</span>
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Este es el resumen de tu farmacia hoy en DosisYa.
-        </p>
-      </div>
-
       {error && (
         <div
           role="alert"
@@ -382,54 +449,29 @@ function InicioSection({
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard
-          label="Pacientes interesados hoy"
-          value={loading ? null : (data?.pacientes_interesados_hoy?.toString() ?? "—")}
-          hint="Clics a tu WhatsApp"
-          icon={<MessageCircle className="h-5 w-5" />}
-          accent="bg-[#25d366]/10 text-[#0f7c3a]"
-        />
-        <MetricCard
-          label="Búsquedas cerca de ti"
-          value={
-            loading
-              ? null
-              : data?.busquedas_zona_disponible === false
-                ? "Pronto"
-                : (data?.busquedas_zona?.toString() ?? "—")
-          }
-          hint={
-            data?.busquedas_zona_disponible === false
-              ? "Métrica en camino"
-              : "Personas buscando medicinas en tu zona"
-          }
-          icon={<Search className="h-5 w-5" />}
-          accent="bg-primary/10 text-primary"
-        />
-        <MetricCard
-          label="Total en Inventario"
-          value={loading && inventoryCount === null ? null : totalInv.toString()}
-          hint="Medicamentos cargados en tu farmacia"
-          icon={<Boxes className="h-5 w-5" />}
-          accent="bg-secondary/20 text-[#0a2463]"
-        />
-        <MetricCard
-          label="Pedidos con récipe este mes"
-          value={loading ? null : (data?.leads_recipe_mes_actual?.toString() ?? "—")}
-          hint="Leads que llegaron con récipe digitalizado"
-          icon={<ScanLine className="h-5 w-5" />}
-          accent="bg-emerald-100 text-emerald-700"
-        />
-      </div>
+      {/* Dashboard del handoff, alimentado por el fetch existente de esta ruta. */}
+      {loading && !data ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" aria-busy="true">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-24 rounded-2xl" />
+          ))}
+          <Skeleton className="h-72 rounded-2xl sm:col-span-2 lg:col-span-4" />
+        </div>
+      ) : data ? (
+        <DashboardFarmacia {...mapearDashboard(data)} />
+      ) : null}
 
-      <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 shadow-[0_4px_20px_-12px_rgba(10,36,99,0.15)]">
+      <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 shadow-[0_4px_20px_-12px_rgba(22,24,26,0.12)]">
         <div className="flex items-start gap-3">
-          <div className="h-10 w-10 rounded-xl bg-secondary/20 text-[#0a2463] flex items-center justify-center shrink-0">
-            <TrendingUp className="h-5 w-5" />
+          <div className="h-10 w-10 rounded-xl bg-secondary/20 text-[var(--verde-cruz)] flex items-center justify-center shrink-0">
+            <Boxes className="h-5 w-5" />
           </div>
           <div>
-            <h3 className="font-bold text-foreground">Tu farmacia está activa</h3>
+            <h3 className="font-bold text-foreground">
+              {totalInv > 0
+                ? `${totalInv} ${totalInv === 1 ? "medicamento" : "medicamentos"} en tu inventario`
+                : "Aún no has cargado inventario"}
+            </h3>
             <p className="text-sm text-muted-foreground mt-1">
               Mantén tu inventario al día para aparecer en más búsquedas y recibir
               más pacientes interesados.
@@ -451,16 +493,25 @@ function InventarioSection({
   onUploaded: (count: number) => void;
 }) {
   const items = data?.inventario ?? [];
+  const [q, setQ] = useState("");
+
+  // Búsqueda client-side (sin backend): filtra por nombre o marca.
+  const norm = (s: string) =>
+    s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const filtro = norm(q.trim());
+  const visibles = filtro
+    ? items.filter(
+        (it) =>
+          norm(it.nombre ?? "").includes(filtro) ||
+          norm(it.marca_comercial ?? "").includes(filtro),
+      )
+    : items;
+  const disponibles = items.filter((it) => it.stock).length;
+
+  const fmt = (n: number) => "$" + n.toFixed(2).replace(".", ",");
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Mi Inventario</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Sube tu archivo y nuestra IA lo normaliza automáticamente.
-        </p>
-      </div>
-
       <UploadInventory
         onUploaded={(res) => {
           // Claves reales que devuelve el backend (ver farmacias.py upload).
@@ -477,8 +528,45 @@ function InventarioSection({
         }}
       />
 
+      <div
+        style={{
+          background: "var(--dy-blanco)",
+          border: "1px solid var(--dy-borde)",
+          borderRadius: 16,
+          overflow: "hidden",
+        }}
+      >
+        {/* Buscador */}
+        <div
+          className="flex items-center gap-3 flex-wrap"
+          style={{ padding: "14px 16px", borderBottom: "1px solid #eef0eb" }}
+        >
+          <div
+            className="flex items-center gap-2 flex-1"
+            style={{
+              minWidth: 180,
+              height: 38,
+              padding: "0 12px",
+              background: "#f7f8f5",
+              border: "1px solid var(--dy-borde)",
+              borderRadius: 10,
+            }}
+          >
+            <Search className="h-4 w-4" style={{ color: "var(--dy-tinta-tenue)" }} aria-hidden="true" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Buscar medicamento…"
+              aria-label="Buscar medicamento en tu inventario"
+              className="dy-foco flex-1 bg-transparent outline-none"
+              style={{ fontSize: 13, color: "var(--dy-tinta)" }}
+            />
+          </div>
+          <span style={{ fontSize: 12, color: "var(--dy-tinta-tenue)" }}>
+            {items.length} en total · {disponibles} disponibles
+          </span>
+        </div>
 
-      <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-[0_4px_20px_-12px_rgba(10,36,99,0.15)]">
         {loading ? (
           <div className="p-6 space-y-3">
             {[...Array(4)].map((_, i) => (
@@ -487,59 +575,116 @@ function InventarioSection({
           </div>
         ) : items.length === 0 ? (
           <div className="p-12 text-center">
-            <Package className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground">
+            <Package className="h-10 w-10 mx-auto mb-3" style={{ color: "var(--dy-tinta-tenue)", opacity: 0.5 }} />
+            <p style={{ fontSize: 14, color: "var(--dy-tinta-suave)" }}>
               Aún no tienes inventario cargado. Sube tu Excel para empezar.
             </p>
           </div>
+        ) : visibles.length === 0 ? (
+          <div className="p-10 text-center" style={{ fontSize: 13, color: "var(--dy-tinta-tenue)" }}>
+            Ningún medicamento coincide con «{q}».
+          </div>
         ) : (
           <>
-            {/* Desktop table */}
-            <div className="hidden sm:block">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/40">
-                    <TableHead className="px-6">Medicamento</TableHead>
-                    <TableHead>Presentación</TableHead>
-                    <TableHead className="text-right">Stock</TableHead>
-                    <TableHead className="text-right pr-6">Precio (USD)</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((it, i) => (
-                    <TableRow key={it.id ?? i}>
-                      <TableCell className="px-6 font-medium">{it.nombre}</TableCell>
-                      <TableCell className="text-muted-foreground">{it.presentacion}</TableCell>
-                      <TableCell className="text-right">{it.stock}</TableCell>
-                      <TableCell className="text-right pr-6 font-medium">
-                        ${(it.precio_usd ?? 0).toFixed(2)}
-                      </TableCell>
-                    </TableRow>
+            {/* Tabla — desktop */}
+            <div className="hidden sm:block" style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 520 }}>
+                <thead>
+                  <tr
+                    style={{
+                      textAlign: "left",
+                      color: "var(--dy-tinta-tenue)",
+                      fontSize: 11,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.04em",
+                    }}
+                  >
+                    <th style={{ padding: "11px 16px", fontWeight: 600 }}>Medicamento</th>
+                    <th style={{ padding: "11px 8px", fontWeight: 600, textAlign: "right" }}>Precio USD</th>
+                    <th style={{ padding: "11px 16px", fontWeight: 600 }}>Disponibilidad</th>
+                  </tr>
+                </thead>
+                <tbody style={{ fontSize: 13 }}>
+                  {visibles.map((it, i) => (
+                    <tr key={it.id ?? i} style={{ borderTop: "1px solid #f1f2ee" }}>
+                      <td style={{ padding: "13px 16px" }}>
+                        <div style={{ fontWeight: 600, color: "var(--dy-tinta)" }}>{it.nombre}</div>
+                        {(it.presentacion || it.marca_comercial) && (
+                          <div style={{ fontSize: 11.5, color: "var(--dy-tinta-tenue)", marginTop: 1 }}>
+                            {[it.marca_comercial, it.presentacion].filter(Boolean).join(" · ")}
+                          </div>
+                        )}
+                      </td>
+                      <td
+                        className="dy-num"
+                        style={{ padding: "13px 8px", textAlign: "right", fontWeight: 600, color: "var(--dy-verde-cruz)" }}
+                      >
+                        {fmt(it.precio_usd ?? 0)}
+                      </td>
+                      <td style={{ padding: "13px 16px" }}>
+                        <BadgeDisponibilidad disponible={Boolean(it.stock)} />
+                      </td>
+                    </tr>
                   ))}
-                </TableBody>
-              </Table>
+                </tbody>
+              </table>
             </div>
 
-            {/* Mobile cards */}
-            <ul className="sm:hidden divide-y divide-border">
-              {items.map((it, i) => (
-                <li key={it.id ?? i} className="p-4 flex items-center justify-between gap-3">
+            {/* Tarjetas — móvil */}
+            <ul className="sm:hidden" style={{ borderTop: "1px solid #f1f2ee" }}>
+              {visibles.map((it, i) => (
+                <li
+                  key={it.id ?? i}
+                  className="flex items-center justify-between gap-3"
+                  style={{ padding: 14, borderBottom: "1px solid #f1f2ee" }}
+                >
                   <div className="min-w-0">
-                    <div className="font-medium truncate">{it.nombre}</div>
-                    <div className="text-xs text-muted-foreground truncate">
-                      {it.presentacion} · Stock {it.stock}
+                    <div style={{ fontWeight: 600, color: "var(--dy-tinta)" }} className="truncate">
+                      {it.nombre}
+                    </div>
+                    <div style={{ fontSize: 11.5, color: "var(--dy-tinta-tenue)" }} className="truncate">
+                      {[it.marca_comercial, it.presentacion].filter(Boolean).join(" · ")}
+                    </div>
+                    <div style={{ marginTop: 6 }}>
+                      <BadgeDisponibilidad disponible={Boolean(it.stock)} />
                     </div>
                   </div>
-                  <div className="font-semibold text-primary shrink-0">
-                    ${(it.precio_usd ?? 0).toFixed(2)}
+                  <div className="dy-num shrink-0" style={{ fontWeight: 700, color: "var(--dy-verde-cruz)" }}>
+                    {fmt(it.precio_usd ?? 0)}
                   </div>
                 </li>
               ))}
             </ul>
           </>
         )}
+
+        {items.length > 0 && (
+          <div style={{ padding: "12px 16px", borderTop: "1px solid #eef0eb", fontSize: 12, color: "var(--dy-tinta-tenue)" }}>
+            Actualiza precios y disponibilidad volviendo a subir tu archivo.
+          </div>
+        )}
       </div>
     </div>
+  );
+}
+
+function BadgeDisponibilidad({ disponible }: { disponible: boolean }) {
+  const estilo = disponible
+    ? { texto: "Disponible", color: "var(--dy-disp-text)", bg: "var(--dy-disp-bg)" }
+    : { texto: "Agotado", color: "var(--dy-rojo)", bg: "var(--dy-rojo-bg)" };
+  return (
+    <span
+      style={{
+        fontSize: 11,
+        fontWeight: 600,
+        color: estilo.color,
+        background: estilo.bg,
+        borderRadius: 999,
+        padding: "3px 9px",
+      }}
+    >
+      {estilo.texto}
+    </span>
   );
 }
 
@@ -661,16 +806,10 @@ function ConfiguracionSection({
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Configuración</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Actualiza los datos de tu farmacia.
-        </p>
-      </div>
-
       <form
         onSubmit={onSubmit}
-        className="bg-card border border-border rounded-2xl p-5 sm:p-6 space-y-4 shadow-[0_4px_20px_-12px_rgba(10,36,99,0.15)]"
+        className="p-5 sm:p-6 space-y-4"
+        style={{ background: "var(--dy-blanco)", border: "1px solid var(--dy-borde)", borderRadius: 16 }}
         noValidate
       >
         <div className="space-y-1.5">
@@ -713,11 +852,12 @@ function ConfiguracionSection({
                   key={s.value}
                   type="button"
                   onClick={() => setSector(s.value)}
-                  className={`h-11 rounded-md border text-sm font-medium transition-colors inline-flex items-center justify-center gap-2 ${
-                    active
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background border-input hover:bg-accent"
-                  }`}
+                  className="dy-foco h-11 rounded-[10px] border text-sm font-medium transition-colors inline-flex items-center justify-center gap-2"
+                  style={{
+                    background: active ? "var(--dy-verde-cruz)" : "var(--dy-blanco)",
+                    color: active ? "#fff" : "var(--dy-tinta)",
+                    borderColor: active ? "var(--dy-verde-cruz)" : "var(--dy-borde)",
+                  }}
                 >
                   <MapPin className="h-4 w-4" /> {s.label}
                 </button>
@@ -750,7 +890,12 @@ function ConfiguracionSection({
           </div>
         )}
 
-        <Button type="submit" disabled={saving} className="w-full sm:w-auto">
+        <Button
+          type="submit"
+          disabled={saving}
+          className="w-full sm:w-auto"
+          style={{ background: "var(--dy-verde-cruz)", color: "#fff" }}
+        >
           {saving ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Guardando…
@@ -765,40 +910,45 @@ function ConfiguracionSection({
 }
 
 function SoporteSection() {
+  const cardBase: React.CSSProperties = {
+    background: "var(--dy-blanco)",
+    border: "1px solid var(--dy-borde)",
+    borderRadius: 16,
+  };
   return (
     <div className="space-y-6 max-w-2xl">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Soporte</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Estamos aquí para ayudarte, escríbenos cuando lo necesites.
-        </p>
-      </div>
-
       <a
         href="https://wa.me/584120000000?text=Hola%20DosisYa%2C%20necesito%20ayuda%20con%20mi%20panel"
         target="_blank"
         rel="noopener noreferrer"
-        className="block bg-card border border-border rounded-2xl p-5 sm:p-6 hover:border-primary/40 transition-colors shadow-[0_4px_20px_-12px_rgba(10,36,99,0.15)]"
+        className="dy-foco block p-5 sm:p-6 transition-colors"
+        style={cardBase}
       >
         <div className="flex items-center gap-4">
-          <div className="h-12 w-12 rounded-xl bg-[#25d366]/10 text-[#0f7c3a] flex items-center justify-center">
+          <div
+            className="h-12 w-12 rounded-xl flex items-center justify-center"
+            style={{ background: "rgba(37,211,102,0.12)", color: "var(--dy-verde-vivo)" }}
+          >
             <MessageCircle className="h-6 w-6" />
           </div>
           <div>
-            <div className="font-bold text-foreground">Escríbenos por WhatsApp</div>
-            <div className="text-sm text-muted-foreground">Respuesta en menos de 1 hora</div>
+            <div style={{ fontWeight: 700, color: "var(--dy-tinta)" }}>Escríbenos por WhatsApp</div>
+            <div style={{ fontSize: 14, color: "var(--dy-tinta-suave)" }}>Respuesta en menos de 1 hora</div>
           </div>
         </div>
       </a>
 
-      <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 shadow-[0_4px_20px_-12px_rgba(10,36,99,0.15)]">
+      <div className="p-5 sm:p-6" style={cardBase}>
         <div className="flex items-center gap-4">
-          <div className="h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+          <div
+            className="h-12 w-12 rounded-xl flex items-center justify-center"
+            style={{ background: "rgba(15,76,58,0.08)", color: "var(--dy-verde-cruz)" }}
+          >
             <MapPin className="h-6 w-6" />
           </div>
           <div>
-            <div className="font-bold text-foreground">Acarigua / Araure</div>
-            <div className="text-sm text-muted-foreground">
+            <div style={{ fontWeight: 700, color: "var(--dy-tinta)" }}>Acarigua / Araure</div>
+            <div style={{ fontSize: 14, color: "var(--dy-tinta-suave)" }}>
               Oficina DosisYa · Lun a Vie · 8am - 5pm
             </div>
           </div>
@@ -835,6 +985,25 @@ function formatoFechaLead(iso: string): string {
   });
 }
 
+// Tono del pill de interacción: verde = contacto real; ámbar = captura; neutral = navegación.
+function tonoInteraccion(tipo: string): "verde" | "ambar" | "neutral" {
+  if (tipo === "clic_whatsapp" || tipo === "click_whatsapp" || tipo === "clic_llamar") return "verde";
+  if (tipo === "capture_pantalla") return "ambar";
+  return "neutral";
+}
+
+const TONO_FACT: Record<"verde" | "ambar" | "neutral", { color: string; bg: string }> = {
+  verde: { color: "var(--dy-disp-text)", bg: "var(--dy-disp-bg)" },
+  ambar: { color: "var(--dy-ambar)", bg: "var(--dy-ambar-bg)" },
+  neutral: { color: "var(--dy-tinta-tenue)", bg: "var(--dy-fondo-suave)" },
+};
+
+const factCard: React.CSSProperties = {
+  background: "var(--dy-blanco)",
+  border: "1px solid var(--dy-borde)",
+  borderRadius: 16,
+};
+
 function FacturacionSection({
   loading,
   data,
@@ -846,147 +1015,152 @@ function FacturacionSection({
   const tarifa = data?.tarifa_por_lead_usd ?? 0;
   const deuda = data?.deuda_estimada_usd ?? 0;
   const leads = data?.leads_recientes ?? [];
+  const fmt = (n: number) => "$" + n.toFixed(2).replace(".", ",");
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Facturación</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Lo que has generado este mes en DosisYa.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <MetricCard
-          label="Leads este mes"
-          value={loading ? null : leadsMes.toString()}
-          hint="Interacciones facturables"
-          icon={<TrendingUp className="h-5 w-5" />}
-          accent="bg-primary/10 text-primary"
-        />
-        <MetricCard
-          label="Tarifa por lead"
-          value={loading ? null : `$${tarifa.toFixed(2)}`}
-          hint="Costo por cada interacción"
-          icon={<Receipt className="h-5 w-5" />}
-          accent="bg-secondary/20 text-[#0a2463]"
-        />
-        <MetricCard
-          label="Deuda estimada del mes"
-          value={loading ? null : `$${deuda.toFixed(2)}`}
-          hint="Total a facturar este mes"
-          icon={<MessageCircle className="h-5 w-5" />}
-          accent="bg-[#25d366]/10 text-[#0f7c3a]"
-        />
-      </div>
-
-      <div>
-        <h2 className="text-lg font-bold text-foreground mb-3">Leads recientes</h2>
-        <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-[0_4px_20px_-12px_rgba(10,36,99,0.15)]">
+      {/* KPIs */}
+      <div className="flex flex-wrap gap-3.5">
+        <KpiFact etiqueta="Leads este mes" valor={loading ? null : String(leadsMes)} nota="Interacciones facturables" />
+        <KpiFact etiqueta="Tarifa por lead" valor={loading ? null : fmt(tarifa)} nota="Costo por interacción" verde />
+        {/* Deuda destacada (verde-cruz) */}
+        <div style={{ background: "var(--dy-verde-cruz)", borderRadius: 16, padding: 18, color: "#fff", flex: "1 1 200px" }}>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>Deuda estimada del mes</div>
           {loading ? (
-            <div className="p-6 space-y-3">
-              {[...Array(4)].map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
-          ) : leads.length === 0 ? (
-            <div className="p-12 text-center">
-              <Clock className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">
-                Aún no hay leads este período. Aparecerán aquí en cuanto lleguen.
-              </p>
-            </div>
+            <Skeleton className="h-8 w-24 mt-2" />
           ) : (
-            <>
-              {/* Desktop table */}
-              <div className="hidden sm:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/40">
-                      <TableHead className="px-6">Fecha</TableHead>
-                      <TableHead>Interacción</TableHead>
-                      <TableHead>Medicamento</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {leads.map((l) => (
-                      <TableRow key={l.lead_id}>
-                        <TableCell className="px-6 text-muted-foreground whitespace-nowrap">
+            <div className="dy-num" style={{ fontSize: 30, fontWeight: 700, marginTop: 6, letterSpacing: "-0.02em" }}>
+              {fmt(deuda)}
+            </div>
+          )}
+          <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.6)", marginTop: 4 }}>
+            Se factura al corte del mes
+          </div>
+        </div>
+      </div>
+
+      {/* Leads recientes */}
+      <section style={{ ...factCard, overflow: "hidden" }}>
+        <header
+          className="flex items-center justify-between"
+          style={{ padding: "14px 16px", borderBottom: "1px solid #eef0eb" }}
+        >
+          <span style={{ fontSize: 13.5, fontWeight: 600 }}>Leads recientes</span>
+          <span style={{ fontSize: 12, color: "var(--dy-tinta-tenue)" }}>Detalle de interacciones</span>
+        </header>
+
+        {loading ? (
+          <div className="p-6 space-y-3">
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
+        ) : leads.length === 0 ? (
+          <div className="p-12 text-center">
+            <Clock className="h-10 w-10 mx-auto mb-3" style={{ color: "var(--dy-tinta-tenue)", opacity: 0.5 }} />
+            <p style={{ fontSize: 14, color: "var(--dy-tinta-suave)" }}>
+              Aún no hay leads este período. Aparecerán aquí en cuanto lleguen.
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Tabla — desktop */}
+            <div className="hidden sm:block" style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 520 }}>
+                <thead>
+                  <tr
+                    style={{
+                      textAlign: "left",
+                      color: "var(--dy-tinta-tenue)",
+                      fontSize: 11,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.04em",
+                    }}
+                  >
+                    <th style={{ padding: "11px 16px", fontWeight: 600 }}>Fecha</th>
+                    <th style={{ padding: "11px 8px", fontWeight: 600 }}>Interacción</th>
+                    <th style={{ padding: "11px 8px", fontWeight: 600 }}>Medicamento</th>
+                    <th style={{ padding: "11px 16px", fontWeight: 600, textAlign: "right" }}>Costo</th>
+                  </tr>
+                </thead>
+                <tbody style={{ fontSize: 13 }}>
+                  {leads.map((l) => {
+                    const t = TONO_FACT[tonoInteraccion(l.tipo_interaccion)];
+                    return (
+                      <tr key={l.lead_id} style={{ borderTop: "1px solid #f1f2ee" }}>
+                        <td className="dy-num" style={{ padding: "12px 16px", color: "var(--dy-tinta-suave)", whiteSpace: "nowrap" }}>
                           {formatoFechaLead(l.fecha_hora)}
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {etiquetaInteraccion(l.tipo_interaccion)}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
+                        </td>
+                        <td style={{ padding: "12px 8px" }}>
+                          <span style={{ fontSize: 11, fontWeight: 600, color: t.color, background: t.bg, borderRadius: 999, padding: "3px 9px" }}>
+                            {etiquetaInteraccion(l.tipo_interaccion)}
+                          </span>
+                        </td>
+                        <td style={{ padding: "12px 8px", color: "var(--dy-tinta)", fontWeight: 500 }}>
                           {l.medicamento_nombre
                             ? `${l.medicamento_nombre}${l.medicamento_marca ? ` · ${l.medicamento_marca}` : ""}`
                             : "—"}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                        </td>
+                        <td className="dy-num" style={{ padding: "12px 16px", textAlign: "right", color: "var(--dy-verde-cruz)", fontWeight: 600 }}>
+                          {fmt(tarifa)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-              {/* Mobile cards */}
-              <ul className="sm:hidden divide-y divide-border">
-                {leads.map((l) => (
-                  <li key={l.lead_id} className="p-4">
+            {/* Tarjetas — móvil */}
+            <ul className="sm:hidden">
+              {leads.map((l) => {
+                const t = TONO_FACT[tonoInteraccion(l.tipo_interaccion)];
+                return (
+                  <li key={l.lead_id} style={{ padding: 14, borderTop: "1px solid #f1f2ee" }}>
                     <div className="flex items-center justify-between gap-3">
-                      <span className="font-medium">
+                      <span style={{ fontSize: 11, fontWeight: 600, color: t.color, background: t.bg, borderRadius: 999, padding: "3px 9px" }}>
                         {etiquetaInteraccion(l.tipo_interaccion)}
                       </span>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      <span className="dy-num" style={{ fontSize: 12, color: "var(--dy-tinta-tenue)", whiteSpace: "nowrap" }}>
                         {formatoFechaLead(l.fecha_hora)}
                       </span>
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1 truncate">
-                      {l.medicamento_nombre
-                        ? `${l.medicamento_nombre}${l.medicamento_marca ? ` · ${l.medicamento_marca}` : ""}`
-                        : "Sin medicamento asociado"}
+                    <div className="flex items-center justify-between gap-3" style={{ marginTop: 6 }}>
+                      <span className="truncate" style={{ fontSize: 12.5, color: "var(--dy-tinta)" }}>
+                        {l.medicamento_nombre
+                          ? `${l.medicamento_nombre}${l.medicamento_marca ? ` · ${l.medicamento_marca}` : ""}`
+                          : "Sin medicamento asociado"}
+                      </span>
+                      <span className="dy-num shrink-0" style={{ fontSize: 12.5, fontWeight: 600, color: "var(--dy-verde-cruz)" }}>
+                        {fmt(tarifa)}
+                      </span>
                     </div>
                   </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </div>
-      </div>
+                );
+              })}
+            </ul>
+          </>
+        )}
+      </section>
     </div>
   );
 }
 
-function MetricCard({
-  label,
-  value,
-  hint,
-  icon,
-  accent,
-}: {
-  label: string;
-  value: string | null;
-  hint: string;
-  icon: React.ReactNode;
-  accent: string;
-}) {
+function KpiFact({ etiqueta, valor, nota, verde }: { etiqueta: string; valor: string | null; nota: string; verde?: boolean }) {
   return (
-    <div className="bg-card border border-border rounded-2xl p-5 shadow-[0_4px_20px_-12px_rgba(10,36,99,0.15)]">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            {label}
-          </div>
-          {value === null ? (
-            <Skeleton className="h-9 w-20 mt-2" />
-          ) : (
-            <div className="text-3xl sm:text-4xl font-bold text-foreground mt-1">{value}</div>
-          )}
-          <div className="text-xs text-muted-foreground mt-1">{hint}</div>
+    <div style={{ ...factCard, flex: "1 1 200px", padding: 16 }}>
+      <div style={{ fontSize: 12, color: "var(--dy-tinta-tenue)" }}>{etiqueta}</div>
+      {valor === null ? (
+        <Skeleton className="h-8 w-20 mt-2" />
+      ) : (
+        <div
+          className="dy-num"
+          style={{ fontSize: 28, fontWeight: 700, color: verde ? "var(--dy-verde-cruz)" : "var(--dy-tinta)", marginTop: 6, letterSpacing: "-0.02em" }}
+        >
+          {valor}
         </div>
-        <div className={`h-11 w-11 rounded-xl flex items-center justify-center shrink-0 ${accent}`}>
-          {icon}
-        </div>
-      </div>
+      )}
+      <div style={{ fontSize: 11.5, color: "var(--dy-tinta-tenue)", marginTop: 4 }}>{nota}</div>
     </div>
   );
 }

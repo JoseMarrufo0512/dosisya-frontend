@@ -7,7 +7,7 @@ Este archivo es la fuente de verdad para el contexto persistente de Claude Code.
 - **Modelo B2B:** Cobro por "Leads" (interacciones hacia WhatsApp de la farmacia). NO cobramos comisiones por venta.
 - **Filosofía B2C:** "Cero Fricción". El paciente NO se registra (sin login) para buscar, armar su Lista Médica ni contactar.
 - **Logística:** Descentralizada. La "última milla" la asume la farmacia (motorizados propios o Yummy).
-- **IA:** Normalización de inventario B2B con Gemini (ya en backend) y escáner de recetas con Gemini Vision (pendiente — spec en `docs/features/receta-ia-y-carrito.md`).
+- **IA:** Normalización de inventario B2B con Gemini (ya en backend) y escáner de recetas con Gemini Vision — **operativo**: endpoint backend `POST /api/v1/ia/analizar-recipe` (`routers/ia.py`) + cliente frontend `src/lib/recipeIA.ts` (mock eliminado en commit `c85f157`). Spec en `docs/features/receta-ia-y-carrito.md`.
 
 ## 2. Stack Técnico Real
 - **Frontend:** React 19 + TanStack Start (SSR) + TanStack Router (file-based) + Vite 7 + TypeScript. Estilos: TailwindCSS 4 (CSS-first, sin tailwind.config). UI: shadcn/ui + Radix, framer-motion, sonner (toasts), vaul (drawer), lucide-react. HTTP state: TanStack Query. Forms: Zod + React Hook Form.
@@ -34,6 +34,7 @@ Este archivo es la fuente de verdad para el contexto persistente de Claude Code.
 - `leads_interacciones.medicamento_buscado_id` es **un UUID único (nullable), NO un array**. Lista multi-producto = fan-out: un POST por medicamento (commit `ac555ca`).
 - El campo del lead es **`tipo_interaccion`** (no `tipo_accion`). Valores canónicos del enum PG: `clic_whatsapp`, `clic_llamar`, `ver_mapa`, `ver_detalle`, `compartir`, `capture_pantalla`. Existen alias legacy de Lovable (`click_whatsapp`, `abrir_mapa`, `expandir_detalle`) — usar siempre los canónicos.
 - `POST /api/v1/leads/` lleva **trailing slash** (commit `b071fc0`).
+- La sección **Configuración** del panel edita vía `PATCH /api/v1/farmacias/{id}` (sin trailing slash). El body usa **nombres alias del dashboard** (`nombre_farmacia`, `whatsapp`), NO las columnas de BD (`nombre`, `telefono_whatsapp`) — el backend mapea. El dashboard GET devuelve `whatsapp`/`sector`/`punto_referencia` para precargar el form. Antes de 2026-07-13 ese endpoint NO existía en el backend (feature frontend contra contrato fantasma → 404 al guardar).
 - Código pegado desde chats externos (zips, bloques de comandos): pasar por el skill `integrar-codigo-externo` — commit de respaldo primero, validar contra schema y dependencias reales.
 
 ## 6. Comandos

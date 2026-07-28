@@ -1,0 +1,93 @@
+/*
+ * dosisya-ui.css — FUENTE ÚNICA de tokens de diseño de DosisYa.
+ *
+ * Los valores de color viven aquí una sola vez, en :root (global, cargado en
+ * __root.tsx). Existen dos convenciones de nombre por historia del proyecto:
+ *   - sin prefijo (--verde-cruz…): la usa la app del paciente (src/components/busqueda).
+ *   - con prefijo --dy-*: la usa el panel B2B (src/components/panel, navegacion).
+ * Para no duplicar literales, los --dy-* son ALIAS que apuntan a los canónicos.
+ * Cambiar un color = editar UNA línea (la canónica).
+ *
+ * La familia tipográfica NO se unifica a propósito: el paciente usa Archivo
+ * (ver .busqueda-root en tokens.css) y el panel usa Inter (.dosisya-ui, abajo).
+ */
+
+:root {
+  /* ── Canónicos (paleta cerrada del handoff) ─────────────────────────────── */
+  /* Marca, cabeceras, sidebar B2B, precio USD, botón primario */
+  --verde-cruz: #0f4c3a;
+  /* Stock/disponible, delivery, acentos positivos, "Ya" del logo */
+  --verde-vivo: #1d9e75;
+  /* Acento sobre verde-cruz (badges, avatar B2B, botón recargar) */
+  --verde-claro: #5fd6a4;
+  /* EXCLUSIVO del botón/acción WhatsApp */
+  --whatsapp: #25d366;
+  /* Aviso "requiere récipe", estados pendiente/pausada */
+  --ambar-receta: #b45309;
+  --ambar-fondo: #fff7ed;
+  /* Destructivo, crítico, rechazar */
+  --rojo: #c1372f;
+  --rojo-fondo: #fbe9e7;
+  /* Texto */
+  --tinta: #16181a;
+  --tinta-suave: #6b6f6b;
+  --tinta-tenue: #8a8e8a;
+  /* Superficies */
+  --papel: #fafaf7;
+  --blanco: #ffffff;
+  --borde: #e8e9e5;
+  --fondo-suave: #f2f3ef;
+  /* Estado "disponible" (chip) */
+  --disp-text: #157a5b;
+  --disp-fondo: #eaf7f1;
+
+  /* ── Alias --dy-* → canónicos (panel B2B) ───────────────────────────────── */
+  --dy-verde-cruz: var(--verde-cruz);
+  --dy-verde-vivo: var(--verde-vivo);
+  --dy-verde-claro: var(--verde-claro);
+  --dy-whatsapp: var(--whatsapp);
+  --dy-ambar: var(--ambar-receta);
+  --dy-ambar-bg: var(--ambar-fondo);
+  --dy-rojo: var(--rojo);
+  --dy-rojo-bg: var(--rojo-fondo);
+  --dy-tinta: var(--tinta);
+  --dy-tinta-suave: var(--tinta-suave);
+  --dy-tinta-tenue: var(--tinta-tenue);
+  --dy-papel: var(--papel);
+  --dy-blanco: var(--blanco);
+  --dy-borde: var(--borde);
+  --dy-fondo-suave: var(--fondo-suave);
+  --dy-disp-text: var(--disp-text);
+  --dy-disp-bg: var(--disp-fondo);
+}
+
+/*
+ * El mapeo shadcn → marca verde vive en styles.css (:root), que referencia esta
+ * paleta. Es global, así que toda la app —incluidos los portales de vaul/Radix
+ * en <body>— hereda la marca verde por defecto. No hace falta remapear por
+ * subárbol; basta con la paleta de arriba.
+ *
+ * Raíz del panel B2B (y de cualquier superficie con la identidad "handoff").
+ * Aísla la familia Inter sin tocar el resto de la app.
+ */
+.dosisya-ui {
+  font-family: "Inter", "Outfit", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, sans-serif;
+  color: var(--tinta);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Cifras alineadas: precios, tasas, distancias, KPIs */
+.dosisya-ui .dy-num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Foco visible consistente (verde-vivo, según handoff) */
+.dosisya-ui .dy-foco:focus-visible {
+  outline: 2px solid var(--verde-vivo);
+  outline-offset: 2px;
+}
+.dosisya-ui .dy-foco-in:focus-visible {
+  outline: 2px solid var(--verde-vivo);
+  outline-offset: -2px;
+}
