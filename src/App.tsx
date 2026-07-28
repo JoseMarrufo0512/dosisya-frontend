@@ -8,7 +8,6 @@ import { useTasa } from "./hooks/useTasa";
 import { useBusquedasRecientes, useRecordatorios } from "./hooks/useLocalStorage";
 import { useListaMedica } from "./hooks/useListaMedica";
 import { HeroBusqueda } from "./components/HeroBusqueda";
-import { BarraBusqueda } from "./components/BarraBusqueda";
 import { TarjetaResultado } from "./components/TarjetaResultado";
 import { EstadoCargando } from "./components/EstadoCargando";
 import { EstadoVacio } from "./components/EstadoVacio";
@@ -16,14 +15,21 @@ import { CartSummary } from "./components/lista/CartSummary";
 import { ListaMedicaDrawer } from "./components/lista/ListaMedicaDrawer";
 import { EscanerRecipe } from "./components/EscanerRecipe";
 import { BarraFiltros } from "./components/BarraFiltros";
-import { ComparadorBar } from "./components/ComparadorBar";
-import { ComparadorPanel } from "./components/ComparadorPanel";
 import NavegacionPaciente, { type TabPaciente } from "@/components/navegacion/NavegacionPaciente";
 import { MenuMasPaciente } from "@/components/paciente/MenuMasPaciente";
 import { HojaLoginPaciente } from "@/components/paciente/HojaLoginPaciente";
 import { HojaChatIA } from "@/components/paciente/HojaChatIA";
 import { BurbujaAsistenteIA } from "@/components/paciente/BurbujaAsistenteIA";
-import { ChevronRight, MapPin, Pill } from "lucide-react";
+import {
+  ChevronRight,
+  ChevronLeft,
+  ChevronDown,
+  MapPin,
+  Pill,
+  Search,
+  X,
+  Info,
+} from "lucide-react";
 import {
   type Filtros,
   FILTROS_INICIALES,
@@ -66,10 +72,6 @@ export default function App() {
   const [orden, setOrden] = useState<"relevancia" | "precio">("relevancia");
   const [filtros, setFiltros] = useState<Filtros>(FILTROS_INICIALES);
 
-  const MAX_COMPARAR = 3;
-  const [compararClaves, setCompararClaves] = useState<string[]>([]);
-  const [comparadorAbierto, setComparadorAbierto] = useState(false);
-
   // Navegación inferior del paciente (handoff): pestaña activa + hoja "Más".
   const [tab, setTab] = useState<TabPaciente>("buscar");
   const [masAbierto, setMasAbierto] = useState(false);
@@ -79,7 +81,6 @@ export default function App() {
   // Botón atrás del teléfono → cierra el overlay abierto (uno por capa).
   useBackDismiss(listaAbierta, () => setListaAbierta(false));
   useBackDismiss(escanerAbierto, () => setEscanerAbierto(false));
-  useBackDismiss(comparadorAbierto, () => setComparadorAbierto(false));
   useBackDismiss(loginAbierto, () => setLoginAbierto(false));
   useBackDismiss(masAbierto, () => setMasAbierto(false));
   useBackDismiss(chatIAAbierto, () => setChatIAAbierto(false));
@@ -114,25 +115,6 @@ export default function App() {
     window.setTimeout(() => setFlyers((f) => f.filter((x) => x.id !== id)), 700);
   };
 
-  const toggleComparar = (clave: string) => {
-    setCompararClaves((prev) =>
-      prev.includes(clave)
-        ? prev.filter((c) => c !== clave)
-        : prev.length >= MAX_COMPARAR
-          ? prev
-          : [...prev, clave],
-    );
-  };
-
-  // Resultados seleccionados, resueltos contra la respuesta actual de la API.
-  const seleccionados = useMemo(
-    () =>
-      compararClaves
-        .map((c) => api.resultados.find((r) => claveResultado(r) === c))
-        .filter((r): r is NonNullable<typeof r> => r !== undefined),
-    [compararClaves, api.resultados],
-  );
-
   // Resultados ordenados según el toggle, sin mutar el array original.
   const resultadosOrdenados = useMemo(() => {
     if (orden === "precio") {
@@ -150,28 +132,6 @@ export default function App() {
   // Clave del más barato ENTRE LOS VISIBLES (badge "Más económico").
   // Por clave y no por índice: los filtros reordenan/ocultan posiciones.
   const claveEconomico = useMemo(() => claveMasEconomico(resultadosVisibles), [resultadosVisibles]);
-
-  // Genéricos equivalentes: por cada producto, el precio del equivalente más
-  // barato = mismo principio activo (medicamento_nombre) pero DISTINTO producto
-  // (medicamento_id). Ojo: mismo producto en otra farmacia NO cuenta (eso es
-  // comparación de precio, no equivalencia). key = medicamento_id.
-  const equivMasBaratoPorProducto = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const a of resultadosVisibles) {
-      let min = Infinity;
-      for (const b of resultadosVisibles) {
-        if (
-          b.medicamento_nombre === a.medicamento_nombre &&
-          b.medicamento_id !== a.medicamento_id &&
-          b.precio_usd < min
-        ) {
-          min = b.precio_usd;
-        }
-      }
-      if (min < Infinity) m.set(a.medicamento_id, min);
-    }
-    return m;
-  }, [resultadosVisibles]);
 
   // Coordenadas efectivas: geolocalización real o fallback a Acarigua.
   // Se comparten entre la búsqueda y el selector de farmacia de la lista.
@@ -193,8 +153,6 @@ export default function App() {
     if (opts?.guardarReciente ?? true) recientes.agregar(termino);
     setRadio(radioKm * 1000);
     setFiltros(FILTROS_INICIALES); // cada búsqueda arranca sin filtros
-    setCompararClaves([]);
-    setComparadorAbierto(false);
 
     await api.buscar(termino, latEfectiva, lngEfectiva, conDelivery, radioKm * 1000);
   };
@@ -251,39 +209,57 @@ export default function App() {
   );
 
   const vistaResultados = (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="sticky top-0 bg-white shadow-sm z-10 py-3 px-4">
-        <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center gap-4">
-          <div className="flex-1 w-full">
-            <BarraBusqueda
-              query={query}
-              onQueryChange={setQuery}
-              onSubmit={handleSubmit}
-              cargando={api.cargando}
-              onRecalcularUbicacion={handleRecalcular}
-              busquedasRecientes={recientes.busquedas}
-              onBusquedaRecienteClick={(term) => ejecutarBusqueda(term, radio / 1000)}
-              compacta={true}
-              onEscanearRecipe={() => setEscanerAbierto(true)}
-            />
-          </div>
-        </div>
+    <div className="min-h-screen bg-[var(--papel)] flex flex-col">
+      <header className="sticky top-0 z-10 bg-[var(--papel)] px-4 pt-2.5 pb-2">
+        <div className="mx-auto max-w-2xl">
+          {/* input activo con volver + limpiar (handoff) */}
+          <form onSubmit={handleSubmit} className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setEstado("hero")}
+              aria-label="Volver a la pantalla de inicio"
+              className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xl border border-[var(--borde)] bg-[var(--fondo-suave)] text-[color:var(--tinta)]"
+            >
+              <ChevronLeft size={19} />
+            </button>
+            <div className="flex h-[46px] flex-1 items-center gap-2.5 rounded-[14px] border-[1.5px] border-[var(--verde-cruz)] bg-white px-3 shadow-[0_4px_14px_-8px_rgba(15,76,58,0.4)]">
+              <Search size={19} className="shrink-0 text-[var(--verde-cruz)]" aria-hidden="true" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                aria-label="Buscar medicamento"
+                className="min-w-0 flex-1 bg-transparent text-[14.5px] text-[color:var(--tinta)] outline-none"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  aria-label="Borrar búsqueda"
+                  className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-[var(--fondo-suave)] text-[color:var(--tinta-tenue)]"
+                >
+                  <X size={15} />
+                </button>
+              )}
+            </div>
+          </form>
 
-        <div className="max-w-4xl mx-auto mt-3 flex items-center justify-between text-sm text-gray-600">
-          <p>
-            <span className="font-semibold text-gray-900">{api.totalResultados}</span> resultado(s)
-            para '{terminoBuscado}'
-          </p>
-          <div className="flex items-center gap-2">
-            <span>Radio: {radio / 1000}km</span>
-            {radio < 10000 && (
-              <button
-                onClick={() => ejecutarBusqueda(terminoBuscado, 10)}
-                className="text-emerald-600 font-medium hover:underline"
-              >
-                Ampliar
-              </button>
-            )}
+          {/* conteo + orden (el orden se movió aquí desde BarraFiltros) */}
+          <div className="mt-2.5 flex items-baseline justify-between">
+            <span className="text-[13px] font-semibold text-[color:var(--tinta)]">
+              {api.totalResultados} resultado{api.totalResultados === 1 ? "" : "s"} cerca
+            </span>
+            <button
+              type="button"
+              onClick={() => setOrden(orden === "precio" ? "relevancia" : "precio")}
+              aria-label={`Ordenar por ${orden === "precio" ? "relevancia" : "precio"}`}
+              className="flex items-center gap-1 text-xs text-[color:var(--tinta-suave)]"
+            >
+              Ordenar:{" "}
+              <span className="font-semibold text-[color:var(--verde-cruz)]">
+                {orden === "precio" ? "precio" : "relevancia"}
+              </span>
+              <ChevronDown size={13} className="text-[var(--verde-cruz)]" aria-hidden="true" />
+            </button>
           </div>
         </div>
       </header>
@@ -302,9 +278,9 @@ export default function App() {
           {!api.cargando && resultadosOrdenados.length > 0 && (
             <div
               role="note"
-              className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800"
+              className="flex items-start gap-2 rounded-xl border border-[#f3dcc0] bg-[var(--ambar-fondo)] px-2.5 py-2 text-xs leading-snug text-[color:var(--ambar-receta)]"
             >
-              <span aria-hidden="true">📋</span>
+              <Info size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
               <p>
                 Algunos medicamentos requieren <strong>récipe médico</strong>. La farmacia te lo
                 pedirá al momento de la compra.
@@ -340,35 +316,19 @@ export default function App() {
               resultados={resultadosOrdenados}
               filtros={filtros}
               onFiltrosChange={setFiltros}
-              orden={orden}
-              onOrdenChange={setOrden}
               radioM={radio}
             />
           )}
 
           {!api.cargando &&
-            resultadosVisibles.map((res, i) => {
-              // Solo avisamos si el equivalente más barato del mismo principio
-              // activo cuesta MENOS que este producto.
-              const equivMin = equivMasBaratoPorProducto.get(res.medicamento_id);
-              const equivalenteDesde =
-                equivMin !== undefined && equivMin < res.precio_usd ? equivMin : null;
-              return (
-                <TarjetaResultado
-                  key={`${claveResultado(res)}-${i}`}
-                  resultado={res}
-                  esMasEconomico={claveResultado(res) === claveEconomico}
-                  equivalenteDesde={equivalenteDesde}
-                  comparando={compararClaves.includes(claveResultado(res))}
-                  onToggleComparar={() => toggleComparar(claveResultado(res))}
-                  compararDeshabilitado={
-                    compararClaves.length >= MAX_COMPARAR &&
-                    !compararClaves.includes(claveResultado(res))
-                  }
-                  onAgregado={volarAlCarrito}
-                />
-              );
-            })}
+            resultadosVisibles.map((res, i) => (
+              <TarjetaResultado
+                key={`${claveResultado(res)}-${i}`}
+                resultado={res}
+                esMasEconomico={claveResultado(res) === claveEconomico}
+                onAgregado={volarAlCarrito}
+              />
+            ))}
 
           {/* Había resultados pero los filtros los ocultan todos */}
           {!api.cargando &&
@@ -595,18 +555,6 @@ export default function App() {
         lng={lngEfectiva}
       />
       <EscanerRecipe abierto={escanerAbierto} onOpenChange={setEscanerAbierto} />
-
-      <ComparadorBar
-        cantidad={seleccionados.length}
-        onComparar={() => setComparadorAbierto(true)}
-        onLimpiar={() => setCompararClaves([])}
-        elevada={totalDistintos > 0}
-      />
-      <ComparadorPanel
-        abierto={comparadorAbierto}
-        onOpenChange={setComparadorAbierto}
-        seleccionados={seleccionados}
-      />
 
       <MenuMasPaciente
         open={masAbierto}
