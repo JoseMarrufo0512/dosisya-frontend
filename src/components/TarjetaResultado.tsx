@@ -1,57 +1,60 @@
 import { type ResultadoFarmacia } from "@/lib/api";
 import { registrarLead } from "@/lib/leads";
+import { construirMensajeProducto, construirUrlWhatsApp } from "@/lib/whatsapp";
 import { useListaMedica } from "@/hooks/useListaMedica";
-import { BadgePremium } from "./BadgePremium";
-import { BadgeDelivery } from "./BadgeDelivery";
-import { Check, Plus, Scale } from "lucide-react";
-import { esGenerico as esGenericoFn } from "@/lib/filtros";
+import { useFavoritos } from "@/hooks/useFavoritos";
+import { MapPin, Star, Plus, Check, Heart, Pill } from "lucide-react";
 import { toast } from "sonner";
 
 interface TarjetaResultadoProps {
   resultado: ResultadoFarmacia;
-  onLeadRegistrado?: () => void;
   /** Marca esta tarjeta como la de menor precio entre los resultados mostrados. */
   esMasEconomico?: boolean;
-  /**
-   * Precio (USD) del equivalente más barato del mismo principio activo pero
-   * distinto producto. Si viene, se muestra la nota "equivalente desde $X".
-   */
-  equivalenteDesde?: number | null;
-  /** La tarjeta está seleccionada para comparar. */
-  comparando?: boolean;
-  /** Toggle de selección; si es undefined el botón Comparar no se muestra. */
-  onToggleComparar?: () => void;
-  /** true cuando ya hay 3 seleccionadas y esta no es una de ellas. */
-  compararDeshabilitado?: boolean;
   /** Al añadir, reporta el rect del botón "+" para la animación packFly. */
   onAgregado?: (desde: DOMRect) => void;
 }
 
+/**
+ * Glyph de marca de WhatsApp (no lucide) — el handoff exige el logotipo real
+ * en el botón de acción, no un ícono genérico de chat.
+ */
+function IconoWhatsApp({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.611-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zm-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.002-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884zm8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+    </svg>
+  );
+}
+
+/**
+ * Tarjeta de resultado (rediseño handoff, versión compacta). Fila superior:
+ * información (farmacia + medicamento + precio protagonista) a la izquierda e
+ * imagen del producto con botón de favorito a la derecha. Debajo, la fila de
+ * acciones (WhatsApp full-width + "+").
+ *
+ * Leads: el "+" (Añadir a la Lista Médica) NO registra lead — el CPC se cobra
+ * al CONTACTAR desde la lista. WhatsApp registra un lead clic_whatsapp de un
+ * solo producto (mismo patrón que ComparadorPanel) antes de abrir wa.me. El
+ * favorito es local (localStorage), sin lead: guardar para después no es una
+ * interacción con la farmacia.
+ */
 export function TarjetaResultado({
   resultado,
-  onLeadRegistrado,
   esMasEconomico = false,
-  equivalenteDesde = null,
-  comparando = false,
-  onToggleComparar,
-  compararDeshabilitado = false,
   onAgregado,
 }: TarjetaResultadoProps) {
-  const esGenerico = esGenericoFn(resultado);
   const { agregar, estaEnLista } = useListaMedica();
   const enLista = estaEnLista(resultado.medicamento_id);
 
-  const mapsUrl = `https://maps.google.com/?q=${resultado.lat},${resultado.lng}`;
+  const { esFavorito, alternar } = useFavoritos();
+  const favorito = esFavorito(resultado.farmacia_id, resultado.medicamento_id);
 
   // ID base para elementos únicos en la tarjeta (requerido para testing y a11y)
   const cardId = `tarjeta-${resultado.farmacia_id}-${resultado.medicamento_id}`;
 
   // ─── Añadir a la Lista Médica (spec receta-ia-y-carrito) ──────────────────
-  // OJO: aquí NO se registra lead. El lead CPC multi-producto se dispara al
-  // CONTACTAR desde la lista — añadir todavía no es una interacción facturable.
-
-  const handleAgregar = (e?: React.MouseEvent<HTMLButtonElement>) => {
-    if (e) onAgregado?.(e.currentTarget.getBoundingClientRect());
+  const handleAgregar = (e: React.MouseEvent<HTMLButtonElement>) => {
+    onAgregado?.(e.currentTarget.getBoundingClientRect());
     const item = agregar({
       medicamentoId: resultado.medicamento_id,
       nombre: resultado.medicamento_nombre,
@@ -66,230 +69,148 @@ export function TarjetaResultado({
         : "Añadido a tu lista",
       {
         description: item.cantidad > 1 ? undefined : "Elige farmacia cuando termines",
-        style: {
-          background: "#ecfdf5",
-          color: "#065f46",
-          borderColor: "#a7f3d0",
-        },
+        style: { background: "#ecfdf5", color: "#065f46", borderColor: "#a7f3d0" },
       },
     );
   };
 
-  // ─── Handlers de leads CPC ────────────────────────────────────────────────
-  // Todos usan void (fire-and-forget) para no bloquear la navegación del usuario.
-  // El backend registra el lead antes de responder al usuario.
-
-  const handleMapa = () => {
-    void registrarLead(resultado.farmacia_id, "ver_mapa", resultado.medicamento_id);
-    onLeadRegistrado?.();
-  };
-
-  const handleGuardar = async () => {
-    // El lead se registra ANTES de intentar copiar: la intención ya cuenta como CPC
-    void registrarLead(resultado.farmacia_id, "capture_pantalla", resultado.medicamento_id);
-    onLeadRegistrado?.();
-
-    const textToCopy = `💊 ${resultado.medicamento_nombre} (${resultado.presentacion}) — $${resultado.precio_usd.toFixed(2)} USD — ${resultado.farmacia_nombre} — WhatsApp: ${resultado.whatsapp}`;
-    try {
-      await navigator.clipboard.writeText(textToCopy);
-      toast.success("✅ Info copiada al portapapeles", {
-        style: {
-          background: "#ecfdf5",
-          color: "#065f46",
-          borderColor: "#a7f3d0",
-        },
-      });
-    } catch {
-      toast.error("No se pudo copiar al portapapeles");
+  // ─── WhatsApp de un solo producto → lead clic_whatsapp ────────────────────
+  // Mismo patrón que ComparadorPanel: lead ANTES de navegar, con keepalive para
+  // que la petición sobreviva al salto a wa.me.
+  const handleWhatsApp = () => {
+    const url = construirUrlWhatsApp(
+      resultado.whatsapp,
+      construirMensajeProducto(
+        resultado.farmacia_nombre,
+        resultado.medicamento_nombre,
+        resultado.presentacion,
+        resultado.precio_usd,
+      ),
+    );
+    if (!url) {
+      toast.error("Esta farmacia no tiene WhatsApp registrado");
+      return;
     }
-  };
-
-  const handleCompartir = async () => {
-    // El lead se registra ANTES del share: la intención ya cuenta como CPC
-    void registrarLead(resultado.farmacia_id, "compartir", resultado.medicamento_id);
-    onLeadRegistrado?.();
-
-    const shareData = {
-      title: "Encontrado en DosisYa",
-      text: `Mira este precio: ${resultado.medicamento_nombre} a $${resultado.precio_usd.toFixed(2)} en ${resultado.farmacia_nombre}.`,
-      url: window.location.href,
-    };
-
-    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
-      try {
-        await navigator.share(shareData);
-      } catch {
-        // Ignorar cancelación del usuario — no es un error
-      }
-    } else {
-      // Fallback: copiar URL al portapapeles
-      try {
-        await navigator.clipboard.writeText(window.location.href);
-        toast.success("🔗 Enlace copiado al portapapeles");
-      } catch {
-        toast.error("No se pudo copiar el enlace");
-      }
-    }
+    void registrarLead(resultado.farmacia_id, "clic_whatsapp", resultado.medicamento_id, {
+      keepalive: true,
+    });
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   return (
     <article
       id={cardId}
       aria-label={`${resultado.medicamento_nombre} — ${resultado.farmacia_nombre}`}
-      className={`shadow-sm rounded-xl p-4 bg-white ${
-        esMasEconomico
-          ? "border-2 border-emerald-400 ring-1 ring-emerald-100"
-          : comparando
-            ? "border-2 border-sky-400 ring-1 ring-sky-100"
-            : "border border-gray-100"
+      className={`flex flex-col gap-2.5 rounded-[16px] border bg-white p-3 shadow-[0_1px_2px_rgba(22,24,26,0.04)] ${
+        esMasEconomico ? "border-[var(--verde-cruz)]" : "border-[var(--borde)]"
       }`}
     >
-      {/* MEDICAMENTO + PRECIO PROTAGONISTA */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="font-semibold text-gray-900 leading-snug">
-            {resultado.medicamento_nombre}
-            {resultado.marca_comercial ? (
-              <span className="text-gray-400 text-sm ml-1 font-normal">
-                ({resultado.marca_comercial})
-              </span>
-            ) : (
-              esGenerico && (
-                <span className="ml-2 inline-flex items-center rounded-full bg-sky-100 text-sky-800 text-xs font-medium px-2 py-0.5 align-middle">
-                  Genérico
+      <div className="flex items-stretch gap-3">
+        <div className="min-w-0 flex-1">
+          {/* farmacia + premium + "más barato"  ·  distancia */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <h2 className="truncate text-[13px] font-semibold text-[color:var(--tinta)]">
+                {resultado.farmacia_nombre}
+              </h2>
+              {resultado.es_premium && (
+                <Star
+                  size={14}
+                  className="shrink-0 fill-[var(--verde-cruz)] text-[var(--verde-cruz)]"
+                  aria-label="Farmacia premium"
+                />
+              )}
+              {esMasEconomico && (
+                <span className="shrink-0 rounded-full bg-[var(--disp-fondo)] px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--disp-text)]">
+                  Más barato
                 </span>
-              )
-            )}
+              )}
+            </div>
+            <span className="flex shrink-0 items-center gap-0.5 text-[11px] text-[color:var(--tinta-tenue)]">
+              <MapPin size={12} aria-hidden="true" />
+              <span className="tabular-nums">
+                {(resultado.distancia_m / 1000).toFixed(1).replace(".", ",")} km
+              </span>
+            </span>
+          </div>
+
+          {/* medicamento + presentación */}
+          <p className="mt-2 text-[14px] font-semibold leading-snug text-[color:var(--tinta)]">
+            {resultado.medicamento_nombre}{" "}
+            <span className="font-normal text-[color:var(--tinta-suave)]">
+              {resultado.presentacion}
+            </span>
           </p>
-          <p className="text-gray-500 text-sm mt-0.5">{resultado.presentacion}</p>
+
+          {/* precio protagonista */}
+          <div className="mt-2">
+            <div className="text-[21px] font-bold leading-none tabular-nums tracking-tight text-[color:var(--verde-cruz)]">
+              ${resultado.precio_usd.toFixed(2)}
+            </div>
+            <div className="mt-1 text-[12.5px] tabular-nums text-[color:var(--tinta-suave)]">
+              Bs {resultado.precio_ves.toLocaleString("es-VE", { minimumFractionDigits: 2 })}
+            </div>
+          </div>
         </div>
-        <div className="text-right shrink-0">
-          <p className="text-emerald-700 font-bold text-2xl leading-none">
-            ${resultado.precio_usd.toFixed(2)}
-          </p>
-          <p className="text-gray-500 text-xs mt-1">
-            Bs.{" "}
-            {resultado.precio_ves.toLocaleString("es-VE", {
-              minimumFractionDigits: 2,
-            })}
-          </p>
+
+        {/* imagen del producto (placeholder — sin foto en la API) + favorito */}
+        <div className="relative w-[60px] shrink-0 self-start">
+          <div className="flex h-[60px] w-[60px] items-center justify-center rounded-[12px] border border-[var(--borde)] bg-[var(--fondo-suave)] text-[#c3c6c0]">
+            <Pill size={22} strokeWidth={1.5} aria-hidden="true" />
+          </div>
+          <button
+            id={`${cardId}-btn-favorito`}
+            type="button"
+            onClick={() => alternar(resultado.farmacia_id, resultado.medicamento_id)}
+            aria-pressed={favorito}
+            aria-label={
+              favorito
+                ? `Quitar ${resultado.medicamento_nombre} de favoritos`
+                : `Guardar ${resultado.medicamento_nombre} en favoritos`
+            }
+            className="absolute -right-1.5 -top-1.5 flex h-[24px] w-[24px] items-center justify-center rounded-full border border-[var(--borde)] bg-white shadow-[0_1px_3px_rgba(22,24,26,0.12)] transition-transform active:scale-90"
+          >
+            <Heart
+              size={13}
+              className={
+                favorito
+                  ? "fill-[var(--verde-cruz)] text-[var(--verde-cruz)]"
+                  : "text-[color:var(--tinta-tenue)]"
+              }
+              aria-hidden="true"
+            />
+          </button>
         </div>
       </div>
 
-      {/* BADGES + EQUIVALENTE */}
-      {(esMasEconomico || equivalenteDesde != null) && (
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          {esMasEconomico && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold px-2 py-0.5">
-              💰 Más económico
-            </span>
-          )}
-          {equivalenteDesde != null && (
-            <span className="text-sky-700 text-xs flex items-center gap-1">
-              💊 Equivalente del mismo principio activo desde ${equivalenteDesde.toFixed(2)}
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* FARMACIA (secundario) */}
-      <div className="mt-3 pt-3 border-t border-gray-50">
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <h2 className="font-medium text-gray-700 text-sm truncate">
-              {resultado.farmacia_nombre}
-            </h2>
-            <p className="text-gray-500 text-xs mt-0.5">
-              {(resultado.distancia_m / 1000).toFixed(1)} km · {resultado.direccion}
-            </p>
-          </div>
-          <div className="flex gap-1 shrink-0">
-            {resultado.es_premium && <BadgePremium />}
-            {resultado.tiene_delivery && <BadgeDelivery />}
-          </div>
-        </div>
-      </div>
-
-      {/* ACCIONES */}
-      <div className="mt-4 flex flex-wrap gap-2">
-        {/* Añadir a mi lista → sin lead; el CPC se cobra al contactar desde la lista */}
+      {/* acciones: WhatsApp full-width + añadir */}
+      <div className="flex gap-2">
+        <button
+          id={`${cardId}-btn-whatsapp`}
+          type="button"
+          onClick={handleWhatsApp}
+          aria-label={`Contactar a ${resultado.farmacia_nombre} por WhatsApp`}
+          className="flex h-[40px] flex-1 items-center justify-center gap-1.5 rounded-xl bg-[var(--whatsapp)] text-[13px] font-semibold text-white transition-transform active:scale-[0.98]"
+        >
+          <IconoWhatsApp className="h-[17px] w-[17px]" />
+          WhatsApp
+        </button>
         <button
           id={`${cardId}-btn-agregar`}
           type="button"
           onClick={handleAgregar}
-          aria-label={`Añadir ${resultado.medicamento_nombre} a tu lista médica`}
-          className={`rounded-lg px-4 py-2 flex-[1_1_100%] sm:flex-1 flex justify-center items-center gap-2 text-center font-medium transition-all min-w-[120px] active:scale-[0.98] ${
+          aria-label={
             enLista
-              ? "border border-emerald-300 bg-emerald-50 text-emerald-700"
-              : "bg-primary text-primary-foreground hover:opacity-90"
+              ? `${resultado.medicamento_nombre} ya está en tu lista (${enLista.cantidad}). Añadir otra`
+              : `Añadir ${resultado.medicamento_nombre} a tu lista médica`
+          }
+          className={`flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-xl border text-[var(--verde-cruz)] transition-transform active:scale-[0.95] ${
+            enLista
+              ? "border-[var(--verde-cruz)] bg-[var(--disp-fondo)]"
+              : "border-[var(--borde)] bg-white"
           }`}
         >
-          {enLista ? (
-            <>
-              <Check className="h-4 w-4" aria-hidden />
-              En tu lista · {enLista.cantidad}
-            </>
-          ) : (
-            <>
-              <Plus className="h-4 w-4" aria-hidden />
-              Añadir a mi lista
-            </>
-          )}
-        </button>
-
-        {/* Comparar → selección local, sin lead (aún no hay interacción con farmacia) */}
-        {onToggleComparar && (
-          <button
-            id={`${cardId}-btn-comparar`}
-            type="button"
-            onClick={onToggleComparar}
-            disabled={compararDeshabilitado}
-            aria-pressed={comparando}
-            aria-label={`${comparando ? "Quitar de" : "Añadir a"} comparación: ${resultado.medicamento_nombre} en ${resultado.farmacia_nombre}`}
-            className={`rounded-lg px-3 py-2 flex justify-center items-center gap-1.5 text-sm transition-colors flex-1 sm:flex-initial disabled:opacity-40 disabled:cursor-not-allowed ${
-              comparando
-                ? "border border-sky-300 bg-sky-50 text-sky-700"
-                : "border border-gray-200 text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            <Scale className="h-4 w-4" aria-hidden />
-            {comparando ? "Comparando" : "Comparar"}
-          </button>
-        )}
-
-        {/* Ver mapa → lead: ver_mapa */}
-        <a
-          id={`${cardId}-btn-mapa`}
-          href={mapsUrl}
-          onClick={handleMapa}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={`Ver ubicación de ${resultado.farmacia_nombre} en Google Maps`}
-          className="border border-gray-200 text-gray-600 rounded-lg px-3 py-2 flex justify-center items-center text-center text-sm hover:bg-gray-50 transition-colors flex-1 sm:flex-initial"
-        >
-          📍 Ver mapa
-        </a>
-
-        {/* Guardar info → lead: capture_pantalla */}
-        <button
-          id={`${cardId}-btn-guardar`}
-          type="button"
-          onClick={handleGuardar}
-          aria-label={`Copiar información de ${resultado.medicamento_nombre} al portapapeles`}
-          className="border border-gray-200 text-gray-600 rounded-lg px-3 py-2 text-sm hover:bg-gray-50 transition-colors flex-1 sm:flex-initial"
-        >
-          💾 Guardar info
-        </button>
-
-        {/* Compartir → lead: compartir */}
-        <button
-          id={`${cardId}-btn-compartir`}
-          type="button"
-          onClick={handleCompartir}
-          aria-label={`Compartir información de ${resultado.medicamento_nombre} en ${resultado.farmacia_nombre}`}
-          className="border border-gray-200 text-gray-600 rounded-lg px-3 py-2 text-sm hover:bg-gray-50 transition-colors flex-1 sm:flex-initial"
-        >
-          🔗 Compartir
+          {enLista ? <Check size={19} aria-hidden="true" /> : <Plus size={19} aria-hidden="true" />}
         </button>
       </div>
     </article>

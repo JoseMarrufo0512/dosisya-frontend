@@ -8,8 +8,6 @@ interface BarraFiltrosProps {
   resultados: ResultadoFarmacia[];
   filtros: Filtros;
   onFiltrosChange: (f: Filtros) => void;
-  orden: "relevancia" | "precio";
-  onOrdenChange: (o: "relevancia" | "precio") => void;
   /** Radio de búsqueda actual en metros (tope del slider de distancia). */
   radioM: number;
 }
@@ -18,15 +16,11 @@ interface BarraFiltrosProps {
  * Barra de filtros client-side (spec busqueda-v2 §2.3). Solo se muestra con
  * ≥2 resultados. Emite un objeto Filtros; el filtrado vive en App (useMemo
  * puro con aplicarFiltros) — esta barra no filtra nada por sí misma.
+ *
+ * El control de ORDEN ya no vive aquí: el rediseño de resultados lo movió a la
+ * fila del encabezado (junto al conteo), como en el handoff.
  */
-export function BarraFiltros({
-  resultados,
-  filtros,
-  onFiltrosChange,
-  orden,
-  onOrdenChange,
-  radioM,
-}: BarraFiltrosProps) {
+export function BarraFiltros({ resultados, filtros, onFiltrosChange, radioM }: BarraFiltrosProps) {
   const rango = useMemo(() => rangoPrecios(resultados), [resultados]);
   if (resultados.length < 2 || !rango) return null;
 
@@ -55,37 +49,6 @@ export function BarraFiltros({
   return (
     <div className="rounded-xl bg-white border border-gray-100 shadow-sm px-3 py-2.5 space-y-2.5">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        {/* Orden (movido desde el bloque anterior de App) */}
-        <div className="flex items-center gap-1.5 text-sm">
-          <span className="text-gray-500 text-xs">Ordenar:</span>
-          <div className="inline-flex rounded-lg border border-gray-200 p-0.5">
-            <button
-              type="button"
-              onClick={() => onOrdenChange("relevancia")}
-              aria-pressed={orden === "relevancia"}
-              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                orden === "relevancia"
-                  ? "bg-primary text-primary-foreground"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              Relevancia
-            </button>
-            <button
-              type="button"
-              onClick={() => onOrdenChange("precio")}
-              aria-pressed={orden === "precio"}
-              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                orden === "precio"
-                  ? "bg-primary text-primary-foreground"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              Precio ↑
-            </button>
-          </div>
-        </div>
-
         {/* Genérico / marca / todos */}
         <div className="inline-flex rounded-lg border border-gray-200 p-0.5">
           {botonTipo("todos", "Todos")}
