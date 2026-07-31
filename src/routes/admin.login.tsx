@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { z } from "zod";
 import {
@@ -144,7 +144,11 @@ function AuthPage() {
         <div className="pointer-events-none absolute -top-24 -left-20 h-80 w-80 rounded-full bg-secondary/30 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-24 -right-20 h-96 w-96 rounded-full bg-secondary/20 blur-3xl" />
 
-        <div className="relative flex items-center gap-3">
+        <Link
+          to="/"
+          aria-label="Volver a la app de DosisYa"
+          className="dy-foco relative flex items-center gap-3 transition-opacity hover:opacity-85"
+        >
           <div className="h-11 w-11 rounded-xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center">
             <Pill className="h-5 w-5 text-white" />
           </div>
@@ -154,7 +158,7 @@ function AuthPage() {
               Portal B2B Farmacias
             </div>
           </div>
-        </div>
+        </Link>
 
         <div className="relative max-w-lg mt-12 lg:mt-0">
           <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-md border border-white/15 px-3 py-1 text-xs font-semibold tracking-wide">

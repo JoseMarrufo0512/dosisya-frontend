@@ -91,11 +91,15 @@ export function BurbujaAsistenteIA({
         width: WIDTH,
         height: HEIGHT,
         borderRadius: redondeo,
-        background: "var(--glass-bg)",
-        border: "1px solid var(--glass-border)",
+        // Vidrio con tinte ámbar (no blanco puro): sobre fondos claros
+        // (bg-gray-50, tarjetas blancas) un glass-bg blanco se volvía
+        // invisible y solo se veían los ojitos flotando. Reusa --ambar-receta,
+        // el mismo tono cálido "de idea" que ya existe en la paleta (récipe).
+        background: "color-mix(in srgb, var(--ambar-receta) 14%, var(--papel) 86%)",
+        border: "1px solid color-mix(in srgb, var(--ambar-receta) 35%, transparent)",
         backdropFilter: "blur(10px)",
         WebkitBackdropFilter: "blur(10px)",
-        boxShadow: "0 6px 16px -9px rgba(15,76,58,0.4)",
+        boxShadow: "0 8px 18px -8px rgba(180,83,9,0.4)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -172,12 +176,12 @@ function CaritaAsistente({
         }
         style={{ originX: "12px", originY: "11px" }}
       >
-        <circle cx={8 + dx} cy="11" r="2.1" fill="var(--verde-cruz)" />
-        <circle cx={16 + dx} cy="11" r="2.1" fill="var(--verde-cruz)" />
+        <circle cx={8 + dx} cy="11" r="2.1" fill="var(--ambar-receta)" />
+        <circle cx={16 + dx} cy="11" r="2.1" fill="var(--ambar-receta)" />
       </motion.g>
       <path
         d={`M ${8.5 + dx} 15.5 Q 12 17.5 ${15.5 + dx} 15.5`}
-        stroke="var(--verde-cruz)"
+        stroke="var(--ambar-receta)"
         strokeWidth="1.5"
         strokeLinecap="round"
         fill="none"
