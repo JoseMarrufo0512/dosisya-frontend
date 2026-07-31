@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Drawer } from "vaul";
 import { toast } from "sonner";
 import { ArrowLeft, ChevronRight, ClipboardList, Minus, Plus, Trash2 } from "lucide-react";
@@ -18,6 +18,14 @@ type Vista = "lista" | "farmacias";
 export function ListaMedicaDrawer({ abierta, onOpenChange, lat, lng }: ListaMedicaDrawerProps) {
   const { lista, cambiarCantidad, quitar, restaurar } = useListaMedica();
   const [vista, setVista] = useState<Vista>("lista");
+
+  // Gasto estimado: suma de precioRefUsd (visto al añadir, puede variar por
+  // farmacia). Solo se muestra si al menos un ítem trae precio de referencia.
+  const totalUsd = useMemo(
+    () => lista.reduce((acc, item) => acc + (item.precioRefUsd ?? 0) * item.cantidad, 0),
+    [lista],
+  );
+  const hayPrecioRef = lista.some((item) => item.precioRefUsd != null);
 
   // Cada vez que se abre, arranca en la vista de la lista
   useEffect(() => {
@@ -120,6 +128,14 @@ export function ListaMedicaDrawer({ abierta, onOpenChange, lat, lng }: ListaMedi
                   </ul>
 
                   <div className="shrink-0 border-t border-border px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3">
+                    {hayPrecioRef && (
+                      <div className="mb-3 flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Gasto estimado hasta ahora</span>
+                        <span className="text-lg font-bold tabular-nums text-foreground">
+                          ${totalUsd.toFixed(2)}
+                        </span>
+                      </div>
+                    )}
                     <button
                       type="button"
                       onClick={() => setVista("farmacias")}

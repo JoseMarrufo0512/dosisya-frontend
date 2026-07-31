@@ -1,5 +1,6 @@
 import { type FormEvent } from "react";
-import { User } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { Building2, User } from "lucide-react";
 import { BarraBusqueda } from "./BarraBusqueda";
 import { CATEGORIAS } from "@/lib/categorias";
 import type { Recordatorio } from "@/hooks/useLocalStorage";
@@ -35,9 +36,9 @@ interface HeroBusquedaProps {
 }
 
 /**
- * Hero variante "accesos rápidos + confianza" (spec busqueda-v2 §2.2):
- * buscador, chips de categorías, resurtidos vencidos, recientes y fila
- * de señales de confianza. Sin estado propio: todo llega por props.
+ * Hero minimalista: buscador, chips de categorías y resurtidos vencidos.
+ * Las señales de confianza se muestran en el splash de carga (SplashScreen),
+ * no aquí. Sin estado propio: todo llega por props.
  */
 export function HeroBusqueda({
   query,
@@ -94,7 +95,7 @@ export function HeroBusqueda({
           <span className="text-gray-900">Dosis</span>
           <span className="text-emerald-600">Ya</span>
         </h1>
-        <p className="text-gray-400 text-sm mt-1">Encuentra tu medicamento en Acarigua/Araure</p>
+        <p className="text-gray-400 text-sm mt-1">Encuentra tu medicamento</p>
       </div>
 
       <BarraBusqueda
@@ -154,13 +155,6 @@ export function HeroBusqueda({
         )}
       </div>
 
-      {/* Señales de confianza (mezcla aprobada: hero C + fila de B) */}
-      <div className="mt-6 flex flex-wrap justify-center gap-x-5 gap-y-1 text-xs text-gray-500">
-        <span>✅ Farmacias verificadas</span>
-        <span>💵 Precios en $ y Bs</span>
-        <span>🛵 Delivery local</span>
-      </div>
-
       <div className="mt-6 flex items-center gap-3">
         <label className="text-sm text-gray-600 font-medium">Solo con delivery 🛵</label>
         <button
@@ -179,6 +173,16 @@ export function HeroBusqueda({
           />
         </button>
       </div>
+
+      {/* Acceso B2B: discreto a propósito — es para dueños de farmacia,
+          no para el paciente, y su panel vive en otra ruta (/admin/login). */}
+      <Link
+        to="/admin/login"
+        className="dy-foco mt-8 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-gray-400 transition-colors hover:text-[color:var(--verde-cruz)]"
+      >
+        <Building2 className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
+        ¿Tienes una farmacia? Accede a tu panel
+      </Link>
     </div>
   );
 }

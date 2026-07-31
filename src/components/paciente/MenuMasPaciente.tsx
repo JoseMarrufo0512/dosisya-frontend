@@ -74,7 +74,7 @@ export function MenuMasPaciente({
             </Drawer.Title>
             <ItemMenu
               icono={Bell}
-              titulo="Recordatorios de resurtido"
+              titulo="Recordatorios para reponer"
               sub="Te avisamos cuando toca reponer"
               onClick={() => abrir("recordatorios")}
             />
@@ -129,7 +129,7 @@ function HojaRecordatorios({ open, onClose }: { open: boolean; onClose: () => vo
   };
 
   return (
-    <HojaBase open={open} onClose={onClose} titulo="Recordatorios de resurtido">
+    <HojaBase open={open} onClose={onClose} titulo="Recordatorios para reponer">
       <p
         style={{
           fontSize: 13,
