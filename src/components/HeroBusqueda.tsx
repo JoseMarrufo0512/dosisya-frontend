@@ -1,5 +1,6 @@
 import { type FormEvent } from "react";
-import { User } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { Building2, User } from "lucide-react";
 import { BarraBusqueda } from "./BarraBusqueda";
 import { CATEGORIAS } from "@/lib/categorias";
 import type { Recordatorio } from "@/hooks/useLocalStorage";
@@ -179,6 +180,16 @@ export function HeroBusqueda({
           />
         </button>
       </div>
+
+      {/* Acceso B2B: discreto a propósito — es para dueños de farmacia,
+          no para el paciente, y su panel vive en otra ruta (/admin/login). */}
+      <Link
+        to="/admin/login"
+        className="dy-foco mt-8 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-gray-400 transition-colors hover:text-[color:var(--verde-cruz)]"
+      >
+        <Building2 className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
+        ¿Tienes una farmacia? Accede a tu panel
+      </Link>
     </div>
   );
 }
