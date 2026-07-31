@@ -17,6 +17,11 @@ API="http://localhost:8000"
 FARMACIA_ID="${1:-00000000-0000-0000-0000-000000000001}"
 MEDICAMENTO_ID="${2:-}"
 
+# Contador de fallos reales (no cuenta 429 — es esperado si se corre rápido).
+# Sin esto el script siempre termina con exit 0, aunque todo falle: no sirve
+# de gate en CI. Ver auditoría test-reviewer, hallazgo M4.
+FAILURES=0
+
 # Colores
 GREEN="\033[0;32m"
 RED="\033[0;31m"
@@ -60,6 +65,7 @@ test_lead() {
     echo -e "  ${YELLOW}⚡ RATE-LIMIT${NC}  [$tipo] $desc → 429 Too Many Requests (esperado si se repiten tests rápido)"
   else
     echo -e "  ${RED}❌ FAIL${NC}  [$tipo] $desc → HTTP $HTTP_CODE | $BODY_RESP"
+    FAILURES=$((FAILURES + 1))
   fi
 }
 
@@ -100,6 +106,7 @@ test_lead_origen() {
     echo -e "  ${YELLOW}⚡ RATE-LIMIT${NC}  [origen=$origen] $desc"
   else
     echo -e "  ${RED}❌ FAIL${NC}  [origen=$origen] $desc → HTTP $HTTP_CODE, origen eco: $ORIGEN_RESP"
+    FAILURES=$((FAILURES + 1))
   fi
 }
 
@@ -119,6 +126,7 @@ elif [ "$HTTP_INVALIDO" = "429" ]; then
   echo -e "  ${YELLOW}⚡ RATE-LIMIT${NC}  [origen inválido]"
 else
   echo -e "  ${RED}❌ FAIL${NC}  [origen inválido] → HTTP $HTTP_INVALIDO (esperado 422)"
+  FAILURES=$((FAILURES + 1))
 fi
 
 echo ""
@@ -131,6 +139,7 @@ if [ "$INVALID" = "400" ]; then
   echo -e "  ${GREEN}✅ PASS${NC}  Rechazó tipo inválido con HTTP 400"
 else
   echo -e "  ${RED}❌ FAIL${NC}  Tipo inválido devolvió HTTP $INVALID (esperado 400)"
+  FAILURES=$((FAILURES + 1))
 fi
 
 echo ""
@@ -141,10 +150,22 @@ NOTFOUND=$(curl -s -o /dev/null -w "%{http_code}" \
   -d '{"farmacia_id":"99999999-9999-9999-9999-999999999999","tipo_interaccion":"clic_whatsapp"}')
 if [ "$NOTFOUND" = "404" ]; then
   echo -e "  ${GREEN}✅ PASS${NC}  Farmacia inexistente devuelve HTTP 404"
+elif [ "$NOTFOUND" = "429" ]; then
+  echo -e "  ${YELLOW}⚡ RATE-LIMIT${NC}  [farmacia inexistente]"
 else
-  echo -e "  ${YELLOW}⚠️  INFO${NC}  Farmacia inexistente devolvió HTTP $NOTFOUND"
+  # 404 está documentado como respuesta esperada del endpoint (ver
+  # responses={} en crear_lead_interaccion) — si esto deja de cumplirse,
+  # una farmacia inexistente podría estar generando un lead facturable.
+  echo -e "  ${RED}❌ FAIL${NC}  Farmacia inexistente devolvió HTTP $NOTFOUND (esperado 404)"
+  FAILURES=$((FAILURES + 1))
 fi
 
 echo ""
-echo -e "${GREEN}═══ Test completado ═══${NC}"
-echo ""
+if [ "$FAILURES" -gt 0 ]; then
+  echo -e "${RED}═══ Test completado con $FAILURES fallo(s) ═══${NC}"
+  echo ""
+  exit 1
+else
+  echo -e "${GREEN}═══ Test completado sin fallos ═══${NC}"
+  echo ""
+fi
