@@ -16,7 +16,6 @@ export interface Categoria {
 export const CATEGORIAS: Categoria[] = [
   { etiqueta: "Dolor y fiebre", emoji: "🤕", termino: "acetaminofen" },
   { etiqueta: "Gripe y alergia", emoji: "🤧", termino: "loratadina" },
-  { etiqueta: "Tensión", emoji: "❤️", termino: "losartan" },
   { etiqueta: "Antibióticos", emoji: "💊", termino: "amoxicilina" },
   { etiqueta: "Estómago", emoji: "🫗", termino: "omeprazol" },
 ];
