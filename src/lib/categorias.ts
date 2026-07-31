@@ -19,5 +19,4 @@ export const CATEGORIAS: Categoria[] = [
   { etiqueta: "Tensión", emoji: "❤️", termino: "losartan" },
   { etiqueta: "Antibióticos", emoji: "💊", termino: "amoxicilina" },
   { etiqueta: "Estómago", emoji: "🫗", termino: "omeprazol" },
-  { etiqueta: "Diabetes", emoji: "🩸", termino: "metformina" },
 ];

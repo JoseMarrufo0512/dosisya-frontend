@@ -36,9 +36,9 @@ interface HeroBusquedaProps {
 }
 
 /**
- * Hero variante "accesos rápidos + confianza" (spec busqueda-v2 §2.2):
- * buscador, chips de categorías, resurtidos vencidos, recientes y fila
- * de señales de confianza. Sin estado propio: todo llega por props.
+ * Hero minimalista: buscador, chips de categorías y resurtidos vencidos.
+ * Las señales de confianza se muestran en el splash de carga (SplashScreen),
+ * no aquí. Sin estado propio: todo llega por props.
  */
 export function HeroBusqueda({
   query,
@@ -95,7 +95,7 @@ export function HeroBusqueda({
           <span className="text-gray-900">Dosis</span>
           <span className="text-emerald-600">Ya</span>
         </h1>
-        <p className="text-gray-400 text-sm mt-1">Encuentra tu medicamento en Acarigua/Araure</p>
+        <p className="text-gray-400 text-sm mt-1">Encuentra tu medicamento</p>
       </div>
 
       <BarraBusqueda
@@ -153,13 +153,6 @@ export function HeroBusqueda({
         ) : (
           <p>📍 Usando tu ubicación actual</p>
         )}
-      </div>
-
-      {/* Señales de confianza (mezcla aprobada: hero C + fila de B) */}
-      <div className="mt-6 flex flex-wrap justify-center gap-x-5 gap-y-1 text-xs text-gray-500">
-        <span>✅ Farmacias verificadas</span>
-        <span>💵 Precios en $ y Bs</span>
-        <span>🛵 Delivery local</span>
       </div>
 
       <div className="mt-6 flex items-center gap-3">

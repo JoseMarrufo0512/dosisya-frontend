@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, FormEvent } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useGeolocalizacion } from "./hooks/useGeolocalizacion";
 import { useBuscarMedicamentos } from "./hooks/useBuscarMedicamentos";
 import { useDebounce } from "./hooks/useDebounce";
@@ -8,6 +8,7 @@ import { useTasa } from "./hooks/useTasa";
 import { useBusquedasRecientes, useRecordatorios } from "./hooks/useLocalStorage";
 import { useListaMedica } from "./hooks/useListaMedica";
 import { HeroBusqueda } from "./components/HeroBusqueda";
+import { SplashScreen } from "./components/SplashScreen";
 import { TarjetaResultado } from "./components/TarjetaResultado";
 import { EstadoCargando } from "./components/EstadoCargando";
 import { EstadoVacio } from "./components/EstadoVacio";
@@ -51,6 +52,10 @@ export default function App() {
   const recordatorios = useRecordatorios();
   const { totalDistintos } = useListaMedica();
   const tasa = useTasa();
+
+  // Splash de carga (logo + señales de confianza): visible por defecto para
+  // que coincida en SSR y en el primer render del cliente, sin parpadeo.
+  const [splashVisible, setSplashVisible] = useState(true);
 
   // Los recordatorios dependen de la fecha actual → solo evaluarlos tras montar
   // en el cliente, para no romper la hidratación SSR.
@@ -573,6 +578,10 @@ export default function App() {
 
   return (
     <>
+      <AnimatePresence>
+        {splashVisible && <SplashScreen onFinish={() => setSplashVisible(false)} />}
+      </AnimatePresence>
+
       {contenido}
 
       {/* Lista Médica — visible sobre ambas vistas (spec receta-ia-y-carrito) */}
