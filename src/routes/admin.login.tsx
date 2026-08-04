@@ -700,6 +700,17 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
             hint="Incluye al menos una letra y un número."
           />
           {error && <ErrorBox text={error} />}
+          <p className="text-xs text-muted-foreground">
+            Al crear tu cuenta aceptas los{" "}
+            <Link to="/terminos" target="_blank" className="underline">
+              Términos de uso
+            </Link>{" "}
+            y la{" "}
+            <Link to="/privacidad" target="_blank" className="underline">
+              Política de privacidad
+            </Link>
+            .
+          </p>
           <div className="flex gap-2">
             <Button
               type="button"
