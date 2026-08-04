@@ -1157,7 +1157,233 @@ function FacturacionSection({
           </>
         )}
       </section>
+
+      {/* Historial de facturas — meses ya cerrados por el súper admin.
+          "Leads recientes" arriba solo cubre el mes en curso; una vez que
+          DosisYa cierra el mes, el detalle vive acá para poder auditarlo. */}
+      <HistorialFacturas />
     </div>
+  );
+}
+
+type Factura = {
+  id: string;
+  periodo_inicio: string;
+  periodo_fin: string;
+  leads_facturables: number;
+  tarifa_aplicada_usd: number;
+  total_usd: number;
+  estado: "pendiente" | "pagada";
+  fecha_pago: string | null;
+};
+
+function formatoPeriodo(periodoInicio: string): string {
+  const d = new Date(periodoInicio + "T00:00:00");
+  if (Number.isNaN(d.getTime())) return periodoInicio;
+  const s = d.toLocaleDateString("es-VE", { month: "long", year: "numeric" });
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/**
+ * Historial de facturas ya cerradas (tabla `facturas`, snapshot congelado).
+ * Cada factura se puede expandir para ver el detalle itemizado de leads del
+ * periodo — la evidencia que necesita la farmacia si disputa un cobro.
+ */
+function HistorialFacturas() {
+  const [facturas, setFacturas] = useState<Factura[] | null>(null);
+  const [error, setError] = useState(false);
+  const [abierta, setAbierta] = useState<string | null>(null);
+  const [leadsPorFactura, setLeadsPorFactura] = useState<
+    Record<string, LeadReciente[] | "cargando" | "error">
+  >({});
+
+  useEffect(() => {
+    const farmaciaId =
+      typeof window !== "undefined" ? localStorage.getItem("farmacia_id") : null;
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+    if (!farmaciaId) return;
+    let cancelado = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/farmacias/${farmaciaId}/facturas`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!res.ok) {
+          if (!cancelado) setError(true);
+          return;
+        }
+        const json = await res.json();
+        if (!cancelado) setFacturas(json?.data?.facturas ?? []);
+      } catch {
+        if (!cancelado) setError(true);
+      }
+    })();
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
+  const alternar = async (f: Factura) => {
+    const nueva = abierta === f.id ? null : f.id;
+    setAbierta(nueva);
+    if (!nueva || leadsPorFactura[f.id]) return;
+
+    setLeadsPorFactura((prev) => ({ ...prev, [f.id]: "cargando" }));
+    const farmaciaId =
+      typeof window !== "undefined" ? localStorage.getItem("farmacia_id") : null;
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+    try {
+      const params = new URLSearchParams({
+        periodo_inicio: f.periodo_inicio,
+        periodo_fin: f.periodo_fin,
+      });
+      const res = await fetch(
+        `${API_BASE}/api/v1/farmacias/${farmaciaId}/leads?${params}`,
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+      );
+      if (!res.ok) throw new Error("leads fetch failed");
+      const json = await res.json();
+      setLeadsPorFactura((prev) => ({ ...prev, [f.id]: json?.data?.leads ?? [] }));
+    } catch {
+      setLeadsPorFactura((prev) => ({ ...prev, [f.id]: "error" }));
+    }
+  };
+
+  const fmtUsd = (n: number) => "$" + n.toFixed(2).replace(".", ",");
+
+  return (
+    <section style={{ ...factCard, overflow: "hidden" }}>
+      <header style={{ padding: "14px 16px", borderBottom: "1px solid #eef0eb" }}>
+        <span style={{ fontSize: 13.5, fontWeight: 600 }}>Historial de facturas</span>
+      </header>
+
+      {facturas === null && !error && (
+        <div className="p-6 space-y-3">
+          {[...Array(2)].map((_, i) => (
+            <Skeleton key={i} className="h-12 w-full" />
+          ))}
+        </div>
+      )}
+
+      {error && (
+        <div className="p-8 text-center" style={{ fontSize: 13, color: "var(--dy-tinta-suave)" }}>
+          No se pudo cargar el historial. Intenta de nuevo más tarde.
+        </div>
+      )}
+
+      {facturas !== null && !error && facturas.length === 0 && (
+        <div className="p-12 text-center">
+          <Receipt className="h-10 w-10 mx-auto mb-3" style={{ color: "var(--dy-tinta-tenue)", opacity: 0.5 }} />
+          <p style={{ fontSize: 14, color: "var(--dy-tinta-suave)" }}>
+            Todavía no hay meses cerrados. En cuanto DosisYa cierre el corte mensual,
+            tus facturas aparecerán acá.
+          </p>
+        </div>
+      )}
+
+      {facturas !== null && !error && facturas.length > 0 && (
+        <ul>
+          {facturas.map((f) => {
+            const detalle = leadsPorFactura[f.id];
+            const estaAbierta = abierta === f.id;
+            const t = TONO_FACT[f.estado === "pagada" ? "verde" : "ambar"];
+            return (
+              <li key={f.id} style={{ borderTop: "1px solid #f1f2ee" }}>
+                <button
+                  onClick={() => alternar(f)}
+                  className="w-full flex items-center justify-between gap-3"
+                  style={{ padding: "14px 16px", textAlign: "left" }}
+                >
+                  <div>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: "var(--dy-tinta)" }}>
+                      {formatoPeriodo(f.periodo_inicio)}
+                    </div>
+                    <div style={{ fontSize: 12, color: "var(--dy-tinta-tenue)", marginTop: 2 }}>
+                      {f.leads_facturables} leads · {fmtUsd(f.total_usd)}
+                    </div>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: t.color,
+                      background: t.bg,
+                      borderRadius: 999,
+                      padding: "3px 9px",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {f.estado === "pagada" ? "Pagada" : "Pendiente"}
+                  </span>
+                </button>
+
+                {estaAbierta && (
+                  <div style={{ padding: "0 16px 14px" }}>
+                    {detalle === "cargando" && (
+                      <div className="space-y-2">
+                        {[...Array(3)].map((_, i) => (
+                          <Skeleton key={i} className="h-8 w-full" />
+                        ))}
+                      </div>
+                    )}
+                    {detalle === "error" && (
+                      <p style={{ fontSize: 12.5, color: "var(--dy-tinta-suave)" }}>
+                        No se pudo cargar el detalle.
+                      </p>
+                    )}
+                    {Array.isArray(detalle) &&
+                      (detalle.length === 0 ? (
+                        <p style={{ fontSize: 12.5, color: "var(--dy-tinta-suave)" }}>
+                          Sin leads registrados en este periodo.
+                        </p>
+                      ) : (
+                        <ul style={{ border: "1px solid #eef0eb", borderRadius: 10, overflow: "hidden" }}>
+                          {detalle.map((l) => {
+                            const t2 = TONO_FACT[tonoInteraccion(l.tipo_interaccion)];
+                            return (
+                              <li
+                                key={l.lead_id}
+                                className="flex items-center justify-between gap-3"
+                                style={{
+                                  padding: "8px 12px",
+                                  borderTop: "1px solid #f1f2ee",
+                                  fontSize: 12.5,
+                                }}
+                              >
+                                <span style={{ color: "var(--dy-tinta-tenue)", whiteSpace: "nowrap" }}>
+                                  {formatoFechaLead(l.fecha_hora)}
+                                </span>
+                                <span
+                                  style={{
+                                    fontSize: 10.5,
+                                    fontWeight: 600,
+                                    color: t2.color,
+                                    background: t2.bg,
+                                    borderRadius: 999,
+                                    padding: "2px 7px",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  {etiquetaInteraccion(l.tipo_interaccion)}
+                                </span>
+                                <span className="truncate flex-1" style={{ color: "var(--dy-tinta)" }}>
+                                  {l.medicamento_nombre ?? "—"}
+                                </span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ))}
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 }
 
