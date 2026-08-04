@@ -3,7 +3,7 @@ import { registrarLead } from "@/lib/leads";
 import { construirMensajeProducto, construirUrlWhatsApp } from "@/lib/whatsapp";
 import { useListaMedica } from "@/hooks/useListaMedica";
 import { useFavoritos } from "@/hooks/useFavoritos";
-import { MapPin, Star, Plus, Check, Heart, Pill } from "lucide-react";
+import { MapPin, Star, Plus, Check, Heart, Pill, Share2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface TarjetaResultadoProps {
@@ -97,6 +97,36 @@ export function TarjetaResultado({
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
+  // ─── Compartir → lead "compartir" + enlace público /producto/... ──────────
+  // Con Web Share API si el navegador la soporta (móvil); si no, copia al
+  // portapapeles. El lead se registra igual en ambos casos.
+  const handleCompartir = async () => {
+    const url = `${window.location.origin}/producto/${resultado.farmacia_id}/${resultado.medicamento_id}`;
+    void registrarLead(resultado.farmacia_id, "compartir", resultado.medicamento_id, {
+      origen: "busqueda",
+    });
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${resultado.medicamento_nombre} en ${resultado.farmacia_nombre}`,
+          text: `Encontré ${resultado.medicamento_nombre} a $${resultado.precio_usd.toFixed(2)} en ${resultado.farmacia_nombre} — DosisYa`,
+          url,
+        });
+      } catch {
+        // El usuario cerró el share sheet sin elegir nada — no es un error.
+      }
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Enlace copiado");
+    } catch {
+      toast.error("No pudimos copiar el enlace");
+    }
+  };
+
   return (
     <article
       id={cardId}
@@ -183,7 +213,7 @@ export function TarjetaResultado({
         </div>
       </div>
 
-      {/* acciones: WhatsApp full-width + añadir */}
+      {/* acciones: WhatsApp full-width + compartir + añadir */}
       <div className="flex gap-2">
         <button
           id={`${cardId}-btn-whatsapp`}
@@ -194,6 +224,15 @@ export function TarjetaResultado({
         >
           <IconoWhatsApp className="h-[17px] w-[17px]" />
           WhatsApp
+        </button>
+        <button
+          id={`${cardId}-btn-compartir`}
+          type="button"
+          onClick={handleCompartir}
+          aria-label={`Compartir ${resultado.medicamento_nombre} en ${resultado.farmacia_nombre}`}
+          className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-xl border border-[var(--borde)] bg-white text-[var(--tinta-suave)] transition-transform active:scale-[0.95]"
+        >
+          <Share2 size={18} aria-hidden="true" />
         </button>
         <button
           id={`${cardId}-btn-agregar`}

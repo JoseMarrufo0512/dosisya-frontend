@@ -16,6 +16,7 @@ import { Route as SuperLoginRouteImport } from './routes/super.login'
 import { Route as SuperDashboardRouteImport } from './routes/super.dashboard'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
+import { Route as ProductoFarmaciaIdMedicamentoIdRouteImport } from './routes/producto.$farmaciaId.$medicamentoId'
 
 const TerminosRoute = TerminosRouteImport.update({
   id: '/terminos',
@@ -52,6 +53,12 @@ const AdminDashboardRoute = AdminDashboardRouteImport.update({
   path: '/admin/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProductoFarmaciaIdMedicamentoIdRoute =
+  ProductoFarmaciaIdMedicamentoIdRouteImport.update({
+    id: '/producto/$farmaciaId/$medicamentoId',
+    path: '/producto/$farmaciaId/$medicamentoId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -61,6 +68,7 @@ export interface FileRoutesByFullPath {
   '/admin/login': typeof AdminLoginRoute
   '/super/dashboard': typeof SuperDashboardRoute
   '/super/login': typeof SuperLoginRoute
+  '/producto/$farmaciaId/$medicamentoId': typeof ProductoFarmaciaIdMedicamentoIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -70,6 +78,7 @@ export interface FileRoutesByTo {
   '/admin/login': typeof AdminLoginRoute
   '/super/dashboard': typeof SuperDashboardRoute
   '/super/login': typeof SuperLoginRoute
+  '/producto/$farmaciaId/$medicamentoId': typeof ProductoFarmaciaIdMedicamentoIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -80,6 +89,7 @@ export interface FileRoutesById {
   '/admin/login': typeof AdminLoginRoute
   '/super/dashboard': typeof SuperDashboardRoute
   '/super/login': typeof SuperLoginRoute
+  '/producto/$farmaciaId/$medicamentoId': typeof ProductoFarmaciaIdMedicamentoIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -91,6 +101,7 @@ export interface FileRouteTypes {
     | '/admin/login'
     | '/super/dashboard'
     | '/super/login'
+    | '/producto/$farmaciaId/$medicamentoId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -100,6 +111,7 @@ export interface FileRouteTypes {
     | '/admin/login'
     | '/super/dashboard'
     | '/super/login'
+    | '/producto/$farmaciaId/$medicamentoId'
   id:
     | '__root__'
     | '/'
@@ -109,6 +121,7 @@ export interface FileRouteTypes {
     | '/admin/login'
     | '/super/dashboard'
     | '/super/login'
+    | '/producto/$farmaciaId/$medicamentoId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -119,6 +132,7 @@ export interface RootRouteChildren {
   AdminLoginRoute: typeof AdminLoginRoute
   SuperDashboardRoute: typeof SuperDashboardRoute
   SuperLoginRoute: typeof SuperLoginRoute
+  ProductoFarmaciaIdMedicamentoIdRoute: typeof ProductoFarmaciaIdMedicamentoIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -172,6 +186,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminDashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/producto/$farmaciaId/$medicamentoId': {
+      id: '/producto/$farmaciaId/$medicamentoId'
+      path: '/producto/$farmaciaId/$medicamentoId'
+      fullPath: '/producto/$farmaciaId/$medicamentoId'
+      preLoaderRoute: typeof ProductoFarmaciaIdMedicamentoIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -183,6 +204,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminLoginRoute: AdminLoginRoute,
   SuperDashboardRoute: SuperDashboardRoute,
   SuperLoginRoute: SuperLoginRoute,
+  ProductoFarmaciaIdMedicamentoIdRoute: ProductoFarmaciaIdMedicamentoIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
