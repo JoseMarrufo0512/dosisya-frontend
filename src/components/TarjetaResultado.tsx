@@ -3,7 +3,7 @@ import { registrarLead } from "@/lib/leads";
 import { construirMensajeProducto, construirUrlWhatsApp } from "@/lib/whatsapp";
 import { useListaMedica } from "@/hooks/useListaMedica";
 import { useFavoritos } from "@/hooks/useFavoritos";
-import { MapPin, Star, Plus, Check, Heart, Pill, Share2 } from "lucide-react";
+import { MapPin, Star, Plus, Check, Heart, Pill, Share2, Scale } from "lucide-react";
 import { toast } from "sonner";
 
 interface TarjetaResultadoProps {
@@ -12,6 +12,12 @@ interface TarjetaResultadoProps {
   esMasEconomico?: boolean;
   /** Al añadir, reporta el rect del botón "+" para la animación packFly. */
   onAgregado?: (desde: DOMRect) => void;
+  /** La tarjeta está seleccionada para el comparador. */
+  comparando?: boolean;
+  /** Toggle de selección; si es undefined el botón Comparar no se muestra. */
+  onToggleComparar?: () => void;
+  /** true cuando ya se alcanzó el máximo de comparación y esta no es una de las seleccionadas. */
+  compararDeshabilitado?: boolean;
 }
 
 /**
@@ -42,9 +48,12 @@ export function TarjetaResultado({
   resultado,
   esMasEconomico = false,
   onAgregado,
+  comparando = false,
+  onToggleComparar,
+  compararDeshabilitado = false,
 }: TarjetaResultadoProps) {
   const { agregar, estaEnLista } = useListaMedica();
-  const enLista = estaEnLista(resultado.medicamento_id);
+  const enLista = estaEnLista(resultado.farmacia_id, resultado.medicamento_id);
 
   const { esFavorito, alternar } = useFavoritos();
   const favorito = esFavorito(resultado.farmacia_id, resultado.medicamento_id);
@@ -62,6 +71,9 @@ export function TarjetaResultado({
       marcaComercial: resultado.marca_comercial ?? null,
       precioRefUsd: resultado.precio_usd,
       origen: "lista_medica",
+      farmaciaId: resultado.farmacia_id,
+      farmaciaNombre: resultado.farmacia_nombre,
+      farmaciaWhatsapp: resultado.whatsapp,
     });
     toast.success(
       item.cantidad > 1
@@ -251,6 +263,23 @@ export function TarjetaResultado({
         >
           {enLista ? <Check size={19} aria-hidden="true" /> : <Plus size={19} aria-hidden="true" />}
         </button>
+        {onToggleComparar && (
+          <button
+            id={`${cardId}-btn-comparar`}
+            type="button"
+            onClick={onToggleComparar}
+            disabled={compararDeshabilitado}
+            aria-pressed={comparando}
+            aria-label={`${comparando ? "Quitar de" : "Añadir a"} comparación: ${resultado.medicamento_nombre} en ${resultado.farmacia_nombre}`}
+            className={`flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-xl border transition-transform active:scale-[0.95] disabled:opacity-40 disabled:active:scale-100 ${
+              comparando
+                ? "border-sky-300 bg-sky-50 text-sky-700"
+                : "border-[var(--borde)] bg-white text-[var(--tinta-suave)]"
+            }`}
+          >
+            <Scale size={18} aria-hidden="true" />
+          </button>
+        )}
       </div>
     </article>
   );

@@ -25,6 +25,36 @@ export interface ItemLista {
   agregadoEn: number;
   /** Por dónde entró el item. Ausente en items previos a la feature (= lista_medica). */
   origen?: OrigenLead;
+  /**
+   * Farmacia de la tarjeta desde la que se añadió. Ausente en items del
+   * escáner de récipe (no hay farmacia todavía) y en items guardados antes
+   * de esta feature.
+   */
+  farmaciaId?: string;
+  farmaciaNombre?: string;
+  farmaciaWhatsapp?: string | null;
+}
+
+/** Clave de identidad de un item: mismo medicamento en la MISMA farmacia. */
+export function claveItem(item: Pick<ItemLista, "farmaciaId" | "medicamentoId">): string {
+  return `${item.farmaciaId ?? "sin-farmacia"}-${item.medicamentoId}`;
+}
+
+/**
+ * Si todos los ítems de la lista vienen de la MISMA farmacia (con datos de
+ * contacto completos), la devuelve — permite saltar el selector de farmacia
+ * e ir directo a WhatsApp. Lista vacía, farmacias mixtas, o ítems sin
+ * farmacia (récipe IA) → null.
+ */
+export function farmaciaUnicaDeLista(
+  lista: ItemLista[],
+): { id: string; nombre: string; whatsapp: string } | null {
+  if (lista.length === 0) return null;
+  const { farmaciaId, farmaciaNombre, farmaciaWhatsapp } = lista[0];
+  if (!farmaciaId || !farmaciaNombre || !farmaciaWhatsapp) return null;
+  const mismaFarmacia = lista.every((i) => i.farmaciaId === farmaciaId);
+  if (!mismaFarmacia) return null;
+  return { id: farmaciaId, nombre: farmaciaNombre, whatsapp: farmaciaWhatsapp };
 }
 
 const STORAGE_KEY = "dosisya:lista-medica:v1";
@@ -93,19 +123,17 @@ const getServerSnapshot = () => LISTA_VACIA;
 
 // ── Acciones (usables también fuera de React) ───────────────────────────────
 
-const mismoId = (a: ItemLista["medicamentoId"], b: ItemLista["medicamentoId"]) =>
-  String(a) === String(b);
-
 export function agregarItem(
   nuevo: Omit<ItemLista, "cantidad" | "agregadoEn"> & { cantidad?: number },
 ): ItemLista {
-  const existente = items.find((i) => mismoId(i.medicamentoId, nuevo.medicamentoId));
+  const clave = claveItem(nuevo);
+  const existente = items.find((i) => claveItem(i) === clave);
   if (existente) {
     const actualizado: ItemLista = {
       ...existente,
       cantidad: Math.min(99, existente.cantidad + (nuevo.cantidad ?? 1)),
     };
-    setItems(items.map((i) => (mismoId(i.medicamentoId, nuevo.medicamentoId) ? actualizado : i)));
+    setItems(items.map((i) => (claveItem(i) === clave ? actualizado : i)));
     return actualizado;
   }
   const item: ItemLista = { ...nuevo, cantidad: nuevo.cantidad ?? 1, agregadoEn: Date.now() };
@@ -115,9 +143,11 @@ export function agregarItem(
 
 /** Devuelve el item quitado y su posición, para poder deshacer. */
 export function quitarItem(
+  farmaciaId: ItemLista["farmaciaId"],
   medicamentoId: ItemLista["medicamentoId"],
 ): { item: ItemLista; indice: number } | null {
-  const indice = items.findIndex((i) => mismoId(i.medicamentoId, medicamentoId));
+  const clave = claveItem({ farmaciaId, medicamentoId });
+  const indice = items.findIndex((i) => claveItem(i) === clave);
   if (indice === -1) return null;
   const item = items[indice];
   setItems(items.filter((_, i) => i !== indice));
@@ -125,16 +155,21 @@ export function quitarItem(
 }
 
 export function restaurarItem(item: ItemLista, indice: number) {
-  if (items.some((i) => mismoId(i.medicamentoId, item.medicamentoId))) return;
+  if (items.some((i) => claveItem(i) === claveItem(item))) return;
   const copia = [...items];
   copia.splice(Math.min(indice, copia.length), 0, item);
   setItems(copia);
 }
 
-export function cambiarCantidad(medicamentoId: ItemLista["medicamentoId"], delta: number) {
+export function cambiarCantidad(
+  farmaciaId: ItemLista["farmaciaId"],
+  medicamentoId: ItemLista["medicamentoId"],
+  delta: number,
+) {
+  const clave = claveItem({ farmaciaId, medicamentoId });
   setItems(
     items.map((i) =>
-      mismoId(i.medicamentoId, medicamentoId)
+      claveItem(i) === clave
         ? { ...i, cantidad: Math.min(99, Math.max(1, i.cantidad + delta)) }
         : i,
     ),
@@ -151,8 +186,10 @@ export function useListaMedica() {
   const lista = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   const estaEnLista = useCallback(
-    (medicamentoId: ItemLista["medicamentoId"]) =>
-      lista.find((i) => mismoId(i.medicamentoId, medicamentoId)) ?? null,
+    (farmaciaId: ItemLista["farmaciaId"], medicamentoId: ItemLista["medicamentoId"]) => {
+      const clave = claveItem({ farmaciaId, medicamentoId });
+      return lista.find((i) => claveItem(i) === clave) ?? null;
+    },
     [lista],
   );
 

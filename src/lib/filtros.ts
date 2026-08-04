@@ -88,3 +88,24 @@ export function claveMasEconomico(resultados: ResultadoFarmacia[]): string | nul
   }
   return claveResultado(min);
 }
+
+/** Toggle de selección para el comparador, con tope de `max` claves a la vez. */
+export function alternarComparacion(claves: string[], clave: string, max: number): string[] {
+  if (claves.includes(clave)) return claves.filter((c) => c !== clave);
+  if (claves.length >= max) return claves;
+  return [...claves, clave];
+}
+
+/**
+ * Resuelve claves de comparación contra la respuesta actual de la API, en el
+ * orden en que se marcaron. Una clave sin resultado correspondiente (la
+ * búsqueda cambió, el resultado ya no está) se descarta silenciosamente.
+ */
+export function resolverSeleccionados(
+  claves: string[],
+  resultados: ResultadoFarmacia[],
+): ResultadoFarmacia[] {
+  return claves
+    .map((c) => resultados.find((r) => claveResultado(r) === c))
+    .filter((r): r is ResultadoFarmacia => r !== undefined);
+}

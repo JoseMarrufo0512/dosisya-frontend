@@ -16,6 +16,8 @@ import { CartSummary } from "./components/lista/CartSummary";
 import { ListaMedicaDrawer } from "./components/lista/ListaMedicaDrawer";
 import { EscanerRecipe } from "./components/EscanerRecipe";
 import { BarraFiltros } from "./components/BarraFiltros";
+import { ComparadorBar } from "./components/ComparadorBar";
+import { ComparadorPanel } from "./components/ComparadorPanel";
 import NavegacionPaciente, { type TabPaciente } from "@/components/navegacion/NavegacionPaciente";
 import { MenuMasPaciente } from "@/components/paciente/MenuMasPaciente";
 import { HojaLoginPaciente } from "@/components/paciente/HojaLoginPaciente";
@@ -35,11 +37,14 @@ import {
 import {
   type Filtros,
   FILTROS_INICIALES,
+  alternarComparacion,
   aplicarFiltros,
   claveMasEconomico,
   claveResultado,
   hayFiltrosActivos,
+  resolverSeleccionados,
 } from "./lib/filtros";
+import { alLimpiarBusqueda } from "./lib/estadoResultados";
 
 // Fallback: centro de Acarigua (mismo criterio que la versión anterior)
 const LAT_ACARIGUA = 9.5569;
@@ -80,6 +85,10 @@ export default function App() {
   // Filtros ocultos por defecto: se abren desde el ícono discreto del encabezado.
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
 
+  const MAX_COMPARAR = 3;
+  const [compararClaves, setCompararClaves] = useState<string[]>([]);
+  const [comparadorAbierto, setComparadorAbierto] = useState(false);
+
   // Navegación inferior del paciente (handoff): pestaña activa + hoja "Más".
   const [tab, setTab] = useState<TabPaciente>("buscar");
   const [masAbierto, setMasAbierto] = useState(false);
@@ -89,6 +98,7 @@ export default function App() {
   // Botón atrás del teléfono → cierra el overlay abierto (uno por capa).
   useBackDismiss(listaAbierta, () => setListaAbierta(false));
   useBackDismiss(escanerAbierto, () => setEscanerAbierto(false));
+  useBackDismiss(comparadorAbierto, () => setComparadorAbierto(false));
   useBackDismiss(filtrosAbiertos, () => setFiltrosAbiertos(false));
   useBackDismiss(loginAbierto, () => setLoginAbierto(false));
   useBackDismiss(masAbierto, () => setMasAbierto(false));
@@ -123,6 +133,16 @@ export default function App() {
     setFlyers((f) => [...f, { id, x0, y0, x1, y1, xc, yc }]);
     window.setTimeout(() => setFlyers((f) => f.filter((x) => x.id !== id)), 700);
   };
+
+  const toggleComparar = (clave: string) => {
+    setCompararClaves((prev) => alternarComparacion(prev, clave, MAX_COMPARAR));
+  };
+
+  // Resultados seleccionados, resueltos contra la respuesta actual de la API.
+  const seleccionados = useMemo(
+    () => resolverSeleccionados(compararClaves, api.resultados),
+    [compararClaves, api.resultados],
+  );
 
   // Resultados ordenados según el toggle, sin mutar el array original.
   const resultadosOrdenados = useMemo(() => {
@@ -162,6 +182,8 @@ export default function App() {
     if (opts?.guardarReciente ?? true) recientes.agregar(termino);
     setRadio(radioKm * 1000);
     setFiltros(FILTROS_INICIALES); // cada búsqueda arranca sin filtros
+    setCompararClaves([]);
+    setComparadorAbierto(false);
 
     await api.buscar(termino, latEfectiva, lngEfectiva, conDelivery, radioKm * 1000);
   };
@@ -242,7 +264,12 @@ export default function App() {
               {query && (
                 <button
                   type="button"
-                  onClick={() => setQuery("")}
+                  onClick={() => {
+                    const limpio = alLimpiarBusqueda();
+                    setEstado(limpio.estado);
+                    setQuery(limpio.query);
+                    setTerminoBuscado(limpio.terminoBuscado);
+                  }}
                   aria-label="Borrar búsqueda"
                   className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-[var(--fondo-suave)] text-[color:var(--tinta-tenue)]"
                 >
@@ -355,14 +382,21 @@ export default function App() {
           )}
 
           {!api.cargando &&
-            resultadosVisibles.map((res, i) => (
-              <TarjetaResultado
-                key={`${claveResultado(res)}-${i}`}
-                resultado={res}
-                esMasEconomico={claveResultado(res) === claveEconomico}
-                onAgregado={volarAlCarrito}
-              />
-            ))}
+            resultadosVisibles.map((res, i) => {
+              const clave = claveResultado(res);
+              const comparando = compararClaves.includes(clave);
+              return (
+                <TarjetaResultado
+                  key={`${clave}-${i}`}
+                  resultado={res}
+                  esMasEconomico={clave === claveEconomico}
+                  onAgregado={volarAlCarrito}
+                  comparando={comparando}
+                  onToggleComparar={() => toggleComparar(clave)}
+                  compararDeshabilitado={!comparando && compararClaves.length >= MAX_COMPARAR}
+                />
+              );
+            })}
 
           {/* Había resultados pero los filtros los ocultan todos */}
           {!api.cargando &&
@@ -593,6 +627,18 @@ export default function App() {
         lng={lngEfectiva}
       />
       <EscanerRecipe abierto={escanerAbierto} onOpenChange={setEscanerAbierto} />
+
+      <ComparadorBar
+        cantidad={seleccionados.length}
+        onComparar={() => setComparadorAbierto(true)}
+        onLimpiar={() => setCompararClaves([])}
+        elevada={totalDistintos > 0}
+      />
+      <ComparadorPanel
+        abierto={comparadorAbierto}
+        onOpenChange={setComparadorAbierto}
+        seleccionados={seleccionados}
+      />
 
       <MenuMasPaciente
         open={masAbierto}

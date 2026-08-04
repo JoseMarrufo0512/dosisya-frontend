@@ -357,7 +357,7 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
                 {/* Lista scrollable */}
                 <ul className="min-h-0 flex-1 divide-y divide-border overflow-y-auto px-5">
                   {resultados.map((med) => {
-                    const enLista = estaEnLista(recipeId(med.medicamento));
+                    const enLista = estaEnLista(undefined, recipeId(med.medicamento));
                     const altExpandidas = expandidos.has(med.id);
 
                     return (
@@ -500,7 +500,7 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
                                     >
                                       <div className="mt-2 space-y-2 rounded-xl bg-sky-50/60 p-3">
                                         {med.alternativas.map((alt) => {
-                                          const altEnLista = estaEnLista(recipeId(alt));
+                                          const altEnLista = estaEnLista(undefined, recipeId(alt));
                                           return (
                                             <div
                                               key={alt}

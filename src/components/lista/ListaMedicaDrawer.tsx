@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { Drawer } from "vaul";
 import { toast } from "sonner";
 import { ArrowLeft, ChevronRight, ClipboardList, Minus, Plus, Trash2 } from "lucide-react";
-import { useListaMedica, type ItemLista } from "@/hooks/useListaMedica";
+import { farmaciaUnicaDeLista, useListaMedica, type ItemLista } from "@/hooks/useListaMedica";
 import { SelectorFarmacia } from "./SelectorFarmacia";
+import { registrarLeadLista } from "@/lib/leadsLista";
+import { construirMensajeLista, construirUrlWhatsApp } from "@/lib/whatsapp";
 
 interface ListaMedicaDrawerProps {
   abierta: boolean;
@@ -27,13 +29,17 @@ export function ListaMedicaDrawer({ abierta, onOpenChange, lat, lng }: ListaMedi
   );
   const hayPrecioRef = lista.some((item) => item.precioRefUsd != null);
 
+  // Si TODO lo que hay en la lista vino de la misma farmacia (tarjeta que el
+  // usuario ya tocó), no tiene sentido preguntar de nuevo — se contacta directo.
+  const farmaciaUnica = farmaciaUnicaDeLista(lista);
+
   // Cada vez que se abre, arranca en la vista de la lista
   useEffect(() => {
     if (abierta) setVista("lista");
   }, [abierta]);
 
   const handleQuitar = (item: ItemLista) => {
-    const quitado = quitar(item.medicamentoId);
+    const quitado = quitar(item.farmaciaId, item.medicamentoId);
     if (!quitado) return;
     toast(`${item.nombre} eliminado de tu lista`, {
       action: {
@@ -42,6 +48,22 @@ export function ListaMedicaDrawer({ abierta, onOpenChange, lat, lng }: ListaMedi
       },
       duration: 5000,
     });
+  };
+
+  const handleContactarDirecto = () => {
+    if (!farmaciaUnica) return;
+    const mensaje = construirMensajeLista(farmaciaUnica.nombre, lista);
+    const url = construirUrlWhatsApp(farmaciaUnica.whatsapp, mensaje);
+    if (!url) {
+      toast.error("Esta farmacia no tiene WhatsApp registrado");
+      return;
+    }
+    registrarLeadLista(
+      farmaciaUnica.id,
+      lista.map((i) => ({ medicamentoId: i.medicamentoId, origen: i.origen })),
+    );
+    window.open(url, "_blank", "noopener,noreferrer");
+    toast.success(`Abriendo WhatsApp de ${farmaciaUnica.nombre}…`);
   };
 
   return (
@@ -78,7 +100,10 @@ export function ListaMedicaDrawer({ abierta, onOpenChange, lat, lng }: ListaMedi
                 <>
                   <ul className="min-h-0 flex-1 divide-y divide-border overflow-y-auto px-5">
                     {lista.map((item) => (
-                      <li key={String(item.medicamentoId)} className="flex items-center gap-3 py-3.5">
+                      <li
+                        key={`${item.farmaciaId ?? "sin-farmacia"}-${item.medicamentoId}`}
+                        className="flex items-center gap-3 py-3.5"
+                      >
                         <div className="min-w-0 flex-1">
                           <p className="truncate font-medium leading-snug text-foreground">
                             {item.nombre}
@@ -88,14 +113,17 @@ export function ListaMedicaDrawer({ abierta, onOpenChange, lat, lng }: ListaMedi
                               </span>
                             )}
                           </p>
-                          <p className="truncate text-xs text-muted-foreground">{item.presentacion}</p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {item.presentacion}
+                            {item.farmaciaNombre && ` · ${item.farmaciaNombre}`}
+                          </p>
                         </div>
 
                         {/* Stepper de cantidad */}
                         <div className="flex shrink-0 items-center rounded-full border border-border">
                           <button
                             type="button"
-                            onClick={() => cambiarCantidad(item.medicamentoId, -1)}
+                            onClick={() => cambiarCantidad(item.farmaciaId, item.medicamentoId, -1)}
                             disabled={item.cantidad <= 1}
                             aria-label={`Reducir cantidad de ${item.nombre}`}
                             className="flex h-9 w-9 items-center justify-center rounded-full text-foreground transition-colors hover:bg-muted disabled:opacity-30"
@@ -107,7 +135,7 @@ export function ListaMedicaDrawer({ abierta, onOpenChange, lat, lng }: ListaMedi
                           </span>
                           <button
                             type="button"
-                            onClick={() => cambiarCantidad(item.medicamentoId, 1)}
+                            onClick={() => cambiarCantidad(item.farmaciaId, item.medicamentoId, 1)}
                             aria-label={`Aumentar cantidad de ${item.nombre}`}
                             className="flex h-9 w-9 items-center justify-center rounded-full text-foreground transition-colors hover:bg-muted"
                           >
@@ -136,14 +164,25 @@ export function ListaMedicaDrawer({ abierta, onOpenChange, lat, lng }: ListaMedi
                         </span>
                       </div>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => setVista("farmacias")}
-                      className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 font-semibold text-primary-foreground transition-all hover:opacity-90 active:scale-[0.99]"
-                    >
-                      Elegir farmacia y contactar
-                      <ChevronRight className="h-5 w-5" aria-hidden />
-                    </button>
+                    {farmaciaUnica ? (
+                      <button
+                        type="button"
+                        onClick={handleContactarDirecto}
+                        aria-label={`Contactar a ${farmaciaUnica.nombre} por WhatsApp con tu lista`}
+                        className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-3 font-semibold text-white transition-all hover:opacity-90 active:scale-[0.99]"
+                      >
+                        Contactar a {farmaciaUnica.nombre} por WhatsApp
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setVista("farmacias")}
+                        className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 font-semibold text-primary-foreground transition-all hover:opacity-90 active:scale-[0.99]"
+                      >
+                        Elegir farmacia y contactar
+                        <ChevronRight className="h-5 w-5" aria-hidden />
+                      </button>
+                    )}
                   </div>
                 </>
               )}
