@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import tsconfigPaths from "vite-tsconfig-paths";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import { sentryTanstackStart } from "@sentry/tanstackstart-react/vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
@@ -13,6 +14,16 @@ export default defineConfig({
     react(),
     tailwindcss(),
     tsconfigPaths(),
+    // Sube source maps a Sentry en el build. Sin SENTRY_AUTH_TOKEN queda inactivo.
+    ...(process.env.SENTRY_AUTH_TOKEN
+      ? [
+          sentryTanstackStart({
+            org: process.env.SENTRY_ORG,
+            project: process.env.SENTRY_PROJECT,
+            authToken: process.env.SENTRY_AUTH_TOKEN,
+          }),
+        ]
+      : []),
 
   ],
   server: {
