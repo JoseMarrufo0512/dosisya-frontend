@@ -528,6 +528,7 @@ function InventarioSection({
         }}
         className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-emerald-300 bg-emerald-50/50 px-4 py-3 text-sm font-semibold text-emerald-800 transition-colors hover:bg-emerald-50"
         style={!esPremium ? { opacity: 0.6 } : undefined}
+        aria-disabled={!esPremium}
       >
         <ScanLine className="h-4 w-4" />
         Escanear récipe en mostrador

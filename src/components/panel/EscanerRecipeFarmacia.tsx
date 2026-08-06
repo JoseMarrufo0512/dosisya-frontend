@@ -132,17 +132,22 @@ export function EscanerRecipeFarmacia({
     setPreviewUrl(url);
     setEstado("scanning");
 
-    const respuesta = await analizarRecipeFarmacia(file);
+    try {
+      const respuesta = await analizarRecipeFarmacia(file);
 
-    if (respuesta.status === "success" && respuesta.data && respuesta.data.length > 0) {
-      const conId: MedicamentoRecetaFarmaciaUI[] = respuesta.data.map((med) => ({
-        ...med,
-        id: crypto.randomUUID(),
-      }));
-      setResultados(conId);
-      setEstado("results");
-    } else {
-      setErrorMsg(respuesta.message || "No pudimos leer los medicamentos del récipe.");
+      if (respuesta.status === "success" && respuesta.data && respuesta.data.length > 0) {
+        const conId: MedicamentoRecetaFarmaciaUI[] = respuesta.data.map((med) => ({
+          ...med,
+          id: crypto.randomUUID(),
+        }));
+        setResultados(conId);
+        setEstado("results");
+      } else {
+        setErrorMsg(respuesta.message || "No pudimos leer los medicamentos del récipe.");
+        setEstado("error");
+      }
+    } catch {
+      setErrorMsg("Error inesperado al analizar el récipe.");
       setEstado("error");
     }
   }, []);
