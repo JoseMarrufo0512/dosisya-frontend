@@ -58,6 +58,12 @@ function Privacidad() {
           Tu ubicación (si la compartes) se usa únicamente para calcular qué farmacias están
           cerca en el momento de la búsqueda; no queda guardada asociada a tu identidad.
         </p>
+        <p>
+          También registramos, de forma anónima (sin asociarlo a una cuenta, porque no
+          creamos una), eventos de uso como qué buscas, cuándo agregas algo a tu Lista
+          Médica y cuándo contactas a una farmacia — nos sirve para entender en qué punto
+          de ese recorrido se pierde la gente y mejorar la app.
+        </p>
       </Seccion>
 
       <Seccion titulo="4. Escáner de récipe y Asistente IA">
@@ -88,6 +94,7 @@ function Privacidad() {
           <li><strong>Supabase</strong> — base de datos donde vive la información descrita arriba.</li>
           <li><strong>Vercel</strong> — hosting de la aplicación y la API.</li>
           <li><strong>Sentry</strong> — monitoreo de errores técnicos; puede incluir tu dirección IP si ocurre un fallo mientras usas la app.</li>
+          <li><strong>PostHog</strong> — analítica de uso anónima (búsquedas, uso de la Lista Médica, contacto con farmacias); no creamos cuenta ni perfil identificado.</li>
           <li><strong>n8n</strong> — envío de la notificación del lead al WhatsApp de la farmacia.</li>
         </ul>
         <p>No vendemos tus datos a terceros con fines publicitarios.</p>

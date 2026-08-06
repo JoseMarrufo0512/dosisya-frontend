@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { buscarMedicamentos, type ResultadoFarmacia } from "@/lib/api";
+import { track } from "@/lib/analytics";
 
 export interface UseBuscarMedicamentosReturn {
   resultados: ResultadoFarmacia[];
@@ -45,6 +46,7 @@ export function useBuscarMedicamentos(): UseBuscarMedicamentosReturn {
       } else {
         setResultados(resp.data.resultados);
         setTotalResultados(resp.data.total);
+        track("busqueda_ejecutada", { termino: q, resultados: resp.data.total });
       }
       setCargando(false);
     },

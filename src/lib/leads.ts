@@ -1,4 +1,5 @@
 import { API_BASE } from "./api";
+import { track } from "./analytics";
 
 /**
  * Tipos de interacción cobrable (Lead CPC).
@@ -59,6 +60,11 @@ export interface LeadPayload {
  * único lugar (junto a registrarLeadLista) que hay que cambiar.
  */
 export function postLead(p: LeadPayload): void {
+  track(p.tipo, {
+    farmacia_id: p.farmaciaId,
+    medicamento_id: p.medicamentoId,
+    origen: p.origen,
+  });
   void fetch(`${API_BASE}/api/v1/leads/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

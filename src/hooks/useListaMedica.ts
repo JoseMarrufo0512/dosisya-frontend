@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import type { OrigenLead } from "@/lib/leads";
+import { track } from "@/lib/analytics";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Lista Médica — store global con persistencia en localStorage.
@@ -138,6 +139,11 @@ export function agregarItem(
   }
   const item: ItemLista = { ...nuevo, cantidad: nuevo.cantidad ?? 1, agregadoEn: Date.now() };
   setItems([...items, item]);
+  track("lista_medica_agregado", {
+    farmacia_id: item.farmaciaId,
+    medicamento_id: item.medicamentoId,
+    origen: item.origen ?? "lista_medica",
+  });
   return item;
 }
 
