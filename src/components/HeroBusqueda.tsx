@@ -1,6 +1,6 @@
 import { type FormEvent } from "react";
 import { Link } from "@tanstack/react-router";
-import { Building2, User } from "lucide-react";
+import { Building2, Info, User } from "lucide-react";
 import { BarraBusqueda } from "./BarraBusqueda";
 import { CATEGORIAS } from "@/lib/categorias";
 import type { Recordatorio } from "@/hooks/useLocalStorage";
@@ -182,6 +182,13 @@ export function HeroBusqueda({
       >
         <Building2 className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
         ¿Tienes una farmacia? Accede a tu panel
+      </Link>
+      <Link
+        to="/acerca-de"
+        className="dy-foco mt-2 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-gray-400 transition-colors hover:text-[color:var(--verde-cruz)]"
+      >
+        <Info className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
+        Acerca de DosisYa
       </Link>
     </div>
   );
