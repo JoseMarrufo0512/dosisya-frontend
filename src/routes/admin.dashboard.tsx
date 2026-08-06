@@ -16,8 +16,10 @@ import {
   Receipt,
   Clock,
   Loader2,
+  ScanLine,
 } from "lucide-react";
 import { UploadInventory } from "@/components/UploadInventory";
+import { EscanerRecipeFarmacia } from "@/components/panel/EscanerRecipeFarmacia";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -55,6 +57,7 @@ type LeadReciente = {
 
 type DashboardData = {
   nombre_farmacia?: string;
+  nivel_suscripcion?: string;
   pacientes_interesados_hoy?: number;
   busquedas_zona?: number | null;
   busquedas_zona_disponible?: boolean;
@@ -494,6 +497,8 @@ function InventarioSection({
 }) {
   const items = data?.inventario ?? [];
   const [q, setQ] = useState("");
+  const [escanerAbierto, setEscanerAbierto] = useState(false);
+  const esPremium = data?.nivel_suscripcion === "premium";
 
   // Búsqueda client-side (sin backend): filtra por nombre o marca.
   const norm = (s: string) =>
@@ -512,6 +517,33 @@ function InventarioSection({
 
   return (
     <div className="space-y-6">
+      <button
+        type="button"
+        onClick={() => {
+          if (!esPremium) {
+            toast.info("Escanear récipes en el mostrador es una función del plan Premium.");
+            return;
+          }
+          setEscanerAbierto(true);
+        }}
+        className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-emerald-300 bg-emerald-50/50 px-4 py-3 text-sm font-semibold text-emerald-800 transition-colors hover:bg-emerald-50"
+        style={!esPremium ? { opacity: 0.6 } : undefined}
+      >
+        <ScanLine className="h-4 w-4" />
+        Escanear récipe en mostrador
+        {!esPremium && (
+          <span className="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+            Premium
+          </span>
+        )}
+      </button>
+
+      <EscanerRecipeFarmacia
+        abierto={escanerAbierto}
+        onOpenChange={setEscanerAbierto}
+        inventario={items}
+      />
+
       <UploadInventory
         onUploaded={(res) => {
           // Claves reales que devuelve el backend (ver farmacias.py upload).
