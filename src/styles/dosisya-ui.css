@@ -91,3 +91,32 @@
   outline: 2px solid var(--verde-vivo);
   outline-offset: -2px;
 }
+
+/* Entrada suave de tarjetas/secciones (ej. /acerca-de) */
+@keyframes dy-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.dosisya-ui .dy-animar-entrada {
+  animation: dy-fade-up 0.5s ease-out backwards;
+}
+
+/* Pulso discreto (ej. indicador "en línea" de farmacias en /acerca-de) */
+@keyframes dy-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.4);
+  }
+}
+.dosisya-ui .dy-pulso {
+  animation: dy-pulse 1.6s ease-in-out infinite;
+}
