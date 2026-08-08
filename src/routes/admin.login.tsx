@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { z } from "zod";
 import {
   Pill,
@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { API_BASE } from "@/lib/api";
+import { verificarRifDisponible, type RifCheckResult } from "@/lib/rifDisponible";
 
 /* ----------- Scalable sector catalog -----------
  * Empezamos con Acarigua y Araure, pero el arreglo está pensado
@@ -362,6 +363,8 @@ type RegData = {
   lead_id?: string;
 };
 
+type RifFieldStatus = "idle" | "checking" | RifCheckResult;
+
 function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
   const navigate = useNavigate();
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -379,15 +382,30 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [done, setDone] = useState(false);
+  const [rifStatus, setRifStatus] = useState<RifFieldStatus>("idle");
+  const rifRef = useRef(data.rif);
 
   const update = <K extends keyof RegData>(k: K, v: RegData[K]) => {
     setData((d) => ({ ...d, [k]: v }));
+    if (k === "rif") {
+      rifRef.current = v as string;
+      setRifStatus("idle");
+    }
     if (fieldErrors[k as string]) {
       setFieldErrors((e) => {
         const { [k as string]: _omit, ...rest } = e;
         return rest;
       });
     }
+  };
+
+  const handleRifBlur = async () => {
+    if (!RIF_REGEX.test(data.rif)) return;
+    const rifAlVerificar = data.rif;
+    setRifStatus("checking");
+    const result = await verificarRifDisponible(rifAlVerificar);
+    if (rifRef.current !== rifAlVerificar) return; // el usuario ya editó el campo de nuevo
+    setRifStatus(result);
   };
 
   const collectErrors = (issues: z.ZodIssue[]) => {
@@ -402,6 +420,7 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
   const handleStep1 = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (rifStatus === "checking" || rifStatus === "taken" || rifStatus === "error") return;
     const parsed = step1Schema.safeParse({
       nombre: data.nombre,
       rif: data.rif,
@@ -571,10 +590,15 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
             required
             value={data.rif}
             onChange={(v) => update("rif", formatRif(v))}
+            onBlur={handleRifBlur}
             placeholder="J-12345678-9"
-            error={fieldErrors.rif}
+            error={
+              fieldErrors.rif ??
+              (rifStatus === "taken" ? "Este RIF ya está registrado." : undefined) ??
+              (rifStatus === "error" ? "No pudimos verificar el RIF. Intenta de nuevo." : undefined)
+            }
             maxLength={12}
-            hint="Empieza con J, V, E, G o P."
+            hint={rifStatus === "checking" ? "Verificando disponibilidad…" : "Empieza con J, V, E, G o P."}
           />
           <Field
             id="whatsapp"
@@ -593,7 +617,7 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
           {error && <ErrorBox text={error} />}
           <Button
             type="submit"
-            disabled={saving}
+            disabled={saving || rifStatus === "checking" || rifStatus === "taken" || rifStatus === "error"}
             className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
           >
             {saving ? (
@@ -794,6 +818,7 @@ function Field({
   type = "text",
   value,
   onChange,
+  onBlur,
   placeholder,
   required,
   autoComplete,
@@ -808,6 +833,7 @@ function Field({
   type?: string;
   value: string;
   onChange: (v: string) => void;
+  onBlur?: () => void;
   placeholder?: string;
   required?: boolean;
   autoComplete?: string;
@@ -839,6 +865,7 @@ function Field({
           maxLength={maxLength}
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
           placeholder={placeholder}
           aria-invalid={invalid}
           aria-describedby={
