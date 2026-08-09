@@ -14,6 +14,12 @@
       "port": 5173
     },
     {
+      "name": "dev-backend-local",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "VITE_API_URL= npm run dev"],
+      "port": 5173
+    },
+    {
       "name": "dev-proxy-prod-5174",
       "runtimeExecutable": "bash",
       "runtimeArgs": ["-c", "DEV_API_PROXY=https://proyecto-dosis-ya.vercel.app npm run dev -- --port 5174"],
