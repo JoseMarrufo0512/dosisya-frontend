@@ -151,7 +151,8 @@ export function UploadInventory({ onUploaded }: Props) {
                   La Inteligencia Artificial está procesando tu inventario...
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  Esto puede tardar entre 5 y 10 segundos
+                  Puede tardar un par de minutos si el inventario es grande.
+                  No cierres esta pestaña.
                   {fileName ? ` · ${fileName}` : ""}
                 </div>
               </div>
