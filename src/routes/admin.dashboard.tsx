@@ -61,7 +61,6 @@ type DashboardData = {
   pacientes_interesados_hoy?: number;
   busquedas_zona?: number | null;
   busquedas_zona_disponible?: boolean;
-  total_inventario?: number;
   leads_recipe_mes_actual?: number;
   total_leads_mes_actual?: number;
   deuda_estimada_usd?: number;
@@ -87,7 +86,6 @@ function AdminDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [inventoryCount, setInventoryCount] = useState<number | null>(null);
 
   const cargarDashboard = useCallback(async () => {
     const farmaciaId =
@@ -285,18 +283,10 @@ function AdminDashboard() {
                   error={error}
                   onRetry={cargarDashboard}
                   data={data}
-                  inventoryCount={inventoryCount}
                 />
               )}
               {section === "inventario" && (
-                <InventarioSection
-                  loading={loading}
-                  data={data}
-                  onUploaded={(count) => {
-                    setInventoryCount(count);
-                    setData((prev) => prev ? { ...prev, total_inventario: count } : prev);
-                  }}
-                />
+                <InventarioSection loading={loading} data={data} onUploaded={cargarDashboard} />
               )}
               {section === "facturacion" && (
                 <FacturacionSection loading={loading} data={data} />
@@ -418,15 +408,16 @@ function InicioSection({
   error,
   onRetry,
   data,
-  inventoryCount,
 }: {
   loading: boolean;
   error: boolean;
   onRetry: () => void;
   data: DashboardData | null;
-  inventoryCount: number | null;
 }) {
-  const totalInv = inventoryCount ?? data?.inventario?.length ?? 0;
+  // Única fuente de verdad: el backend no manda un total aparte, y mantener un
+  // contador en paralelo fue justo lo que hizo que Inicio dijera 520 mientras
+  // la lista seguía en 0.
+  const totalInv = data?.inventario?.length ?? 0;
   return (
     <div className="space-y-6">
       {error && (
@@ -493,7 +484,7 @@ function InventarioSection({
 }: {
   loading: boolean;
   data: DashboardData | null;
-  onUploaded: (count: number) => void;
+  onUploaded: () => void;
 }) {
   const items = data?.inventario ?? [];
   const [q, setQ] = useState("");
@@ -545,21 +536,10 @@ function InventarioSection({
         inventario={items}
       />
 
-      <UploadInventory
-        onUploaded={(res) => {
-          // Claves reales que devuelve el backend (ver farmacias.py upload).
-          const r = res as {
-            medicamentos_procesados?: number;
-            medicamentos_gemini?: number;
-            detalle?: unknown[];
-          } | null;
-          const count =
-            r?.medicamentos_procesados ??
-            r?.medicamentos_gemini ??
-            (Array.isArray(r?.detalle) ? r!.detalle!.length : 0);
-          onUploaded(count);
-        }}
-      />
+      {/* Releer el dashboard en vez de fiarse del conteo que devuelve el upload:
+          la tabla de abajo sale de `data.inventario`, así que sin refetch se
+          queda mostrando el inventario anterior. */}
+      <UploadInventory onUploaded={() => onUploaded()} />
 
       <div
         style={{
@@ -596,7 +576,10 @@ function InventarioSection({
             />
           </div>
           <span style={{ fontSize: 12, color: "var(--dy-tinta-tenue)" }}>
-            {items.length} en total · {disponibles} disponibles
+            {/* Mientras se relee, `items` sigue siendo el inventario viejo:
+                mostrar ese conteo junto a los skeletons es justo la mezcla que
+                hacía dudar a la farmacia de si su carga funcionó. */}
+            {loading ? "Actualizando…" : `${items.length} en total · ${disponibles} disponibles`}
           </span>
         </div>
 
