@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 
 /**
  * Hace que el botón "atrás" del navegador/teléfono cierre el overlay abierto en
@@ -18,11 +18,17 @@ import { useEffect, useRef } from "react";
 type Closer = () => void;
 
 const closers = new Set<Closer>();
+const suscriptores = new Set<() => void>();
 let openCount = 0;
 let trapActive = false;
 let programmaticBack = false;
 let scheduled = false;
 let listening = false;
+
+/** Avisa a los suscriptores de `useHayOverlayAbierto` que cambió el contador. */
+function notificar() {
+  suscriptores.forEach((fn) => fn());
+}
 
 function onPop() {
   if (programmaticBack) {
@@ -35,6 +41,7 @@ function onPop() {
   const fns = [...closers];
   closers.clear();
   openCount = 0;
+  notificar();
   fns.forEach((fn) => fn());
 }
 
@@ -77,11 +84,13 @@ export function useBackDismiss(open: boolean, onClose: () => void) {
       closerRef.current = closer;
       closers.add(closer);
       openCount += 1;
+      notificar();
       schedule();
     } else if (!open && closerRef.current) {
       closers.delete(closerRef.current);
       closerRef.current = null;
       openCount = Math.max(0, openCount - 1);
+      notificar();
       schedule();
     }
   }, [open]);
@@ -93,8 +102,33 @@ export function useBackDismiss(open: boolean, onClose: () => void) {
         closers.delete(closerRef.current);
         closerRef.current = null;
         openCount = Math.max(0, openCount - 1);
+        notificar();
         schedule();
       }
     };
   }, []);
+}
+
+/**
+ * ¿Hay alguna hoja/overlay abierto ahora mismo?
+ *
+ * Reusa el contador de arriba, así que cubre cualquier overlay registrado sin
+ * tener que enumerarlos (incluidas las sub-hojas de "Más", que cierran su hoja
+ * madre al abrirse y por eso no se ven desde los flags de App).
+ *
+ * Lo usa la burbuja flotante del asistente para esconderse: los overlays de
+ * vaul se portalean al body y ganan el hit-test, así que la burbuja quedaba a
+ * la vista sobre el fondo oscurecido pero al tocarla cerrabas la hoja.
+ */
+export function useHayOverlayAbierto(): boolean {
+  return useSyncExternalStore(
+    (avisar) => {
+      suscriptores.add(avisar);
+      return () => {
+        suscriptores.delete(avisar);
+      };
+    },
+    () => openCount > 0,
+    () => false, // en SSR no hay overlays abiertos
+  );
 }

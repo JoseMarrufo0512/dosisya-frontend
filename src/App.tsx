@@ -3,7 +3,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useGeolocalizacion } from "./hooks/useGeolocalizacion";
 import { useBuscarMedicamentos } from "./hooks/useBuscarMedicamentos";
 import { useDebounce } from "./hooks/useDebounce";
-import { useBackDismiss } from "./hooks/useBackDismiss";
+import { useBackDismiss, useHayOverlayAbierto } from "./hooks/useBackDismiss";
 import { useTasa } from "./hooks/useTasa";
 import { useBusquedasRecientes, useRecordatorios } from "./hooks/useLocalStorage";
 import { useListaMedica } from "./hooks/useListaMedica";
@@ -103,6 +103,8 @@ export default function App() {
   useBackDismiss(loginAbierto, () => setLoginAbierto(false));
   useBackDismiss(masAbierto, () => setMasAbierto(false));
   useBackDismiss(chatIAAbierto, () => setChatIAAbierto(false));
+  // La burbuja se esconde con CUALQUIER hoja abierta, no solo con el chat.
+  const hayOverlayAbierto = useHayOverlayAbierto();
 
   // packFly: paquete que vuela del botón "+" al ícono de Lista (handoff).
   const reduceMotion = useReducedMotion();
@@ -646,7 +648,7 @@ export default function App() {
         onAbrirChatIA={() => setChatIAAbierto(true)}
       />
       <HojaChatIA open={chatIAAbierto} onClose={() => setChatIAAbierto(false)} />
-      <BurbujaAsistenteIA visible={!chatIAAbierto} onAbrir={() => setChatIAAbierto(true)} />
+      <BurbujaAsistenteIA visible={!hayOverlayAbierto} onAbrir={() => setChatIAAbierto(true)} />
       <HojaLoginPaciente open={loginAbierto} onOpenChange={setLoginAbierto} />
 
       {/* Capa de vuelo (packFly): el paquete arquea del botón "+" al carrito */}

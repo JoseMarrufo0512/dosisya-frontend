@@ -1,15 +1,28 @@
 /*
- * HojaChatIA — hoja del Asistente IA (bottom-sheet). UI lista; la respuesta real
- * necesita un endpoint de chat en el backend (aún no existe). Se abre desde la
- * hoja "Más" y desde la burbuja flotante (misma instancia, controlada por App).
+ * HojaChatIA — hoja del Asistente IA (bottom-sheet). Responde vía
+ * POST /api/v1/ia/chat (ver src/lib/chatIA.ts). Se abre desde la hoja "Más" y
+ * desde la burbuja flotante (misma instancia, controlada por App).
  */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useReducedMotion } from "framer-motion";
 import { Sparkles, Send } from "lucide-react";
 import { HojaBase } from "./_hojaBase";
 import { useBackDismiss } from "@/hooks/useBackDismiss";
-import { enviarMensajeChat, type MensajeChat } from "@/lib/chatIA";
+import {
+  enviarMensajeChat,
+  ErrorChat,
+  MAX_CARACTERES_MENSAJE,
+  type CodigoErrorChat,
+  type MensajeChat,
+} from "@/lib/chatIA";
 
-type Mensaje = { de: "ia" | "yo"; texto: string };
+/**
+ * `error: true` marca las burbujas que escribimos nosotros cuando falla la
+ * llamada. Se ven como un mensaje del asistente, pero NO viajan en el historial:
+ * si no, le enseñábamos al modelo que él dijo "no pude responder" y encima
+ * gastaban un turno del hilo.
+ */
+type Mensaje = { de: "ia" | "yo"; texto: string; error?: boolean };
 
 const CHAT_SEED: Mensaje[] = [
   {
@@ -18,12 +31,40 @@ const CHAT_SEED: Mensaje[] = [
   },
 ];
 
+/** Qué le decimos al paciente según por qué falló. Nunca detalles del proveedor. */
+const MENSAJE_ERROR: Record<CodigoErrorChat, string> = {
+  timeout: "El asistente tardó demasiado en responder. Intenta de nuevo.",
+  limite: "Vas muy rápido. Espera un momento y vuelve a preguntar.",
+  no_disponible: "El asistente está ocupado ahora mismo. Intenta en unos segundos.",
+  desconocido: "No pude responder ahora, intenta de nuevo.",
+};
+
 export function HojaChatIA({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [mensajes, setMensajes] = useState<Mensaje[]>(CHAT_SEED);
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const listaRef = useRef<HTMLDivElement>(null);
+  const reduce = useReducedMotion();
 
   useBackDismiss(open, onClose);
+
+  // El área de mensajes es corta (46dvh): sin esto la respuesta nueva nacía
+  // fuera de la vista y el usuario se quedaba mirando el saludo inicial.
+  // También al reabrir la hoja, que remonta el contenedor con scrollTop 0.
+  useEffect(() => {
+    const cont = listaRef.current;
+    if (!cont) return;
+    cont.scrollTo({ top: cont.scrollHeight, behavior: reduce ? "auto" : "smooth" });
+  }, [mensajes, open, reduce]);
+
+  // El hilo sobrevive a cerrar y reabrir la hoja (cerrar sin querer en móvil es
+  // demasiado fácil), así que el borrón es explícito. Bloqueado mientras hay una
+  // respuesta en vuelo: si no, esa respuesta caería sobre el hilo ya vacío.
+  const reiniciar = () => {
+    if (enviando) return;
+    setMensajes(CHAT_SEED);
+    setTexto("");
+  };
 
   const enviar = async () => {
     const t = texto.trim();
@@ -33,17 +74,17 @@ export function HojaChatIA({ open, onClose }: { open: boolean; onClose: () => vo
     setTexto("");
     setEnviando(true);
     try {
-      const historial: MensajeChat[] = nuevos.map((m) => ({
-        rol: m.de === "yo" ? "usuario" : "asistente",
-        texto: m.texto,
-      }));
+      const historial: MensajeChat[] = nuevos
+        .filter((m) => !m.error)
+        .map((m) => ({
+          rol: m.de === "yo" ? "usuario" : "asistente",
+          texto: m.texto,
+        }));
       const respuesta = await enviarMensajeChat(historial);
       setMensajes((m) => [...m, { de: "ia", texto: respuesta }]);
-    } catch {
-      setMensajes((m) => [
-        ...m,
-        { de: "ia", texto: "No pude responder ahora, intenta de nuevo." },
-      ]);
+    } catch (e) {
+      const codigo = e instanceof ErrorChat ? e.codigo : "desconocido";
+      setMensajes((m) => [...m, { de: "ia", texto: MENSAJE_ERROR[codigo], error: true }]);
     } finally {
       setEnviando(false);
     }
@@ -69,7 +110,29 @@ export function HojaChatIA({ open, onClose }: { open: boolean; onClose: () => vo
         </span>
       }
     >
+      {mensajes.length > CHAT_SEED.length && (
+        <button
+          type="button"
+          onClick={reiniciar}
+          disabled={enviando}
+          className="dy-foco self-end"
+          style={{
+            marginTop: 10,
+            marginBottom: -4,
+            background: "transparent",
+            border: 0,
+            padding: "2px 4px",
+            fontSize: 12,
+            color: "var(--tinta-tenue)",
+            opacity: enviando ? 0.5 : 1,
+            cursor: enviando ? "default" : "pointer",
+          }}
+        >
+          Nueva conversación
+        </button>
+      )}
       <div
+        ref={listaRef}
         className="flex flex-col gap-2.5"
         style={{ marginTop: 14, maxHeight: "46dvh", overflowY: "auto" }}
       >
@@ -117,6 +180,21 @@ export function HojaChatIA({ open, onClose }: { open: boolean; onClose: () => vo
           escribiendo…
         </div>
       )}
+      {texto.length >= MAX_CARACTERES_MENSAJE - 100 && (
+        // El corte de maxLength es silencioso: avisamos antes de llegar para que
+        // pegar un texto largo no se sienta como que la app se comió parte.
+        <div
+          aria-live="polite"
+          style={{
+            alignSelf: "flex-end",
+            fontSize: 11,
+            color: texto.length >= MAX_CARACTERES_MENSAJE ? "var(--rojo)" : "var(--tinta-tenue)",
+            marginTop: 6,
+          }}
+        >
+          {texto.length}/{MAX_CARACTERES_MENSAJE}
+        </div>
+      )}
       <div
         className="flex items-center gap-2"
         style={{
@@ -130,10 +208,14 @@ export function HojaChatIA({ open, onClose }: { open: boolean; onClose: () => vo
       >
         <input
           value={texto}
-          onChange={(e) => setTexto(e.target.value)}
+          // maxLength solo frena la edición manual: dictado, autocompletado o
+          // algunos IME escriben el value directo y se lo saltan. Recortamos
+          // también aquí para que el estado nunca pase del tope del backend.
+          onChange={(e) => setTexto(e.target.value.slice(0, MAX_CARACTERES_MENSAJE))}
           onKeyDown={(e) => e.key === "Enter" && enviar()}
           placeholder="Escribe tu pregunta…"
           aria-label="Escribe tu pregunta al asistente"
+          maxLength={MAX_CARACTERES_MENSAJE}
           className="flex-1"
           disabled={enviando}
           style={{
