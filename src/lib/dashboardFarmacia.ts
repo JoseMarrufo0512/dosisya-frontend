@@ -36,6 +36,10 @@ export interface DashboardFarmaciaData {
   whatsapp?: string;
   sector?: string;
   punto_referencia?: string;
+  lat?: number | null;
+  lng?: number | null;
+  /** false ⇒ la farmacia sigue en (0,0) y su inventario NO sale en el buscador. */
+  ubicacion_configurada?: boolean;
   pacientes_interesados_hoy?: number;
   busquedas_zona?: number | null;
   busquedas_zona_disponible?: boolean;
