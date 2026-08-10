@@ -2,12 +2,15 @@
  * HojaChatIA — hoja del Asistente IA (bottom-sheet). Responde vía
  * POST /api/v1/ia/chat (ver src/lib/chatIA.ts). Se abre desde la hoja "Más" y
  * desde la burbuja flotante (misma instancia, controlada por App).
+ *
+ * El botón "atrás" lo registra App junto al resto de las hojas, igual que
+ * Lista/Escáner/Comparador/Más: el estado `open` lo posee App, así que el
+ * registro vive donde vive el estado.
  */
 import { useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "framer-motion";
 import { Sparkles, Send } from "lucide-react";
 import { HojaBase } from "./_hojaBase";
-import { useBackDismiss } from "@/hooks/useBackDismiss";
 import {
   enviarMensajeChat,
   ErrorChat,
@@ -45,8 +48,6 @@ export function HojaChatIA({ open, onClose }: { open: boolean; onClose: () => vo
   const [enviando, setEnviando] = useState(false);
   const listaRef = useRef<HTMLDivElement>(null);
   const reduce = useReducedMotion();
-
-  useBackDismiss(open, onClose);
 
   // El área de mensajes es corta (46dvh): sin esto la respuesta nueva nacía
   // fuera de la vista y el usuario se quedaba mirando el saludo inicial.
