@@ -24,6 +24,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { API_BASE } from "@/lib/api";
+import { CampoUbicacion } from "@/components/panel/CampoUbicacion";
+import { parsearParCoordenadas } from "@/lib/coordenadas";
 import { verificarRifDisponible, type RifCheckResult } from "@/lib/rifDisponible";
 
 /* ----------- Scalable sector catalog -----------
@@ -358,6 +360,13 @@ type RegData = {
   whatsapp: string;
   sector: string;
   referencia: string;
+  /* Coordenadas como texto: van al backend solo si el usuario las completó.
+     Si quedan vacías la farmacia nace en (0,0) y no aparece en el buscador
+     hasta que alguien la ubique — el panel se lo avisa y el superadmin lo ve
+     antes de aprobarla. No se exigen para no perder la afiliación cuando el
+     GPS falla o el navegador niega el permiso. */
+  lat: string;
+  lng: string;
   email: string;
   password: string;
   lead_id?: string;
@@ -374,6 +383,8 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
     whatsapp: "",
     sector: "",
     referencia: "",
+    lat: "",
+    lng: "",
     email: "",
     password: "",
   });
@@ -467,8 +478,16 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
       sector: data.sector,
       referencia: data.referencia,
     });
-    if (!parsed.success) {
-      setFieldErrors(collectErrors(parsed.error.issues));
+    const errs = parsed.success ? {} : collectErrors(parsed.error.issues);
+
+    // Las coordenadas son opcionales, pero si escribió una sola no se puede
+    // construir el punto: el backend devolvería 400 al final del wizard, que es
+    // el peor momento para descubrirlo. Se corta acá.
+    const coords = parsearParCoordenadas(data.lat, data.lng);
+    if (coords.estado === "error") Object.assign(errs, coords.errores);
+
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
       return;
     }
     setFieldErrors({});
@@ -488,6 +507,8 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
     }
     setFieldErrors({});
     setSaving(true);
+    // El par ya se validó en el paso 2; acá solo se adjunta si está completo.
+    const coords = parsearParCoordenadas(data.lat, data.lng);
     try {
       const res = await fetch(`${API_BASE}/api/v1/auth/register`, {
         method: "POST",
@@ -501,6 +522,7 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
           correo: parsed.data.email,
           password: parsed.data.password,
           lead_parcial_id: data.lead_id,
+          ...(coords.estado === "ok" ? coords.coords : {}),
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -674,6 +696,30 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
             error={fieldErrors.referencia}
             maxLength={180}
           />
+
+          {/* Ubicación exacta. Sin ella la farmacia queda fuera del buscador:
+              los pacientes buscan por cercanía. */}
+          <div className="space-y-2 pt-1">
+            <div>
+              <Label>Ubicación en el mapa</Label>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Los pacientes te encuentran por cercanía. Si la omites, tu farmacia no aparecerá en
+                las búsquedas hasta que la ubiques desde tu panel.
+              </p>
+            </div>
+            <CampoUbicacion
+              idPrefix="reg"
+              lat={data.lat}
+              lng={data.lng}
+              onLatChange={(v) => update("lat", v)}
+              onLngChange={(v) => update("lng", v)}
+              errorLat={fieldErrors.lat}
+              errorLng={fieldErrors.lng}
+              onAviso={setError}
+              onDetectada={() => setError(null)}
+            />
+          </div>
+
           {error && <ErrorBox text={error} />}
           <div className="flex gap-2">
             <Button

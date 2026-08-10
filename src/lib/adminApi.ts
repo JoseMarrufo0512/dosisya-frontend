@@ -13,11 +13,17 @@ export interface FarmaciaAdmin {
   created_at: string;
   leads_mes: number;
   deuda_usd: number;
+  lat?: number | null;
+  lng?: number | null;
+  /** false ⇒ sigue en (0,0): aprobarla la deja activa pero fuera del buscador. */
+  ubicacion_configurada?: boolean;
 }
 
 export interface TotalesRed {
   total_farmacias: number;
   pendientes: number;
+  /** Farmacias que no pueden aparecer en el buscador por no tener coordenadas. */
+  sin_ubicacion?: number;
   leads_mes_red: number;
   deuda_red_usd: number;
 }
@@ -80,14 +86,39 @@ export async function getFarmaciasAdmin(
   return json.data as AdminFarmaciasResponse;
 }
 
+/**
+ * ¿Hay que pedirle coordenadas al superadmin antes de aplicar este cambio?
+ *
+ * Solo al ACTIVAR: suspender o rechazar no necesitan ubicación. Una farmacia
+ * activa en (0,0) queda invisible en el buscador (ST_DWithin la descarta) y
+ * empieza a facturar por leads que nunca va a recibir.
+ *
+ * `ubicacion_configurada` es opcional en el tipo porque un backend viejo no lo
+ * manda; en ese caso no se interrumpe el flujo (solo `=== false` interrumpe).
+ */
+export function requiereUbicacionAntesDeActivar(
+  farmacia: Pick<FarmaciaAdmin, "ubicacion_configurada">,
+  estado: EstadoAfiliacion,
+): boolean {
+  return estado === "activa" && farmacia.ubicacion_configurada === false;
+}
+
+/**
+ * Cambia el estado de afiliación y, opcionalmente, ubica la farmacia.
+ *
+ * Las coordenadas viajan juntas o no viajan (el backend devuelve 400 con una
+ * sola). Sirven para no aprobar una farmacia que sigue en (0,0): quedaría
+ * activa pero invisible en el buscador, cobrando por leads que no va a recibir.
+ */
 export async function cambiarEstadoFarmacia(
   token: string,
   id: string,
   estado: EstadoAfiliacion,
+  coords?: { lat: number; lng: number },
 ): Promise<void> {
   const res = await adminFetch(`/api/v1/admin/farmacias/${id}/estado`, token, {
     method: "PATCH",
-    body: JSON.stringify({ estado_afiliacion: estado }),
+    body: JSON.stringify({ estado_afiliacion: estado, ...(coords ?? {}) }),
   });
   if (!res.ok) throw new Error("No se pudo cambiar el estado");
 }

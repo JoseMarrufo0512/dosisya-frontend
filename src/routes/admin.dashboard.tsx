@@ -29,6 +29,8 @@ import { toast } from "sonner";
 
 import { API_BASE } from "@/lib/api";
 import DashboardFarmacia from "@/components/panel/DashboardFarmacia";
+import { CampoUbicacion } from "@/components/panel/CampoUbicacion";
+import { parsearParCoordenadas } from "@/lib/coordenadas";
 import { mapearDashboard } from "@/lib/dashboardFarmacia";
 
 export const Route = createFileRoute("/admin/dashboard")({
@@ -786,22 +788,6 @@ const configSchema = z.object({
     .max(180, "Máximo 180 caracteres"),
 });
 
-/* Coordenadas: se validan aparte porque el backend las acepta como par opcional
-   (ambas o ninguna) y aquí llegan como texto de dos inputs independientes. */
-const coordsSchema = z.object({
-  lat: z
-    .number({ message: "Latitud inválida" })
-    .min(-90, "Entre -90 y 90")
-    .max(90, "Entre -90 y 90"),
-  lng: z
-    .number({ message: "Longitud inválida" })
-    .min(-180, "Entre -180 y 180")
-    .max(180, "Entre -180 y 180"),
-});
-
-/** "9,5578" y "9.5578" → 9.5578. NaN si el texto no es un número. */
-const aNumero = (s: string) => Number(s.trim().replace(",", "."));
-
 const formatoTelefonoVE = (raw: string) => {
   let d = raw.replace(/\D/g, "");
   if (d.startsWith("58")) d = d.slice(2);
@@ -838,7 +824,6 @@ function ConfiguracionSection({
     : { lat: "", lng: "" };
   const [lat, setLat] = useState(coordsIniciales.lat);
   const [lng, setLng] = useState(coordsIniciales.lng);
-  const [ubicando, setUbicando] = useState(false);
 
   // Precargar cuando llegue/cambie la data del dashboard.
   useEffect(() => {
@@ -852,36 +837,6 @@ function ConfiguracionSection({
       setLng(String(data.lng ?? ""));
     }
   }, [data]);
-
-  /* Pide la posición del navegador. A diferencia de useGeolocalizacion (que cae
-     en silencio al centro de Acarigua para el buscador público), aquí un
-     fallback silencioso sería un desastre: dejaría la farmacia registrada en
-     una dirección que no es la suya. Si falla, se dice y se pide a mano. */
-  const usarMiUbicacion = () => {
-    if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
-      setError("Tu navegador no permite obtener la ubicación. Escribe las coordenadas a mano.");
-      return;
-    }
-    setError(null);
-    setUbicando(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLat(pos.coords.latitude.toFixed(6));
-        setLng(pos.coords.longitude.toFixed(6));
-        setUbicando(false);
-        toast.success("Ubicación detectada. Revisa y guarda los cambios.");
-      },
-      (err) => {
-        setUbicando(false);
-        setError(
-          err.code === err.PERMISSION_DENIED
-            ? "Diste permiso denegado a la ubicación. Actívalo o escribe las coordenadas a mano."
-            : "No se pudo obtener la ubicación. Escribe las coordenadas a mano.",
-        );
-      },
-      { enableHighAccuracy: true, timeout: 10000 },
-    );
-  };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -902,21 +857,10 @@ function ConfiguracionSection({
 
     /* Coordenadas: el backend las exige juntas o ninguna. Ambas vacías = el
        usuario no las está tocando y se conserva la ubicación guardada. */
-    const latVacio = lat.trim() === "";
-    const lngVacio = lng.trim() === "";
-    let coords: { lat: number; lng: number } | null = null;
-    if (latVacio !== lngVacio) {
-      errs[latVacio ? "lat" : "lng"] = "Completa latitud y longitud, o deja ambas vacías";
-    } else if (!latVacio) {
-      const coordsParsed = coordsSchema.safeParse({ lat: aNumero(lat), lng: aNumero(lng) });
-      if (coordsParsed.success) {
-        coords = coordsParsed.data;
-      } else {
-        for (const issue of coordsParsed.error.issues) {
-          const k = issue.path[0] as string;
-          if (k && !errs[k]) errs[k] = issue.message;
-        }
-      }
+    const resultadoCoords = parsearParCoordenadas(lat, lng);
+    const coords = resultadoCoords.estado === "ok" ? resultadoCoords.coords : null;
+    if (resultadoCoords.estado === "error") {
+      Object.assign(errs, resultadoCoords.errores);
     }
 
     // Dos guardas separadas (y no una con ||) para que TypeScript estreche
@@ -1072,54 +1016,20 @@ function ConfiguracionSection({
             </p>
           </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            onClick={usarMiUbicacion}
-            disabled={ubicando}
-            className="w-full sm:w-auto"
-          >
-            {ubicando ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Detectando…
-              </>
-            ) : (
-              <>
-                <MapPin className="h-4 w-4 mr-2" /> Usar mi ubicación actual
-              </>
-            )}
-          </Button>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="cfg-lat" style={{ fontSize: 12 }}>
-                Latitud
-              </Label>
-              <Input
-                id="cfg-lat"
-                value={lat}
-                onChange={(e) => setLat(e.target.value)}
-                placeholder="9.5578"
-                inputMode="decimal"
-                aria-invalid={Boolean(fieldErrors.lat)}
-              />
-              {fieldErrors.lat && <p className="text-xs text-destructive">{fieldErrors.lat}</p>}
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="cfg-lng" style={{ fontSize: 12 }}>
-                Longitud
-              </Label>
-              <Input
-                id="cfg-lng"
-                value={lng}
-                onChange={(e) => setLng(e.target.value)}
-                placeholder="-69.2113"
-                inputMode="decimal"
-                aria-invalid={Boolean(fieldErrors.lng)}
-              />
-              {fieldErrors.lng && <p className="text-xs text-destructive">{fieldErrors.lng}</p>}
-            </div>
-          </div>
+          <CampoUbicacion
+            idPrefix="cfg"
+            lat={lat}
+            lng={lng}
+            onLatChange={setLat}
+            onLngChange={setLng}
+            errorLat={fieldErrors.lat}
+            errorLng={fieldErrors.lng}
+            onAviso={setError}
+            onDetectada={() => {
+              setError(null);
+              toast.success("Ubicación detectada. Revisa y guarda los cambios.");
+            }}
+          />
         </div>
 
         {error && (
