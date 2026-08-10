@@ -69,6 +69,10 @@ type DashboardData = {
   whatsapp?: string;
   sector?: string;
   punto_referencia?: string;
+  lat?: number | null;
+  lng?: number | null;
+  /** false ⇒ la farmacia sigue en (0,0) y su inventario NO sale en el buscador. */
+  ubicacion_configurada?: boolean;
   inventario?: Array<{
     id?: string;
     nombre: string;
@@ -286,13 +290,22 @@ function AdminDashboard() {
                 />
               )}
               {section === "inventario" && (
-                <InventarioSection loading={loading} data={data} onUploaded={cargarDashboard} />
+                <InventarioSection
+                  loading={loading}
+                  data={data}
+                  onUploaded={cargarDashboard}
+                  onIrAConfiguracion={() => setSection("configuracion")}
+                />
               )}
               {section === "facturacion" && (
                 <FacturacionSection loading={loading} data={data} />
               )}
               {section === "configuracion" && (
-                <ConfiguracionSection data={data} onNombreActualizado={setNombre} />
+                <ConfiguracionSection
+                  data={data}
+                  onNombreActualizado={setNombre}
+                  onGuardado={cargarDashboard}
+                />
               )}
               {section === "soporte" && <SoporteSection />}
             </motion.div>
@@ -481,10 +494,12 @@ function InventarioSection({
   loading,
   data,
   onUploaded,
+  onIrAConfiguracion,
 }: {
   loading: boolean;
   data: DashboardData | null;
   onUploaded: () => void;
+  onIrAConfiguracion: () => void;
 }) {
   const items = data?.inventario ?? [];
   const [q, setQ] = useState("");
@@ -508,6 +523,12 @@ function InventarioSection({
 
   return (
     <div className="space-y-6">
+      {/* Se muestra solo con inventario cargado: es justo el momento en que la
+          farmacia espera verse en el buscador y no aparece. */}
+      {data && !data.ubicacion_configurada && items.length > 0 && (
+        <AvisoSinUbicacion onConfigurar={onIrAConfiguracion} />
+      )}
+
       <button
         type="button"
         onClick={() => {
@@ -709,6 +730,45 @@ const SECTORES_CONFIG: { value: string; label: string }[] = [
   { value: "araure", label: "Araure" },
 ];
 
+/* Aviso de farmacia sin geolocalizar. Es el caso más caro de soporte: la
+   farmacia sube su inventario, no se ve en el buscador y concluye que la carga
+   falló. El backend marca ubicacion_configurada=false mientras siga en el (0,0)
+   con el que la crea el registro. */
+function AvisoSinUbicacion({ onConfigurar }: { onConfigurar?: () => void }) {
+  return (
+    <div
+      className="flex items-start gap-3 p-4"
+      style={{
+        background: "rgba(217,119,6,0.08)",
+        border: "1px solid rgba(217,119,6,0.25)",
+        borderRadius: 12,
+      }}
+      role="status"
+    >
+      <AlertTriangle className="h-5 w-5 shrink-0" style={{ color: "#b45309" }} aria-hidden="true" />
+      <div className="space-y-1">
+        <div style={{ fontWeight: 600, fontSize: 14, color: "var(--dy-tinta)" }}>
+          Tu farmacia todavía no tiene ubicación en el mapa
+        </div>
+        <p style={{ fontSize: 13, color: "var(--dy-tinta-suave)" }}>
+          Tu inventario está cargado, pero los pacientes buscan por cercanía y sin coordenadas no
+          puedes aparecer en los resultados.
+        </p>
+        {onConfigurar && (
+          <button
+            type="button"
+            onClick={onConfigurar}
+            className="dy-foco underline"
+            style={{ fontSize: 13, fontWeight: 600, color: "var(--dy-verde-cruz)" }}
+          >
+            Configurar ubicación
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 const configSchema = z.object({
   nombre_farmacia: z
     .string()
@@ -726,6 +786,22 @@ const configSchema = z.object({
     .max(180, "Máximo 180 caracteres"),
 });
 
+/* Coordenadas: se validan aparte porque el backend las acepta como par opcional
+   (ambas o ninguna) y aquí llegan como texto de dos inputs independientes. */
+const coordsSchema = z.object({
+  lat: z
+    .number({ message: "Latitud inválida" })
+    .min(-90, "Entre -90 y 90")
+    .max(90, "Entre -90 y 90"),
+  lng: z
+    .number({ message: "Longitud inválida" })
+    .min(-180, "Entre -180 y 180")
+    .max(180, "Entre -180 y 180"),
+});
+
+/** "9,5578" y "9.5578" → 9.5578. NaN si el texto no es un número. */
+const aNumero = (s: string) => Number(s.trim().replace(",", "."));
+
 const formatoTelefonoVE = (raw: string) => {
   let d = raw.replace(/\D/g, "");
   if (d.startsWith("58")) d = d.slice(2);
@@ -737,9 +813,13 @@ const formatoTelefonoVE = (raw: string) => {
 function ConfiguracionSection({
   data,
   onNombreActualizado,
+  onGuardado,
 }: {
   data: DashboardData | null;
   onNombreActualizado: (nombre: string) => void;
+  /** Relee el dashboard: sin esto el aviso de "sin ubicación" seguiría
+      visible después de guardar las coordenadas. */
+  onGuardado: () => void;
 }) {
   const [nombre, setNombre] = useState(data?.nombre_farmacia ?? "");
   const [whatsapp, setWhatsapp] = useState(data?.whatsapp ?? "");
@@ -749,6 +829,17 @@ function ConfiguracionSection({
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
+  /* Ubicación. Se guarda como texto para poder distinguir "vacío" de "0": una
+     farmacia sin configurar viene en (0,0) del registro y mostrar "0" en los
+     inputs haría parecer que ya tiene ubicación. */
+  const ubicacionLista = data?.ubicacion_configurada ?? false;
+  const coordsIniciales = ubicacionLista
+    ? { lat: String(data?.lat ?? ""), lng: String(data?.lng ?? "") }
+    : { lat: "", lng: "" };
+  const [lat, setLat] = useState(coordsIniciales.lat);
+  const [lng, setLng] = useState(coordsIniciales.lng);
+  const [ubicando, setUbicando] = useState(false);
+
   // Precargar cuando llegue/cambie la data del dashboard.
   useEffect(() => {
     if (!data) return;
@@ -756,7 +847,41 @@ function ConfiguracionSection({
     setWhatsapp(data.whatsapp ?? "");
     setSector(data.sector ?? "");
     setReferencia(data.punto_referencia ?? "");
+    if (data.ubicacion_configurada) {
+      setLat(String(data.lat ?? ""));
+      setLng(String(data.lng ?? ""));
+    }
   }, [data]);
+
+  /* Pide la posición del navegador. A diferencia de useGeolocalizacion (que cae
+     en silencio al centro de Acarigua para el buscador público), aquí un
+     fallback silencioso sería un desastre: dejaría la farmacia registrada en
+     una dirección que no es la suya. Si falla, se dice y se pide a mano. */
+  const usarMiUbicacion = () => {
+    if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
+      setError("Tu navegador no permite obtener la ubicación. Escribe las coordenadas a mano.");
+      return;
+    }
+    setError(null);
+    setUbicando(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLat(pos.coords.latitude.toFixed(6));
+        setLng(pos.coords.longitude.toFixed(6));
+        setUbicando(false);
+        toast.success("Ubicación detectada. Revisa y guarda los cambios.");
+      },
+      (err) => {
+        setUbicando(false);
+        setError(
+          err.code === err.PERMISSION_DENIED
+            ? "Diste permiso denegado a la ubicación. Actívalo o escribe las coordenadas a mano."
+            : "No se pudo obtener la ubicación. Escribe las coordenadas a mano.",
+        );
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -767,16 +892,47 @@ function ConfiguracionSection({
       sector,
       punto_referencia: referencia,
     });
+    const errs: Record<string, string> = {};
     if (!parsed.success) {
-      const errs: Record<string, string> = {};
       for (const issue of parsed.error.issues) {
         const k = issue.path[0] as string;
         if (k && !errs[k]) errs[k] = issue.message;
       }
+    }
+
+    /* Coordenadas: el backend las exige juntas o ninguna. Ambas vacías = el
+       usuario no las está tocando y se conserva la ubicación guardada. */
+    const latVacio = lat.trim() === "";
+    const lngVacio = lng.trim() === "";
+    let coords: { lat: number; lng: number } | null = null;
+    if (latVacio !== lngVacio) {
+      errs[latVacio ? "lat" : "lng"] = "Completa latitud y longitud, o deja ambas vacías";
+    } else if (!latVacio) {
+      const coordsParsed = coordsSchema.safeParse({ lat: aNumero(lat), lng: aNumero(lng) });
+      if (coordsParsed.success) {
+        coords = coordsParsed.data;
+      } else {
+        for (const issue of coordsParsed.error.issues) {
+          const k = issue.path[0] as string;
+          if (k && !errs[k]) errs[k] = issue.message;
+        }
+      }
+    }
+
+    // Dos guardas separadas (y no una con ||) para que TypeScript estreche
+    // `parsed` a su variante exitosa y `parsed.data` sea accesible abajo.
+    if (!parsed.success) {
+      setFieldErrors(errs);
+      return;
+    }
+    if (Object.keys(errs).length > 0) {
       setFieldErrors(errs);
       return;
     }
     setFieldErrors({});
+
+    // Sin coords, el PATCH va sin lat/lng y el backend conserva la ubicación.
+    const payload = coords ? { ...parsed.data, ...coords } : parsed.data;
 
     const farmaciaId =
       typeof window !== "undefined" ? localStorage.getItem("farmacia_id") : null;
@@ -795,7 +951,7 @@ function ConfiguracionSection({
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify(parsed.data),
+        body: JSON.stringify(payload),
       });
       if (res.status === 401 || res.status === 403) {
         setError("Tu sesión expiró. Inicia sesión de nuevo.");
@@ -812,7 +968,12 @@ function ConfiguracionSection({
         localStorage.setItem("nombre_farmacia", nombreGuardado);
       }
       onNombreActualizado(nombreGuardado);
-      toast.success("Datos actualizados con éxito");
+      toast.success(
+        coords
+          ? "Datos guardados. Tu farmacia ya aparece en las búsquedas de la zona."
+          : "Datos actualizados con éxito",
+      );
+      onGuardado();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al guardar");
     } finally {
@@ -822,6 +983,7 @@ function ConfiguracionSection({
 
   return (
     <div className="space-y-6 max-w-2xl">
+      {data && !ubicacionLista && <AvisoSinUbicacion />}
       <form
         onSubmit={onSubmit}
         className="p-5 sm:p-6 space-y-4"
@@ -898,6 +1060,66 @@ function ConfiguracionSection({
           {fieldErrors.punto_referencia && (
             <p className="text-xs text-destructive">{fieldErrors.punto_referencia}</p>
           )}
+        </div>
+
+        {/* Ubicación en el mapa — sin esto la farmacia no existe para el buscador */}
+        <div className="space-y-2 pt-2" style={{ borderTop: "1px solid var(--dy-borde)" }}>
+          <div className="pt-3">
+            <Label>Ubicación en el mapa</Label>
+            <p style={{ fontSize: 12, color: "var(--dy-tinta-suave)", marginTop: 4 }}>
+              Los pacientes buscan por cercanía. Sin coordenadas tu inventario no aparece en los
+              resultados.
+            </p>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={usarMiUbicacion}
+            disabled={ubicando}
+            className="w-full sm:w-auto"
+          >
+            {ubicando ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Detectando…
+              </>
+            ) : (
+              <>
+                <MapPin className="h-4 w-4 mr-2" /> Usar mi ubicación actual
+              </>
+            )}
+          </Button>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="cfg-lat" style={{ fontSize: 12 }}>
+                Latitud
+              </Label>
+              <Input
+                id="cfg-lat"
+                value={lat}
+                onChange={(e) => setLat(e.target.value)}
+                placeholder="9.5578"
+                inputMode="decimal"
+                aria-invalid={Boolean(fieldErrors.lat)}
+              />
+              {fieldErrors.lat && <p className="text-xs text-destructive">{fieldErrors.lat}</p>}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="cfg-lng" style={{ fontSize: 12 }}>
+                Longitud
+              </Label>
+              <Input
+                id="cfg-lng"
+                value={lng}
+                onChange={(e) => setLng(e.target.value)}
+                placeholder="-69.2113"
+                inputMode="decimal"
+                aria-invalid={Boolean(fieldErrors.lng)}
+              />
+              {fieldErrors.lng && <p className="text-xs text-destructive">{fieldErrors.lng}</p>}
+            </div>
+          </div>
         </div>
 
         {error && (
