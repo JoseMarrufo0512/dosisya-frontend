@@ -72,9 +72,12 @@ export function TablaFarmacias({
     [data.farmacias, filtro],
   );
 
-  const sinUbicacion =
-    data.totales.sin_ubicacion ??
-    data.farmacias.filter((f) => f.ubicacion_configurada === false).length;
+  const sinUbicacion = useMemo(
+    () =>
+      data.totales.sin_ubicacion ??
+      data.farmacias.filter((f) => f.ubicacion_configurada === false).length,
+    [data.totales.sin_ubicacion, data.farmacias],
+  );
 
   return (
     <div className="space-y-4">
@@ -147,8 +150,15 @@ export function TablaFarmacias({
         onCancelar={() => setAprobando(null)}
         onConfirmar={(coords) => {
           if (!aprobando) return;
-          mut.mutate({ id: aprobando.id, estado: "activa", coords });
-          setAprobando(null);
+          // Cerrar solo si la mutación tiene éxito: closearlo antes (como antes)
+          // hacía que el useEffect de "cambió de farmacia" limpiara lat/lng al
+          // instante, así que un PATCH fallido perdía lo que el superadmin
+          // acababa de escribir. mut.onError ya muestra el toast de error; el
+          // diálogo se queda abierto con los campos intactos para reintentar.
+          mut.mutate(
+            { id: aprobando.id, estado: "activa", coords },
+            { onSuccess: () => setAprobando(null) },
+          );
         }}
       />
     </div>
@@ -192,7 +202,10 @@ function DialogoAprobarSinUbicacion({
       return;
     }
     if (res.estado === "ausente") {
-      setErrores({ lat: "Escribe las coordenadas o aprueba sin ubicar" });
+      // Los dos campos están igual de vacíos: marcar solo `lat` dejaba
+      // Longitud sin resaltar, como si únicamente Latitud fuera obligatoria.
+      const mensaje = "Escribe las coordenadas o aprueba sin ubicar";
+      setErrores({ lat: mensaje, lng: mensaje });
       return;
     }
     setErrores({});
