@@ -77,13 +77,41 @@ async function adminFetch(
   return res;
 }
 
+/** Totales neutros: evita que la cabecera reviente si el backend los omite. */
+const TOTALES_VACIOS: TotalesRed = {
+  total_farmacias: 0,
+  pendientes: 0,
+  sin_ubicacion: 0,
+  leads_mes_red: 0,
+  deuda_red_usd: 0,
+};
+
 export async function getFarmaciasAdmin(
   token: string,
 ): Promise<AdminFarmaciasResponse> {
   const res = await adminFetch("/api/v1/admin/farmacias", token);
   if (!res.ok) throw new Error("No se pudo cargar la lista de farmacias");
-  const json = await res.json();
-  return json.data as AdminFarmaciasResponse;
+
+  const json = await res.json().catch(() => null);
+
+  /* Validar la forma acá y no en la tabla. Un 200 cuyo `data` no trae
+     `farmacias` hacía estallar `data.farmacias.filter(...)` durante el render,
+     y como el throw ocurría dentro del árbol de React se llevaba por delante
+     la ruta COMPLETA: el superadmin perdía hasta las pestañas y solo veía el
+     error genérico en inglés, sin forma de reintentar.
+
+     Lanzando desde el queryFn, el fallo se convierte en el estado de error que
+     la vista ya sabe mostrar, con su botón de Reintentar. */
+  const data = json?.data;
+  if (!data || !Array.isArray(data.farmacias)) {
+    throw new Error("No se pudo cargar la lista de farmacias");
+  }
+
+  return {
+    farmacias: data.farmacias as FarmaciaAdmin[],
+    // `totales` es secundario: si falta, mostrar la lista vale más que fallar.
+    totales: { ...TOTALES_VACIOS, ...(data.totales ?? {}) },
+  };
 }
 
 /**

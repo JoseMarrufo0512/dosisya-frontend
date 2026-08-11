@@ -71,13 +71,15 @@ function SuperDashboard() {
             icon={<Receipt className="h-4 w-4" />} label="Facturación" />
         </nav>
 
-        {query.isLoading ? (
-          <div className="space-y-3">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-        ) : query.isError ? (
+        {/* Orden: error → datos → cargando. El último es el caso "todo lo demás"
+            a propósito, porque el `null` que había dejaba la pantalla en blanco.
+
+            Antes se preguntaba primero por `isLoading`, que en React Query v5 es
+            `isPending && isFetching`: solo cubre la PRIMERA carga. Si el
+            superadmin pulsaba Reintentar y volvía a fallar, quedaban ventanas
+            sin isLoading, sin isError y sin data, y el panel se vaciaba debajo
+            de las pestañas — sin forma de reintentar otra vez. */}
+        {query.isError ? (
           <div className="text-sm text-destructive">
             No pudimos cargar los datos. <button className="underline" onClick={() => query.refetch()}>Reintentar</button>
           </div>
@@ -87,7 +89,13 @@ function SuperDashboard() {
           ) : (
             <TablaFacturacion data={query.data} />
           )
-        ) : null}
+        ) : (
+          <div className="space-y-3">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        )}
       </div>
     </div>
   );

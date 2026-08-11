@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   cambiarEstadoFarmacia,
+  getFarmaciasAdmin,
   requiereUbicacionAntesDeActivar,
   type EstadoAfiliacion,
 } from "./adminApi";
@@ -79,5 +80,64 @@ describe("cambiarEstadoFarmacia", () => {
   it("traduce 401 a UNAUTHORIZED para que la superficie cierre sesión", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 401 })));
     await expect(cambiarEstadoFarmacia("tok", "f1", "activa")).rejects.toThrow("UNAUTHORIZED");
+  });
+});
+
+/**
+ * Un 200 con el cuerpo mal formado hacía estallar `data.farmacias.filter(...)`
+ * durante el render de TablaFarmacias. Como el throw ocurría dentro del árbol
+ * de React, se llevaba la ruta COMPLETA: el superadmin perdía las pestañas y
+ * solo veía el error genérico en inglés, sin forma de reintentar.
+ *
+ * Validando en el queryFn, el fallo se convierte en el estado de error que la
+ * vista ya sabe mostrar.
+ */
+describe("getFarmaciasAdmin — respuestas mal formadas", () => {
+  const responder = (body: unknown, status = 200) =>
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status })),
+    );
+
+  it("devuelve la lista cuando el cuerpo es correcto", async () => {
+    responder({ data: { farmacias: [{ id: "f1" }], totales: { pendientes: 1 } } });
+    const r = await getFarmaciasAdmin("tok");
+    expect(r.farmacias).toHaveLength(1);
+    expect(r.totales.pendientes).toBe(1);
+  });
+
+  it.each([
+    ["sin campo data", { status: "success" }],
+    ["data en null", { data: null }],
+    ["data sin farmacias", { data: { totales: {} } }],
+    ["farmacias no es un array", { data: { farmacias: "muchas" } }],
+    ["cuerpo que no es JSON", null],
+  ])("lanza en vez de dejar reventar el render: %s", async (_caso, body) => {
+    if (body === null) {
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("<html>502</html>", { status: 200 })));
+    } else {
+      responder(body);
+    }
+    await expect(getFarmaciasAdmin("tok")).rejects.toThrow();
+  });
+
+  it("rellena los totales que falten en vez de fallar: la lista vale más", async () => {
+    responder({ data: { farmacias: [] } });
+    const r = await getFarmaciasAdmin("tok");
+    expect(r.totales).toEqual({
+      total_farmacias: 0,
+      pendientes: 0,
+      sin_ubicacion: 0,
+      leads_mes_red: 0,
+      deuda_red_usd: 0,
+    });
+  });
+
+  it("conserva los totales que sí vienen", async () => {
+    responder({ data: { farmacias: [], totales: { total_farmacias: 9, sin_ubicacion: 3 } } });
+    const r = await getFarmaciasAdmin("tok");
+    expect(r.totales.total_farmacias).toBe(9);
+    expect(r.totales.sin_ubicacion).toBe(3);
+    expect(r.totales.leads_mes_red).toBe(0); // el que falta, en neutro
   });
 });
