@@ -17,6 +17,7 @@ import { Loader2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { obtenerPosicionActual, type ErrorGeolocalizacion } from "@/lib/geolocalizacionNavegador";
 
 export interface CampoUbicacionProps {
   lat: string;
@@ -54,28 +55,24 @@ export function CampoUbicacion({
   const [ubicando, setUbicando] = useState(false);
 
   const usarMiUbicacion = () => {
-    if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
-      onAviso?.("Tu navegador no permite obtener la ubicación. Escribe las coordenadas a mano.");
-      return;
-    }
     setUbicando(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
+    obtenerPosicionActual()
+      .then((pos) => {
         onLatChange(pos.coords.latitude.toFixed(6));
         onLngChange(pos.coords.longitude.toFixed(6));
         setUbicando(false);
         onDetectada?.();
-      },
-      (err) => {
+      })
+      .catch((err: ErrorGeolocalizacion) => {
         setUbicando(false);
         onAviso?.(
-          err.code === err.PERMISSION_DENIED
-            ? "Diste permiso denegado a la ubicación. Actívalo o escribe las coordenadas a mano."
-            : "No se pudo obtener la ubicación. Escribe las coordenadas a mano.",
+          err.tipo === "no_soportado"
+            ? "Tu navegador no permite obtener la ubicación. Escribe las coordenadas a mano."
+            : err.tipo === "permiso_denegado"
+              ? "Diste permiso denegado a la ubicación. Actívalo o escribe las coordenadas a mano."
+              : "No se pudo obtener la ubicación. Escribe las coordenadas a mano.",
         );
-      },
-      { enableHighAccuracy: true, timeout: 10000 },
-    );
+      });
   };
 
   return (

@@ -912,8 +912,12 @@ function ConfiguracionSection({
         localStorage.setItem("nombre_farmacia", nombreGuardado);
       }
       onNombreActualizado(nombreGuardado);
+      // ubicacion_configurada la calcula el backend (dosisya/geo.py, mismo epsilon
+      // que decide si la farmacia sale en el buscador): no basta con que el par
+      // haya pasado la validación de rango del cliente, porque (0,0) —el
+      // centinela de "nunca se ubicó"— también pasa esa validación.
       toast.success(
-        coords
+        coords && json?.data?.ubicacion_configurada
           ? "Datos guardados. Tu farmacia ya aparece en las búsquedas de la zona."
           : "Datos actualizados con éxito",
       );
