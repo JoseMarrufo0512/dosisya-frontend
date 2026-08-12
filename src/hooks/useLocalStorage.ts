@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 
 export function useLocalStorage<T>(key: string, initialValue: T) {
-  const [value, setValue] = useState<T>(() => {
-    if (typeof window === "undefined") return initialValue;
+  const [value, setValue] = useState<T>(initialValue);
+
+  useEffect(() => {
     try {
       const raw = window.localStorage.getItem(key);
-      return raw ? (JSON.parse(raw) as T) : initialValue;
+      if (raw) {
+        setValue(JSON.parse(raw) as T);
+      }
     } catch {
-      return initialValue;
+      // ignore
     }
-  });
+  }, [key]);
 
   useEffect(() => {
     try {

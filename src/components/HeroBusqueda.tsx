@@ -65,7 +65,7 @@ export function HeroBusqueda({
           type="button"
           aria-label="Iniciar sesión"
           onClick={onAbrirCuenta}
-          className="dy-foco absolute left-4 top-4 flex h-[34px] w-[34px] items-center justify-center rounded-full"
+          className="dy-foco absolute left-4 top-4 flex h-[44px] w-[44px] items-center justify-center rounded-full"
           style={{
             background: "#eef0eb",
             border: "1px solid var(--borde)",

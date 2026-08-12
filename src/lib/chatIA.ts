@@ -7,6 +7,7 @@
  * qué pasó en vez de un "no pude responder" para todo.
  */
 import { API_BASE } from "./api";
+import * as Sentry from '@sentry/tanstackstart-react';
 
 export type MensajeChat = { rol: "usuario" | "asistente"; texto: string };
 
@@ -72,9 +73,13 @@ export async function enviarMensajeChat(mensajes: MensajeChat[]): Promise<string
     });
 
     if (!res.ok) {
-      // 429 = rate limit (20/min por IP); 503 = Gemini caído/timeout/cuota.
+      // 429 = rate limit (20/min por IP); 503/504 = Gemini caído/timeout/cuota.
       const codigo: CodigoErrorChat =
-        res.status === 429 ? "limite" : res.status === 503 ? "no_disponible" : "desconocido";
+        res.status === 429
+          ? "limite"
+          : res.status === 503 || res.status === 504
+            ? "no_disponible"
+            : "desconocido";
       throw new ErrorChat(codigo, `El asistente respondió ${res.status}`);
     }
 
@@ -89,6 +94,7 @@ export async function enviarMensajeChat(mensajes: MensajeChat[]): Promise<string
       throw new ErrorChat("timeout", `El asistente no respondió en ${TIMEOUT_MS} ms`);
     }
     if (e instanceof ErrorChat) throw e; // ya tipado arriba: no lo degrades
+    Sentry.captureException(e);
     throw new ErrorChat("desconocido", `Falló la red: ${String(e)}`);
   } finally {
     clearTimeout(reloj);

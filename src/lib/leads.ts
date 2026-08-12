@@ -1,5 +1,6 @@
 import { API_BASE } from "./api";
 import { track } from "./analytics";
+import * as Sentry from "@sentry/tanstackstart-react";
 
 /**
  * Tipos de interacción cobrable (Lead CPC).
@@ -77,8 +78,19 @@ export function postLead(p: LeadPayload): void {
     // keepalive: la petición sobrevive si el navegador abandona la página
     // (crítico cuando el clic abre wa.me).
     keepalive: p.keepalive ?? false,
-  }).catch(() => {
-    // Silencio intencional: los leads CPC nunca deben romper el UX
+  }).catch((err) => {
+    // Fire-and-forget: los leads CPC nunca deben romper el UX,
+    // pero SÍ reportamos a Sentry para detectar pérdida de revenue.
+    Sentry.captureMessage("lead_perdido", {
+      level: "warning",
+      extra: {
+        farmacia_id: p.farmaciaId,
+        tipo: p.tipo,
+        medicamento_id: p.medicamentoId,
+        origen: p.origen,
+        error: err instanceof Error ? err.message : String(err),
+      },
+    });
   });
 }
 

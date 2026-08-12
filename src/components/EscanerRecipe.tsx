@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import { Drawer } from "vaul";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { useListaMedica } from "@/hooks/useListaMedica";
 import { analizarRecipe, validarImagen, type MedicamentoRecetaUI } from "@/lib/recipeIA";
+import * as Sentry from '@sentry/tanstackstart-react';
+import { track } from "@/lib/analytics";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EscanerRecipe — Drawer que cubre todo el flujo de escaneo de récipe médico.
@@ -47,6 +49,12 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
   const [borradorMedicamento, setBorradorMedicamento] = useState("");
   const [borradorCantidad, setBorradorCantidad] = useState("");
   const { agregar, estaEnLista } = useListaMedica();
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
 
   // Resetear al abrir
   const handleOpenChange = useCallback(
@@ -82,6 +90,7 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
       const respuesta = await analizarRecipe(file);
 
       if (respuesta.status === "success" && respuesta.data && respuesta.data.length > 0) {
+        track('receta_escaneada', { medicamentos: respuesta.data?.length ?? 0 });
         const conId: MedicamentoRecetaUI[] = respuesta.data.map((med) => ({
           ...med,
           id: crypto.randomUUID(),
@@ -89,12 +98,17 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
         setResultados(conId);
         setEstado("results");
       } else {
-        setErrorMsg(respuesta.message || "No pudimos leer los medicamentos del récipe.");
+        const errorMsg = respuesta.message || "No pudimos leer los medicamentos del récipe.";
+        setErrorMsg(errorMsg);
         setEstado("error");
+        track('receta_error', { motivo: errorMsg });
       }
-    } catch {
-      setErrorMsg("Error inesperado al analizar el récipe.");
+    } catch (err) {
+      Sentry.captureException(err);
+      const errorMsg = "Error inesperado al analizar el récipe.";
+      setErrorMsg(errorMsg);
       setEstado("error");
+      track('receta_error', { motivo: errorMsg });
     }
   }, []);
 
@@ -299,7 +313,7 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
                 </div>
 
                 {/* Texto de estado */}
-                <div className="mt-6 flex flex-col items-center gap-2 text-center">
+                <div aria-live="polite" className="mt-6 flex flex-col items-center gap-2 text-center">
                   <div className="flex items-center gap-2">
                     <Sparkles className="h-5 w-5 text-emerald-500 animate-pulse" />
                     <p className="font-semibold text-foreground">

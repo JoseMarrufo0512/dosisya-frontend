@@ -6,9 +6,11 @@ import { Loader2 } from "lucide-react";
 import { API_BASE } from "@/lib/api";
 import type { FarmaciaAdmin } from "@/lib/adminApi";
 import { manejarNoAutorizado } from "@/lib/adminAuth";
+import { parsearParCoordenadas } from "@/lib/coordenadas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CampoUbicacion } from "@/components/panel/CampoUbicacion";
 
 const formatoTelefonoVE = (raw: string) => {
   let d = raw.replace(/\D/g, "");
@@ -32,6 +34,9 @@ export function EditarFarmaciaDrawer({
   const [whatsapp, setWhatsapp] = useState("");
   const [sector, setSector] = useState("");
   const [referencia, setReferencia] = useState("");
+  const [lat, setLat] = useState("");
+  const [lng, setLng] = useState("");
+  const [erroresCoords, setErroresCoords] = useState<{ lat?: string; lng?: string }>({});
   const [saving, setSaving] = useState(false);
 
   // Precargar cada vez que cambia la farmacia a editar (no depender de onOpenChange:
@@ -42,6 +47,11 @@ export function EditarFarmaciaDrawer({
       setWhatsapp(farmacia.whatsapp);
       setSector(farmacia.sector);
       setReferencia(farmacia.punto_referencia);
+      // (0,0) es el centinela de "nunca se ubicó": mostrarlo como "0" en los
+      // inputs haría parecer que la farmacia ya tiene ubicación configurada.
+      setLat(farmacia.ubicacion_configurada ? String(farmacia.lat ?? "") : "");
+      setLng(farmacia.ubicacion_configurada ? String(farmacia.lng ?? "") : "");
+      setErroresCoords({});
     }
   }, [farmacia?.id]);
 
@@ -51,6 +61,14 @@ export function EditarFarmaciaDrawer({
       toast.error("WhatsApp: +58 seguido de 10 dígitos");
       return;
     }
+    // El backend exige el par junto o ninguno; ambos vacíos = no se toca la
+    // ubicación guardada (mismo contrato que Configuración del panel).
+    const resultadoCoords = parsearParCoordenadas(lat, lng);
+    if (resultadoCoords.estado === "error") {
+      setErroresCoords(resultadoCoords.errores);
+      return;
+    }
+    setErroresCoords({});
     setSaving(true);
     try {
       const res = await fetch(`${API_BASE}/api/v1/farmacias/${farmacia.id}`, {
@@ -58,6 +76,7 @@ export function EditarFarmaciaDrawer({
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           nombre_farmacia: nombre, whatsapp, sector, punto_referencia: referencia,
+          ...(resultadoCoords.estado === "ok" ? resultadoCoords.coords : {}),
         }),
       });
       if (res.status === 401 || res.status === 403) {
@@ -70,7 +89,23 @@ export function EditarFarmaciaDrawer({
       if (!res.ok) {
         throw new Error(json?.detail || json?.error?.message || "No se pudo guardar");
       }
-      toast.success("Farmacia actualizada");
+      // ubicacion_configurada la calcula el backend (mismo epsilon que decide si
+      // la farmacia sale en el buscador): que el PATCH haya aceptado el par no
+      // implica que supere ese margen. Este drawer existe justamente para que el
+      // superadmin corrija una farmacia "sin ubicación" — un "Farmacia
+      // actualizada" liso aquí escondería que el problema que vino a resolver
+      // sigue intacto, y es la última señal que va a ver: el drawer se cierra.
+      if (resultadoCoords.estado === "ok" && !json?.data?.ubicacion_configurada) {
+        toast.warning(
+          "Los demás datos se guardaron, pero esas coordenadas siguen sin ubicar la farmacia. Revísalas.",
+        );
+      } else {
+        toast.success(
+          resultadoCoords.estado === "ok" && json?.data?.ubicacion_configurada
+            ? "Farmacia actualizada. Ya aparece en las búsquedas de la zona."
+            : "Farmacia actualizada",
+        );
+      }
       onSaved();
       onOpenChange(false);
     } catch (e) {
@@ -103,6 +138,27 @@ export function EditarFarmaciaDrawer({
             <div className="space-y-1.5">
               <Label htmlFor="e-ref">Punto de referencia</Label>
               <Input id="e-ref" value={referencia} onChange={(e) => setReferencia(e.target.value)} maxLength={180} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Ubicación en el mapa</Label>
+              {farmacia?.ubicacion_configurada === false && (
+                <p className="text-xs text-amber-700">
+                  Sin coordenadas: no aparece en el buscador.
+                </p>
+              )}
+              <CampoUbicacion
+                idPrefix="editar"
+                lat={lat}
+                lng={lng}
+                onLatChange={setLat}
+                onLngChange={setLng}
+                errorLat={erroresCoords.lat}
+                errorLng={erroresCoords.lng}
+                // El superadmin edita desde su escritorio, no desde la farmacia:
+                // ofrecerle GPS solo serviría para meter datos errados (mismo
+                // criterio que el diálogo de aprobación en TablaFarmacias).
+                mostrarGps={false}
+              />
             </div>
             <div className="flex gap-2 pt-2">
               <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancelar</Button>

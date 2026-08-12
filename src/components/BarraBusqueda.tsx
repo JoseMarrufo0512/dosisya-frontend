@@ -45,7 +45,7 @@ export function BarraBusqueda({
             type="button"
             onClick={onEscanearRecipe}
             className={`absolute flex items-center justify-center rounded-full text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 transition-colors ${
-              compacta ? "right-9 h-6 w-6" : "right-12 h-10 w-10"
+              compacta ? "right-10 h-8 w-8" : "right-12 h-11 w-11"
             }`}
             title="Escanear récipe médico"
             aria-label="Escanear récipe médico con IA"
@@ -57,7 +57,7 @@ export function BarraBusqueda({
           type="button"
           onClick={onRecalcularUbicacion}
           className={`absolute right-2 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 transition-colors ${
-            compacta ? "h-6 w-6 text-sm" : "h-10 w-10 text-xl"
+            compacta ? "h-8 w-8 text-sm" : "h-11 w-11 text-xl"
           }`}
           title="Recalcular ubicación"
         >
