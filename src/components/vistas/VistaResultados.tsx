@@ -2,6 +2,7 @@ import { FormEvent } from "react";
 import { ChevronLeft, Search, X, SlidersHorizontal, ChevronDown, Info } from "lucide-react";
 import { EstadoCargando } from "../EstadoCargando";
 import { EstadoVacio } from "../EstadoVacio";
+import { EstadoError } from "../EstadoError";
 import { BarraFiltros } from "../BarraFiltros";
 import { TarjetaResultado } from "../TarjetaResultado";
 import { type Filtros, FILTROS_INICIALES, hayFiltrosActivos, claveResultado } from "@/lib/filtros";
@@ -15,6 +16,8 @@ interface VistaResultadosProps {
   terminoBuscado: string;
   setTerminoBuscado: (t: string) => void;
   cargando: boolean;
+  error: string | null;
+  onReintentar: () => void;
   totalResultados: number;
   resultados: ResultadoFarmacia[]; // Original results
   resultadosOrdenados: ResultadoFarmacia[];
@@ -47,6 +50,8 @@ export function VistaResultados({
   terminoBuscado,
   setTerminoBuscado,
   cargando,
+  error,
+  onReintentar,
   totalResultados,
   resultados,
   resultadosOrdenados,
@@ -161,7 +166,9 @@ export function VistaResultados({
         >
           {cargando && <EstadoCargando />}
 
-          {!cargando && resultados.length === 0 && <EstadoVacio termino={terminoBuscado} />}
+          {!cargando && error && <EstadoError mensaje={error} onReintentar={onReintentar} />}
+
+          {!cargando && !error && resultados.length === 0 && <EstadoVacio termino={terminoBuscado} />}
 
           {!cargando && resultadosOrdenados.length > 0 && (
             <div

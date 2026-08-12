@@ -73,7 +73,6 @@ export function HojaChatIA({ open, onClose }: { open: boolean; onClose: () => vo
     if (!t || enviando) return;
     const nuevos: Mensaje[] = [...mensajes, { de: "yo", texto: t }];
     setMensajes(nuevos);
-    setTexto("");
     setEnviando(true);
     try {
       const historial: MensajeChat[] = nuevos
@@ -83,6 +82,7 @@ export function HojaChatIA({ open, onClose }: { open: boolean; onClose: () => vo
           texto: m.texto,
         }));
       const respuesta = await enviarMensajeChat(historial);
+      setTexto("");
       setMensajes((m) => [...m, { de: "ia", texto: respuesta }]);
     } catch (e) {
       Sentry.captureException(e);
