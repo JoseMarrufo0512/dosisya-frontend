@@ -77,6 +77,7 @@ if (import.meta.env.DEV) {
 
 export async function buscarMedicamentos(
   params: ParamsBusqueda,
+  signal?: AbortSignal,
 ): Promise<RespuestaAPI> {
   try {
     const qs = new URLSearchParams({
@@ -90,10 +91,12 @@ export async function buscarMedicamentos(
     });
     const res = await fetch(
       `${API_BASE}/api/v1/medicamentos/buscar?${qs.toString()}`,
+      { signal }
     );
     const json = (await res.json()) as RespuestaAPI;
     return json;
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") throw err;
     return { status: "error", message: "Error de red", data: null };
   }
 }

@@ -89,7 +89,23 @@ export function EditarFarmaciaDrawer({
       if (!res.ok) {
         throw new Error(json?.detail || json?.error?.message || "No se pudo guardar");
       }
-      toast.success("Farmacia actualizada");
+      // ubicacion_configurada la calcula el backend (mismo epsilon que decide si
+      // la farmacia sale en el buscador): que el PATCH haya aceptado el par no
+      // implica que supere ese margen. Este drawer existe justamente para que el
+      // superadmin corrija una farmacia "sin ubicación" — un "Farmacia
+      // actualizada" liso aquí escondería que el problema que vino a resolver
+      // sigue intacto, y es la última señal que va a ver: el drawer se cierra.
+      if (resultadoCoords.estado === "ok" && !json?.data?.ubicacion_configurada) {
+        toast.warning(
+          "Los demás datos se guardaron, pero esas coordenadas siguen sin ubicar la farmacia. Revísalas.",
+        );
+      } else {
+        toast.success(
+          resultadoCoords.estado === "ok" && json?.data?.ubicacion_configurada
+            ? "Farmacia actualizada. Ya aparece en las búsquedas de la zona."
+            : "Farmacia actualizada",
+        );
+      }
       onSaved();
       onOpenChange(false);
     } catch (e) {

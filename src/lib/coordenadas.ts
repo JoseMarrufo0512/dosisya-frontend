@@ -26,7 +26,7 @@ export const coordsSchema = z.object({
 export type Coordenadas = z.infer<typeof coordsSchema>;
 
 /** "9,5578" y "9.5578" → 9.5578. En es-VE el separador decimal es la coma. */
-export const aNumero = (s: string) => Number(s.trim().replace(",", "."));
+export const aNumero = (s: string) => Number(s.trim().replaceAll(",", "."));
 
 export type ResultadoCoordenadas =
   /** Ambas vacías: el usuario no está fijando ubicación. */

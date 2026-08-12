@@ -9,13 +9,9 @@ import { useBusquedasRecientes, useRecordatorios } from "./hooks/useLocalStorage
 import { useListaMedica } from "./hooks/useListaMedica";
 import { HeroBusqueda } from "./components/HeroBusqueda";
 import { SplashScreen } from "./components/SplashScreen";
-import { TarjetaResultado } from "./components/TarjetaResultado";
-import { EstadoCargando } from "./components/EstadoCargando";
-import { EstadoVacio } from "./components/EstadoVacio";
 import { CartSummary } from "./components/lista/CartSummary";
 import { ListaMedicaDrawer } from "./components/lista/ListaMedicaDrawer";
 import { EscanerRecipe } from "./components/EscanerRecipe";
-import { BarraFiltros } from "./components/BarraFiltros";
 import { ComparadorBar } from "./components/ComparadorBar";
 import { ComparadorPanel } from "./components/ComparadorPanel";
 import NavegacionPaciente, { type TabPaciente } from "@/components/navegacion/NavegacionPaciente";
@@ -23,25 +19,15 @@ import { MenuMasPaciente } from "@/components/paciente/MenuMasPaciente";
 import { HojaLoginPaciente } from "@/components/paciente/HojaLoginPaciente";
 import { HojaChatIA } from "@/components/paciente/HojaChatIA";
 import { BurbujaAsistenteIA } from "@/components/paciente/BurbujaAsistenteIA";
-import {
-  ChevronRight,
-  ChevronLeft,
-  ChevronDown,
-  MapPin,
-  Pill,
-  Search,
-  X,
-  Info,
-  SlidersHorizontal,
-} from "lucide-react";
+import { Pill } from "lucide-react";
+import { VistaFarmacias } from "./components/vistas/VistaFarmacias";
+import { VistaResultados } from "./components/vistas/VistaResultados";
 import {
   type Filtros,
   FILTROS_INICIALES,
   alternarComparacion,
   aplicarFiltros,
   claveMasEconomico,
-  claveResultado,
-  hayFiltrosActivos,
   resolverSeleccionados,
 } from "./lib/filtros";
 import { alLimpiarBusqueda } from "./lib/estadoResultados";
@@ -62,25 +48,30 @@ export default function App() {
   // que coincida en SSR y en el primer render del cliente, sin parpadeo.
   const [splashVisible, setSplashVisible] = useState(true);
 
+  // Leer estado inicial de la URL (MED-7)
+  const urlInit = typeof window !== "undefined" ? new URL(window.location.href) : null;
+  const qInit = urlInit?.searchParams.get("q") || "";
+  const ordInit = (urlInit?.searchParams.get("orden") as "relevancia" | "precio") || "relevancia";
+
   // Los recordatorios dependen de la fecha actual → solo evaluarlos tras montar
   // en el cliente, para no romper la hidratación SSR.
   const [montado, setMontado] = useState(false);
   useEffect(() => setMontado(true), []);
   const resurtidosVencidos = montado ? recordatorios.vencidos() : [];
 
-  const [estado, setEstado] = useState<"hero" | "resultados">("hero");
-  const [query, setQuery] = useState("");
+  const [estado, setEstado] = useState<"hero" | "resultados">(qInit ? "resultados" : "hero");
+  const [query, setQuery] = useState(qInit);
   // Búsqueda mientras se escribe: query "retrasado" ~350ms (ver useEffect abajo).
   const queryDebounced = useDebounce(query, 350);
   const [conDelivery, setConDelivery] = useState(false);
   const [radio, setRadio] = useState(5000);
-  const [terminoBuscado, setTerminoBuscado] = useState("");
+  const [terminoBuscado, setTerminoBuscado] = useState(qInit);
   const [listaAbierta, setListaAbierta] = useState(false);
   const [escanerAbierto, setEscanerAbierto] = useState(false);
   // Orden de resultados. "relevancia" = orden del backend (proximidad + boost
   // premium; NO tocar por defecto, es parte de la monetización). "precio" =
   // orden ascendente por precio_usd, solo del lado del cliente y opt-in.
-  const [orden, setOrden] = useState<"relevancia" | "precio">("relevancia");
+  const [orden, setOrden] = useState<"relevancia" | "precio">(ordInit);
   const [filtros, setFiltros] = useState<Filtros>(FILTROS_INICIALES);
   // Filtros ocultos por defecto: se abren desde el ícono discreto del encabezado.
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
@@ -195,6 +186,29 @@ export default function App() {
     ejecutarBusqueda(query, 5);
   };
 
+  // Efecto inicial para buscar si venimos de un link con ?q=... (MED-7)
+  useEffect(() => {
+    if (qInit) {
+      void api.buscar(qInit, latEfectiva, lngEfectiva, false, 5000);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sincronizar estado a URL (MED-7)
+  useEffect(() => {
+    if (!montado || typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (estado === "resultados" && terminoBuscado) {
+      url.searchParams.set("q", terminoBuscado);
+      if (orden !== "relevancia") url.searchParams.set("orden", orden);
+      else url.searchParams.delete("orden");
+    } else {
+      url.searchParams.delete("q");
+      url.searchParams.delete("orden");
+    }
+    window.history.replaceState({}, "", url.toString());
+  }, [estado, terminoBuscado, orden, montado]);
+
   // ─── Búsqueda mientras se escribe ──────────────────────────────────────────
   // Dispara ~350ms tras la última tecla, desde 2 caracteres. No guarda en
   // "recientes" y omite el término ya buscado (evita repetir tras Enter/chip).
@@ -217,408 +231,69 @@ export default function App() {
     }
   };
 
-  const vistaHero = (
-    <HeroBusqueda
-      query={query}
-      onQueryChange={setQuery}
-      onSubmit={handleSubmit}
-      cargando={api.cargando}
-      onRecalcularUbicacion={handleRecalcular}
-      busquedasRecientes={recientes.busquedas}
-      onBuscarTermino={(term) => ejecutarBusqueda(term, 5)}
-      resurtidosVencidos={resurtidosVencidos}
-      onResurtir={(term) => {
-        recordatorios.agregar(term); // re-arma otro ciclo de 30 días
-        ejecutarBusqueda(term, 5);
-      }}
-      geoError={geo.error}
-      geoCargando={geo.cargando}
-      conDelivery={conDelivery}
-      onToggleDelivery={() => setConDelivery(!conDelivery)}
-      onEscanearRecipe={() => setEscanerAbierto(true)}
-      onAbrirCuenta={() => setLoginAbierto(true)}
-      tasa={tasa?.tasa ?? null}
-    />
-  );
-
-  const vistaResultados = (
-    <div className="min-h-screen bg-[var(--papel)] flex flex-col">
-      <header className="sticky top-0 z-10 bg-[var(--papel)] px-4 pt-2.5 pb-2">
-        <div className="mx-auto max-w-2xl">
-          {/* input activo con volver + limpiar (handoff) */}
-          <form onSubmit={handleSubmit} className="flex items-center gap-2.5">
-            <button
-              type="button"
-              onClick={() => setEstado("hero")}
-              aria-label="Volver a la pantalla de inicio"
-              className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xl border border-[var(--borde)] bg-[var(--fondo-suave)] text-[color:var(--tinta)]"
-            >
-              <ChevronLeft size={19} />
-            </button>
-            <div className="flex h-[46px] flex-1 items-center gap-2.5 rounded-[14px] border-[1.5px] border-[var(--verde-cruz)] bg-white px-3 shadow-[0_4px_14px_-8px_rgba(15,76,58,0.4)]">
-              <Search size={19} className="shrink-0 text-[var(--verde-cruz)]" aria-hidden="true" />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                aria-label="Buscar medicamento"
-                className="min-w-0 flex-1 bg-transparent text-[14.5px] text-[color:var(--tinta)] outline-none"
-              />
-              {query && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const limpio = alLimpiarBusqueda();
-                    setEstado(limpio.estado);
-                    setQuery(limpio.query);
-                    setTerminoBuscado(limpio.terminoBuscado);
-                  }}
-                  aria-label="Borrar búsqueda"
-                  className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-[var(--fondo-suave)] text-[color:var(--tinta-tenue)]"
-                >
-                  <X size={15} />
-                </button>
-              )}
-            </div>
-          </form>
-
-          {/* conteo + filtro discreto + orden (ambos movidos aquí desde la
-              antigua BarraFiltros siempre visible) */}
-          <div className="mt-2.5 flex items-center justify-between">
-            <span className="text-[13px] font-semibold text-[color:var(--tinta)]">
-              {api.totalResultados} resultado{api.totalResultados === 1 ? "" : "s"} cerca
-            </span>
-            <div className="flex items-center gap-3.5">
-              {resultadosOrdenados.length >= 2 && (
-                <button
-                  type="button"
-                  onClick={() => setFiltrosAbiertos((v) => !v)}
-                  aria-expanded={filtrosAbiertos}
-                  aria-label="Filtros"
-                  className={`relative flex items-center gap-1 text-xs ${
-                    filtrosAbiertos
-                      ? "text-[color:var(--verde-cruz)]"
-                      : "text-[color:var(--tinta-suave)]"
-                  }`}
-                >
-                  <SlidersHorizontal size={15} aria-hidden="true" />
-                  Filtrar
-                  {hayFiltrosActivos(filtros) && (
-                    <span
-                      className="absolute -right-1 -top-0.5 h-1.5 w-1.5 rounded-full bg-[var(--verde-cruz)]"
-                      aria-hidden="true"
-                    />
-                  )}
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setOrden(orden === "precio" ? "relevancia" : "precio")}
-                aria-label={`Ordenar por ${orden === "precio" ? "relevancia" : "precio"}`}
-                className="flex items-center gap-1 text-xs text-[color:var(--tinta-suave)]"
-              >
-                Ordenar:{" "}
-                <span className="font-semibold text-[color:var(--verde-cruz)]">
-                  {orden === "precio" ? "precio" : "relevancia"}
-                </span>
-                <ChevronDown size={13} className="text-[var(--verde-cruz)]" aria-hidden="true" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="flex-1 overflow-y-auto">
-        {/* pb-28 evita que la barra flotante de la lista tape la última tarjeta */}
-        <div
-          className={`max-w-2xl mx-auto px-4 py-4 space-y-3 ${totalDistintos > 0 ? "pb-44" : "pb-24"}`}
-        >
-          {api.cargando && <EstadoCargando />}
-
-          {!api.cargando && api.resultados.length === 0 && <EstadoVacio termino={terminoBuscado} />}
-
-          {/* Aviso de récipe — señal de legitimidad. Los medicamentos
-              controlados exigen récipe médico; DosisYa no vende, solo conecta. */}
-          {!api.cargando && resultadosOrdenados.length > 0 && (
-            <div
-              role="note"
-              className="flex items-start gap-2 rounded-xl border border-[#f3dcc0] bg-[var(--ambar-fondo)] px-2.5 py-2 text-xs leading-snug text-[color:var(--ambar-receta)]"
-            >
-              <Info size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
-              <p>
-                Algunos medicamentos requieren <strong>récipe médico</strong>. La farmacia te lo
-                pedirá al momento de la compra.
-              </p>
-            </div>
-          )}
-
-          {/* Recordatorio de resurtido — opt-in para el término buscado. */}
-          {!api.cargando && resultadosOrdenados.length > 0 && terminoBuscado && (
-            <div className="flex justify-end">
-              {montado && recordatorios.estaActivo(terminoBuscado) ? (
-                <button
-                  type="button"
-                  onClick={() => recordatorios.eliminar(terminoBuscado)}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-medium px-3 py-1.5 hover:bg-emerald-100 transition-colors"
-                >
-                  🔔 Te recordaré resurtir · quitar
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => recordatorios.agregar(terminoBuscado)}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 text-gray-600 text-xs font-medium px-3 py-1.5 hover:bg-gray-50 transition-colors"
-                >
-                  🔔 Recordarme resurtir en 30 días
-                </button>
-              )}
-            </div>
-          )}
-
-          {!api.cargando && filtrosAbiertos && resultadosOrdenados.length >= 2 && (
-            <BarraFiltros
-              resultados={resultadosOrdenados}
-              filtros={filtros}
-              onFiltrosChange={setFiltros}
-              radioM={radio}
-            />
-          )}
-
-          {!api.cargando &&
-            resultadosVisibles.map((res, i) => {
-              const clave = claveResultado(res);
-              const comparando = compararClaves.includes(clave);
-              return (
-                <TarjetaResultado
-                  key={`${clave}-${i}`}
-                  resultado={res}
-                  esMasEconomico={clave === claveEconomico}
-                  onAgregado={volarAlCarrito}
-                  comparando={comparando}
-                  onToggleComparar={() => toggleComparar(clave)}
-                  compararDeshabilitado={!comparando && compararClaves.length >= MAX_COMPARAR}
-                />
-              );
-            })}
-
-          {/* Había resultados pero los filtros los ocultan todos */}
-          {!api.cargando &&
-            api.resultados.length > 0 &&
-            resultadosVisibles.length === 0 &&
-            hayFiltrosActivos(filtros) && (
-              <div className="rounded-xl bg-white border border-gray-100 p-8 text-center">
-                <p className="text-sm text-gray-600">Ningún resultado cumple los filtros.</p>
-                <button
-                  type="button"
-                  onClick={() => setFiltros(FILTROS_INICIALES)}
-                  className="mt-3 rounded-lg bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:opacity-90 transition-opacity"
-                >
-                  Limpiar filtros
-                </button>
-              </div>
-            )}
-
-          {/* Sello de confianza — todas las farmacias en resultados están
-              afiliadas y activas (estado_afiliacion = 'activa' en el backend). */}
-          {!api.cargando && resultadosOrdenados.length > 0 && (
-            <p className="flex items-center justify-center gap-1.5 text-center text-xs text-gray-400 pt-1">
-              <span aria-hidden="true">✅</span>
-              Farmacias afiliadas y verificadas por DosisYa
-            </p>
-          )}
-        </div>
-      </main>
-    </div>
-  );
-
-  // Farmacias cercanas derivadas de los resultados actuales (únicas por id).
-  const farmaciasCercanas = useMemo(() => {
-    const map = new Map<
-      string,
-      { id: string; nombre: string; direccion: string; distancia_m: number; count: number }
-    >();
-    for (const r of api.resultados) {
-      const cur = map.get(r.farmacia_id);
-      if (cur) cur.count += 1;
-      else
-        map.set(r.farmacia_id, {
-          id: r.farmacia_id,
-          nombre: r.farmacia_nombre,
-          direccion: r.direccion,
-          distancia_m: r.distancia_m,
-          count: 1,
-        });
-    }
-    return [...map.values()].sort((a, b) => a.distancia_m - b.distancia_m);
-  }, [api.resultados]);
-
-  const fmtKm = (m: number) => (m / 1000).toFixed(1).replace(".", ",") + " km";
-
-  const vistaFarmacias = (
-    <div className="dosisya-ui min-h-screen" style={{ background: "var(--papel)" }}>
-      <div className="mx-auto max-w-2xl px-4 py-6" style={{ paddingBottom: 104 }}>
-        <h1
-          style={{ fontSize: 20, fontWeight: 500, color: "var(--tinta)", letterSpacing: "-0.02em" }}
-        >
-          Farmacias cerca de ti
-        </h1>
-        <p style={{ fontSize: 12.5, color: "var(--tinta-tenue)", marginTop: 2 }}>
-          {farmaciasCercanas.length > 0
-            ? `${farmaciasCercanas.length} aliada(s) que tienen tu búsqueda`
-            : "Aliadas verificadas en Acarigua/Araure"}
-        </p>
-
-        {/* Placeholder de mapa (handoff): superficie visual, no un mapa real. */}
-        <div
-          aria-hidden="true"
-          style={{
-            position: "relative",
-            height: 196,
-            marginTop: 16,
-            borderRadius: 18,
-            border: "1px solid var(--borde)",
-            overflow: "hidden",
-            background:
-              "repeating-linear-gradient(45deg,#f2f3ef,#f2f3ef 11px,#ecefe9 11px,#ecefe9 22px)",
-          }}
-        >
-          <span style={{ position: "absolute", left: 64, top: 56, color: "var(--verde-cruz)" }}>
-            <MapPin className="h-[30px] w-[30px]" strokeWidth={1.4} />
-          </span>
-          <span style={{ position: "absolute", right: 70, top: 96, color: "var(--verde-vivo)" }}>
-            <MapPin className="h-[26px] w-[26px]" strokeWidth={1.4} />
-          </span>
-          <span
-            className="dy-num"
-            style={{
-              position: "absolute",
-              left: "50%",
-              top: "50%",
-              transform: "translate(-50%,-50%)",
-              fontFamily: "ui-monospace,Menlo,monospace",
-              fontSize: 11,
-              color: "var(--tinta-tenue)",
-              background: "rgba(250,250,247,0.82)",
-              padding: "5px 9px",
-              borderRadius: 7,
-            }}
-          >
-            mapa · farmacias cercanas
-          </span>
-        </div>
-
-        {farmaciasCercanas.length === 0 ? (
-          <div
-            style={{
-              marginTop: 16,
-              textAlign: "center",
-              padding: "34px 20px",
-              background: "var(--blanco)",
-              border: "1px dashed var(--borde)",
-              borderRadius: 16,
-            }}
-          >
-            <span
-              className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl"
-              style={{ background: "var(--fondo-suave)", color: "var(--verde-cruz)" }}
-            >
-              <MapPin className="h-6 w-6" aria-hidden="true" />
-            </span>
-            <div style={{ fontSize: 14.5, fontWeight: 500, color: "var(--tinta)", marginTop: 12 }}>
-              Busca un medicamento
-            </div>
-            <div
-              style={{
-                fontSize: 12.5,
-                color: "var(--tinta-tenue)",
-                marginTop: 3,
-                lineHeight: 1.45,
-              }}
-            >
-              Te mostramos las farmacias cercanas que lo tienen disponible.
-            </div>
-            <button
-              type="button"
-              onClick={() => setTab("buscar")}
-              className="dy-foco"
-              style={{
-                marginTop: 16,
-                height: 44,
-                padding: "0 18px",
-                background: "var(--verde-cruz)",
-                color: "var(--papel)",
-                border: 0,
-                borderRadius: 12,
-                fontSize: 14,
-                fontWeight: 500,
-              }}
-            >
-              Ir a buscar
-            </button>
-          </div>
-        ) : (
-          <ul
-            style={{
-              marginTop: 16,
-              listStyle: "none",
-              padding: 0,
-              background: "var(--blanco)",
-              border: "1px solid var(--borde)",
-              borderRadius: 16,
-              overflow: "hidden",
-            }}
-          >
-            {farmaciasCercanas.map((f, i) => (
-              <li
-                key={f.id}
-                className="flex items-center gap-3"
-                style={{
-                  padding: "13px 14px",
-                  borderBottom: i < farmaciasCercanas.length - 1 ? "1px solid #eef0eb" : "none",
-                }}
-              >
-                <span
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                  style={{ background: "var(--fondo-suave)", color: "var(--verde-cruz)" }}
-                >
-                  <MapPin className="h-[18px] w-[18px]" aria-hidden="true" />
-                </span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
-                    style={{ fontSize: 14, fontWeight: 500, color: "var(--tinta)" }}
-                    className="truncate"
-                  >
-                    {f.nombre}
-                  </div>
-                  <div
-                    className="dy-num truncate"
-                    style={{ fontSize: 12, color: "var(--tinta-tenue)", marginTop: 1 }}
-                  >
-                    {fmtKm(f.distancia_m)} · {f.count} resultado{f.count === 1 ? "" : "s"}
-                  </div>
-                </div>
-                <ChevronRight
-                  className="h-[18px] w-[18px] shrink-0"
-                  style={{ color: "#c3c6c0" }}
-                  aria-hidden="true"
-                />
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </div>
-  );
-
-  const contenido =
-    tab === "farmacias" ? vistaFarmacias : estado === "hero" ? vistaHero : vistaResultados;
-
   return (
     <>
       <AnimatePresence>
         {splashVisible && <SplashScreen onFinish={() => setSplashVisible(false)} />}
       </AnimatePresence>
 
-      {contenido}
+      {tab === "farmacias" ? (
+        <VistaFarmacias resultados={api.resultados} onSetTab={setTab} />
+      ) : estado === "hero" ? (
+        <HeroBusqueda
+          query={query}
+          onQueryChange={setQuery}
+          onSubmit={handleSubmit}
+          cargando={api.cargando}
+          onRecalcularUbicacion={handleRecalcular}
+          busquedasRecientes={recientes.busquedas}
+          onBuscarTermino={(term) => ejecutarBusqueda(term, 5)}
+          resurtidosVencidos={resurtidosVencidos}
+          onResurtir={(term) => {
+            recordatorios.agregar(term); // re-arma otro ciclo de 30 días
+            ejecutarBusqueda(term, 5);
+          }}
+          geoError={geo.error}
+          geoCargando={geo.cargando}
+          conDelivery={conDelivery}
+          onToggleDelivery={() => setConDelivery(!conDelivery)}
+          onEscanearRecipe={() => setEscanerAbierto(true)}
+          onAbrirCuenta={() => setLoginAbierto(true)}
+          tasa={tasa?.tasa ?? null}
+        />
+      ) : (
+        <VistaResultados
+          query={query}
+          setQuery={setQuery}
+          handleSubmit={handleSubmit}
+          setEstado={setEstado}
+          terminoBuscado={terminoBuscado}
+          setTerminoBuscado={setTerminoBuscado}
+          cargando={api.cargando}
+          totalResultados={api.totalResultados}
+          resultados={api.resultados}
+          resultadosOrdenados={resultadosOrdenados}
+          resultadosVisibles={resultadosVisibles}
+          filtrosAbiertos={filtrosAbiertos}
+          setFiltrosAbiertos={setFiltrosAbiertos}
+          orden={orden}
+          setOrden={setOrden}
+          filtros={filtros}
+          setFiltros={setFiltros}
+          radio={radio}
+          totalDistintos={totalDistintos}
+          recordatoriosActivo={recordatorios.estaActivo(terminoBuscado)}
+          onEliminarRecordatorio={recordatorios.eliminar}
+          onAgregarRecordatorio={recordatorios.agregar}
+          claveEconomico={claveEconomico}
+          compararClaves={compararClaves}
+          MAX_COMPARAR={MAX_COMPARAR}
+          volarAlCarrito={volarAlCarrito}
+          toggleComparar={toggleComparar}
+          alLimpiarBusqueda={alLimpiarBusqueda}
+          montado={montado}
+        />
+      )}
 
       {/* Lista Médica — visible sobre ambas vistas (spec receta-ia-y-carrito) */}
       <CartSummary onVerLista={() => setListaAbierta(true)} />

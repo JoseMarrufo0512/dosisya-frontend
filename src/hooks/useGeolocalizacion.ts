@@ -20,8 +20,10 @@ export function useGeolocalizacion(): GeolocalizacionState {
   });
 
   useEffect(() => {
+    let isMounted = true;
     obtenerPosicionActual()
       .then((pos) => {
+        if (!isMounted) return;
         setState({
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
@@ -29,14 +31,16 @@ export function useGeolocalizacion(): GeolocalizacionState {
           cargando: false,
         });
       })
-      .catch(() => {
+      .catch((err) => {
+        if (!isMounted) return;
         setState({
           lat: FALLBACK_COORDS.lat,
           lng: FALLBACK_COORDS.lng,
-          error: "Usando ubicación predeterminada: Acarigua",
+          error: `Usando ubicación predeterminada: Acarigua (${err instanceof Error ? err.message : String(err)})`,
           cargando: false,
         });
       });
+    return () => { isMounted = false; };
   }, []);
 
   return state;

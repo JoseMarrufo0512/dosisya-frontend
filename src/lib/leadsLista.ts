@@ -28,17 +28,20 @@ export function registrarLeadLista(
   if (items.length === 0) return;
 
   // Fan-out: un lead por medicamento (schema actual de leads_interacciones).
-  // El guard UUID y el keepalive viven en postLead (ver leads.ts). Verifica en
-  // Supabase que los leads entren con medicamento_buscado_id correcto (uno por fila).
-  for (const { medicamentoId, origen } of items) {
-    postLead({
-      farmaciaId,
-      tipo: "clic_whatsapp",
-      medicamentoId,
-      // Items previos a la feature no traen origen → lista_medica (nunca
-      // premium por accidente, misma regla que el backend)
-      origen: origen ?? "lista_medica",
-      keepalive: true,
-    });
-  }
+  // Serializamos los fetch usando await dentro de un IIFE async para evitar
+  // saturar la cola de conexiones del navegador (max 6 por origen),
+  // lo cual provocaba que leads masivos se abortaran o perdieran.
+  (async () => {
+    for (const { medicamentoId, origen } of items) {
+      await postLead({
+        farmaciaId,
+        tipo: "clic_whatsapp",
+        medicamentoId,
+        // Items previos a la feature no traen origen → lista_medica (nunca
+        // premium por accidente, misma regla que el backend)
+        origen: origen ?? "lista_medica",
+        keepalive: true,
+      });
+    }
+  })();
 }

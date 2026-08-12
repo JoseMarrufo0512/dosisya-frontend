@@ -134,6 +134,7 @@ export function HojaChatIA({ open, onClose }: { open: boolean; onClose: () => vo
       )}
       <div
         ref={listaRef}
+        aria-live="polite"
         className="flex flex-col gap-2.5"
         style={{ marginTop: 14, maxHeight: "46dvh", overflowY: "auto" }}
       >
