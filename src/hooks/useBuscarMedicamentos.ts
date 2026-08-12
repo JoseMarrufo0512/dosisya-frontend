@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { buscarMedicamentos, type ResultadoFarmacia } from "@/lib/api";
 import { track } from "@/lib/analytics";
+import * as Sentry from '@sentry/tanstackstart-react';
 
 export interface UseBuscarMedicamentosReturn {
   resultados: ResultadoFarmacia[];
@@ -62,6 +63,7 @@ export function useBuscarMedicamentos(): UseBuscarMedicamentosReturn {
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") return;
         if (idBusqueda !== idBusquedaRef.current) return;
+        Sentry.captureException(err);
         setError("Error inesperado al buscar medicamentos");
         setResultados([]);
         setTotalResultados(0);

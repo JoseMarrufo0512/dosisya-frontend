@@ -7,6 +7,7 @@ import { construirMensajeLista, construirUrlWhatsApp } from "@/lib/whatsapp";
 import type { ItemLista } from "@/hooks/useListaMedica";
 import { BadgePremium } from "@/components/BadgePremium";
 import { BadgeDelivery } from "@/components/BadgeDelivery";
+import { track } from "@/lib/analytics";
 
 // Radio amplio para la cobertura: preferimos mostrar una farmacia a 6 km con
 // la lista completa antes que esconderla. La distancia sigue visible para que
@@ -125,6 +126,8 @@ export function SelectorFarmacia({ lista, lat, lng }: SelectorFarmaciaProps) {
       farmacia.farmaciaId,
       lista.map((i) => ({ medicamentoId: i.medicamentoId, origen: i.origen })),
     );
+
+    track('farmacia_contactada', { farmacia_id: farmacia.farmaciaId, items: lista.length });
 
     // 2) Abrir WhatsApp con la lista completa
     window.open(url, "_blank", "noopener,noreferrer");

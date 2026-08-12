@@ -7,6 +7,8 @@
 //   - lat / lng      → ST_Y/ST_X(f.ubicacion) AS lat/lng
 //   - medicamento_nombre → im.principio_activo AS medicamento_nombre
 
+import * as Sentry from '@sentry/tanstackstart-react';
+
 /** Nivel de suscripción de una farmacia (columna nivel_suscripcion en BD). */
 export type NivelSuscripcion = "gratuita" | "premium";
 
@@ -93,10 +95,15 @@ export async function buscarMedicamentos(
       `${API_BASE}/api/v1/medicamentos/buscar?${qs.toString()}`,
       { signal }
     );
+    if (!res.ok) {
+      Sentry.captureException(new Error(`API Error: ${res.status}`));
+      return { status: "error", message: `Error ${res.status}`, data: null };
+    }
     const json = (await res.json()) as RespuestaAPI;
     return json;
   } catch (err) {
     if (err instanceof Error && err.name === "AbortError") throw err;
+    Sentry.captureException(err);
     return { status: "error", message: "Error de red", data: null };
   }
 }

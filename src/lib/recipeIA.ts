@@ -12,6 +12,7 @@
 
 import { API_BASE } from "./api";
 import { comprimirImagen } from "./comprimirImagen";
+import * as Sentry from '@sentry/tanstackstart-react';
 
 // ── Tipos del contrato backend ──────────────────────────────────────────────
 
@@ -117,6 +118,7 @@ export async function analizarRecipe(imagen: File): Promise<RespuestaRecipe> {
         data: null,
       };
     }
+    Sentry.captureException(e);
     return {
       status: "error",
       message: "Error de conexión. Revisa tu internet e intenta de nuevo.",
