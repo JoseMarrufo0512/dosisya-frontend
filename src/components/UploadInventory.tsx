@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Upload, Sparkles, FileSpreadsheet, Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { API_BASE } from "@/lib/api";
+import * as Sentry from '@sentry/tanstackstart-react';
+import { track } from "@/lib/analytics";
 
 const ACCEPTED_EXT = [".csv", ".xlsx"];
 const ACCEPTED_MIME = [
@@ -101,6 +103,7 @@ export function UploadInventory({ onUploaded }: Props) {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
           body: formData,
+          signal: AbortSignal.timeout(180_000),
         });
 
         // Los fallos de validación (auth, formato, tamaño) siguen llegando
@@ -147,10 +150,13 @@ export function UploadInventory({ onUploaded }: Props) {
         } else {
           toast.success("¡Inventario actualizado con éxito!");
         }
+        track('inventario_subido', { total: (payload as any).total_procesados ?? 0 });
         onUploaded?.(payload);
       } catch (e) {
+        Sentry.captureException(e);
         const msg = e instanceof Error ? e.message : "Error subiendo el archivo";
         toast.error(msg);
+        track('inventario_error', { motivo: msg });
       } finally {
         setUploading(false);
         setProgreso(null);

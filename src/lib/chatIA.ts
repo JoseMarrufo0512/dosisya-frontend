@@ -7,6 +7,7 @@
  * qué pasó en vez de un "no pude responder" para todo.
  */
 import { API_BASE } from "./api";
+import * as Sentry from '@sentry/tanstackstart-react';
 
 export type MensajeChat = { rol: "usuario" | "asistente"; texto: string };
 
@@ -89,6 +90,7 @@ export async function enviarMensajeChat(mensajes: MensajeChat[]): Promise<string
       throw new ErrorChat("timeout", `El asistente no respondió en ${TIMEOUT_MS} ms`);
     }
     if (e instanceof ErrorChat) throw e; // ya tipado arriba: no lo degrades
+    Sentry.captureException(e);
     throw new ErrorChat("desconocido", `Falló la red: ${String(e)}`);
   } finally {
     clearTimeout(reloj);

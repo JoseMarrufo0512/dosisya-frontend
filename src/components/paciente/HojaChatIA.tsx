@@ -18,6 +18,7 @@ import {
   type CodigoErrorChat,
   type MensajeChat,
 } from "@/lib/chatIA";
+import * as Sentry from '@sentry/tanstackstart-react';
 
 /**
  * `error: true` marca las burbujas que escribimos nosotros cuando falla la
@@ -84,6 +85,7 @@ export function HojaChatIA({ open, onClose }: { open: boolean; onClose: () => vo
       const respuesta = await enviarMensajeChat(historial);
       setMensajes((m) => [...m, { de: "ia", texto: respuesta }]);
     } catch (e) {
+      Sentry.captureException(e);
       const codigo = e instanceof ErrorChat ? e.codigo : "desconocido";
       setMensajes((m) => [...m, { de: "ia", texto: MENSAJE_ERROR[codigo], error: true }]);
     } finally {
