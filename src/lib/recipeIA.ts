@@ -105,6 +105,8 @@ export async function analizarRecipe(imagen: File): Promise<RespuestaRecipe> {
         message = "Has hecho muchas solicitudes. Espera un momento e intenta de nuevo.";
       } else if (res.status === 503) {
         message = "El servicio de IA está temporalmente saturado. Intenta en unos segundos.";
+      } else if (res.status === 504) {
+        message = "El análisis tardó demasiado. Intenta con una foto más clara o con mejor iluminación.";
       } else {
         message = txt || `Error del servidor (${res.status})`;
       }

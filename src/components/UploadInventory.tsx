@@ -109,8 +109,16 @@ export function UploadInventory({ onUploaded }: Props) {
         // Los fallos de validación (auth, formato, tamaño) siguen llegando
         // como código HTTP; los de IA/BD viajan dentro del stream.
         if (!res.ok) {
+          let errorMsg = "";
+          if (res.status === 429) {
+            errorMsg = "Has subido muchos archivos seguidos. Espera un momento.";
+          } else if (res.status === 503) {
+            errorMsg = "El sistema está procesando mucha información. Intenta en unos minutos.";
+          } else if (res.status === 504) {
+            errorMsg = "La conexión tardó demasiado. Asegúrate de tener buena señal de internet.";
+          }
           const txt = await res.text().catch(() => "");
-          throw new Error(txt || `Error ${res.status}`);
+          throw new Error(errorMsg || txt || `Error ${res.status}`);
         }
 
         let payload: Record<string, unknown> | null = null;

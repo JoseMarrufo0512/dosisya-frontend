@@ -73,9 +73,13 @@ export async function enviarMensajeChat(mensajes: MensajeChat[]): Promise<string
     });
 
     if (!res.ok) {
-      // 429 = rate limit (20/min por IP); 503 = Gemini caído/timeout/cuota.
+      // 429 = rate limit (20/min por IP); 503/504 = Gemini caído/timeout/cuota.
       const codigo: CodigoErrorChat =
-        res.status === 429 ? "limite" : res.status === 503 ? "no_disponible" : "desconocido";
+        res.status === 429
+          ? "limite"
+          : res.status === 503 || res.status === 504
+            ? "no_disponible"
+            : "desconocido";
       throw new ErrorChat(codigo, `El asistente respondió ${res.status}`);
     }
 
