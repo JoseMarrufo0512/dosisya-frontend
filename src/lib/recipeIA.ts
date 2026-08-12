@@ -100,9 +100,17 @@ export async function analizarRecipe(imagen: File): Promise<RespuestaRecipe> {
 
     if (!res.ok) {
       const txt = await res.text().catch(() => "");
+      let message: string;
+      if (res.status === 429) {
+        message = "Has hecho muchas solicitudes. Espera un momento e intenta de nuevo.";
+      } else if (res.status === 503) {
+        message = "El servicio de IA está temporalmente saturado. Intenta en unos segundos.";
+      } else {
+        message = txt || `Error del servidor (${res.status})`;
+      }
       return {
         status: "error",
-        message: txt || `Error del servidor (${res.status})`,
+        message,
         data: null,
       };
     }
