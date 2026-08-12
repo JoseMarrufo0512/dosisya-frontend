@@ -299,7 +299,7 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
                 </div>
 
                 {/* Texto de estado */}
-                <div className="mt-6 flex flex-col items-center gap-2 text-center">
+                <div aria-live="polite" className="mt-6 flex flex-col items-center gap-2 text-center">
                   <div className="flex items-center gap-2">
                     <Sparkles className="h-5 w-5 text-emerald-500 animate-pulse" />
                     <p className="font-semibold text-foreground">

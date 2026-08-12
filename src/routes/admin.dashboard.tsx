@@ -1070,7 +1070,7 @@ function SoporteSection() {
   return (
     <div className="space-y-6 max-w-2xl">
       <a
-        href="https://wa.me/584120000000?text=Hola%20DosisYa%2C%20necesito%20ayuda%20con%20mi%20panel"
+        href="https://wa.me/584245928624?text=Hola%20DosisYa%2C%20necesito%20ayuda%20con%20mi%20panel"
         target="_blank"
         rel="noopener noreferrer"
         className="dy-foco block p-5 sm:p-6 transition-colors"
