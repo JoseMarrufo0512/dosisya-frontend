@@ -121,8 +121,9 @@ export function SelectorFarmacia({ lista, lat, lng }: SelectorFarmaciaProps) {
     setBloqueadaId(String(farmacia.farmaciaId));
     setTimeout(() => setBloqueadaId(null), 2000);
 
-    // 1) Lead CPC multi-producto — keepalive sobrevive a la navegación
-    registrarLeadLista(
+    // 1) Lead CPC multi-producto — keepalive sobrevive a la navegación.
+    // No se espera: serializa internamente, pero no debe retrasar el wa.me de abajo.
+    void registrarLeadLista(
       farmacia.farmaciaId,
       lista.map((i) => ({ medicamentoId: i.medicamentoId, origen: i.origen })),
     );
