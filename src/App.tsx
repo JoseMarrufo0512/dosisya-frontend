@@ -186,13 +186,30 @@ export default function App() {
     ejecutarBusqueda(query, 5);
   };
 
-  // Efecto inicial para buscar si venimos de un link con ?q=... (MED-7)
+  // Efecto inicial para buscar si venimos de un link con ?q=... (MED-7).
+  // Dispara de inmediato con las coordenadas que haya en ese momento —
+  // normalmente el fallback de Acarigua, porque geo.lat todavía es null en
+  // el primer render — para no dejar la vista de resultados vacía mientras
+  // se resuelve la geolocalización.
   useEffect(() => {
     if (qInit) {
       void api.buscar(qInit, latEfectiva, lngEfectiva, false, 5000);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Si esa búsqueda inicial salió con el fallback y la geolocalización real
+  // resuelve después CON ÉXITO, la repetimos con las coordenadas reales: si
+  // no, quien abre un link compartido desde Araure se queda con resultados
+  // sesgados hacia Acarigua para siempre, sin ninguna señal de que pasó.
+  // No se repite si geo falló (mismo fallback, buscar de nuevo no cambiaría nada).
+  const geoLlegoTardeRef = useRef(false);
+  useEffect(() => {
+    if (!qInit || geo.cargando || geo.error || geoLlegoTardeRef.current) return;
+    geoLlegoTardeRef.current = true;
+    void api.buscar(qInit, latEfectiva, lngEfectiva, false, 5000);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [geo.cargando]);
 
   // Sincronizar estado a URL (MED-7)
   useEffect(() => {

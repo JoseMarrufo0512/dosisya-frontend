@@ -21,27 +21,29 @@ export interface ItemLeadLista {
   origen?: OrigenLead;
 }
 
-export function registrarLeadLista(
+/**
+ * Fire-and-forget para quien no espera esta promesa (SelectorFarmacia abre
+ * wa.me sin esperarla) — pero es una promesa real: `postLead` retorna el
+ * fetch, así que este `await` sí serializa, uno a la vez, en vez de disparar
+ * N fetches simultáneos que saturan la cola de conexiones del navegador
+ * (máx. 6 por origen) y provocaban que leads masivos se abortaran o perdieran.
+ */
+export async function registrarLeadLista(
   farmaciaId: string | number,
   items: ItemLeadLista[],
-): void {
+): Promise<void> {
   if (items.length === 0) return;
 
   // Fan-out: un lead por medicamento (schema actual de leads_interacciones).
-  // Serializamos los fetch usando await dentro de un IIFE async para evitar
-  // saturar la cola de conexiones del navegador (max 6 por origen),
-  // lo cual provocaba que leads masivos se abortaran o perdieran.
-  (async () => {
-    for (const { medicamentoId, origen } of items) {
-      await postLead({
-        farmaciaId,
-        tipo: "clic_whatsapp",
-        medicamentoId,
-        // Items previos a la feature no traen origen → lista_medica (nunca
-        // premium por accidente, misma regla que el backend)
-        origen: origen ?? "lista_medica",
-        keepalive: true,
-      });
-    }
-  })();
+  for (const { medicamentoId, origen } of items) {
+    await postLead({
+      farmaciaId,
+      tipo: "clic_whatsapp",
+      medicamentoId,
+      // Items previos a la feature no traen origen → lista_medica (nunca
+      // premium por accidente, misma regla que el backend)
+      origen: origen ?? "lista_medica",
+      keepalive: true,
+    });
+  }
 }
