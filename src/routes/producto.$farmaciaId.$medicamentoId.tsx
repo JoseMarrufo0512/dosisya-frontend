@@ -29,7 +29,9 @@ interface ProductoDetalle {
 // relativa revienta ahí (no hay document.baseURI) — por eso el servidor
 // necesita su propia base absoluta, igual al target del proxy en vite.config.mts.
 const resolveApiBase = createIsomorphicFn()
-  .server(() => import.meta.env.VITE_API_URL || process.env.DEV_API_PROXY || "http://localhost:8000")
+  .server(
+    () => import.meta.env.VITE_API_URL || process.env.DEV_API_PROXY || "http://localhost:8000",
+  )
   .client(() => API_BASE);
 
 async function cargarProducto(
@@ -38,9 +40,7 @@ async function cargarProducto(
 ): Promise<ProductoDetalle | null> {
   const base = resolveApiBase();
   try {
-    const res = await fetch(
-      `${base}/api/v1/medicamentos/${medicamentoId}/farmacias/${farmaciaId}`,
-    );
+    const res = await fetch(`${base}/api/v1/medicamentos/${medicamentoId}/farmacias/${farmaciaId}`);
     if (!res.ok) return null;
     const json = await res.json();
     return json?.data ?? null;
@@ -74,7 +74,10 @@ export const Route = createFileRoute("/producto/$farmaciaId/$medicamentoId")({
   },
   component: ProductoPage,
   notFoundComponent: () => (
-    <div className="dosisya-ui flex min-h-screen flex-col items-center justify-center gap-3 px-4 text-center" style={{ background: "var(--papel)" }}>
+    <div
+      className="dosisya-ui flex min-h-screen flex-col items-center justify-center gap-3 px-4 text-center"
+      style={{ background: "var(--papel)" }}
+    >
       <Pill className="h-10 w-10" style={{ color: "var(--tinta-tenue)" }} aria-hidden="true" />
       <h1 className="text-lg font-semibold" style={{ color: "var(--tinta)" }}>
         No encontramos este producto
@@ -82,7 +85,11 @@ export const Route = createFileRoute("/producto/$farmaciaId/$medicamentoId")({
       <p className="text-sm" style={{ color: "var(--tinta-tenue)" }}>
         Puede que la farmacia ya no lo tenga listado.
       </p>
-      <Link to="/" className="mt-2 text-sm font-medium underline" style={{ color: "var(--verde-cruz)" }}>
+      <Link
+        to="/buscar"
+        className="mt-2 text-sm font-medium underline"
+        style={{ color: "var(--verde-cruz)" }}
+      >
         Buscar en DosisYa
       </Link>
     </div>
@@ -95,7 +102,12 @@ function ProductoPage() {
   const handleWhatsApp = () => {
     const url = construirUrlWhatsApp(
       p.whatsapp,
-      construirMensajeProducto(p.farmacia_nombre, p.medicamento_nombre, p.presentacion, p.precio_usd),
+      construirMensajeProducto(
+        p.farmacia_nombre,
+        p.medicamento_nombre,
+        p.presentacion,
+        p.precio_usd,
+      ),
     );
     if (!url) {
       toast.error("Esta farmacia no tiene WhatsApp registrado");
@@ -137,12 +149,18 @@ function ProductoPage() {
               </span>
             )}
           </div>
-          <p className="mt-1 flex items-center gap-1 text-[12px]" style={{ color: "var(--tinta-tenue)" }}>
+          <p
+            className="mt-1 flex items-center gap-1 text-[12px]"
+            style={{ color: "var(--tinta-tenue)" }}
+          >
             <MapPin size={12} aria-hidden="true" />
             {p.direccion}
           </p>
 
-          <p className="mt-3 text-[16px] font-semibold leading-snug" style={{ color: "var(--tinta)" }}>
+          <p
+            className="mt-3 text-[16px] font-semibold leading-snug"
+            style={{ color: "var(--tinta)" }}
+          >
             {p.medicamento_nombre}{" "}
             <span className="font-normal" style={{ color: "var(--tinta-suave)" }}>
               {p.presentacion}
@@ -156,10 +174,16 @@ function ProductoPage() {
 
           {p.stock_disponible ? (
             <div className="mt-3">
-              <div className="text-[26px] font-bold leading-none tabular-nums tracking-tight" style={{ color: "var(--verde-cruz)" }}>
+              <div
+                className="text-[26px] font-bold leading-none tabular-nums tracking-tight"
+                style={{ color: "var(--verde-cruz)" }}
+              >
                 ${p.precio_usd.toFixed(2)}
               </div>
-              <div className="mt-1 text-[13px] tabular-nums" style={{ color: "var(--tinta-suave)" }}>
+              <div
+                className="mt-1 text-[13px] tabular-nums"
+                style={{ color: "var(--tinta-suave)" }}
+              >
                 Bs {p.precio_ves.toLocaleString("es-VE", { minimumFractionDigits: 2 })}
               </div>
             </div>

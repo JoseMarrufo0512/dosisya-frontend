@@ -1,14 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import App from "@/App";
+import { LandingPage } from "@/components/landing/LandingPage";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "DosisYa — Encuentra tu medicamento cerca de ti" },
+      { title: "DosisYa — Marketplace farmacéutico hiperlocal" },
       {
         name: "description",
         content:
-          "Busca medicamentos en farmacias cercanas en Venezuela. Compara precios en USD y Bs., y contacta por WhatsApp al instante.",
+          "DosisYa conecta pacientes con farmacias en Acarigua y Araure. Busca medicamentos sin registrarte, o registra tu farmacia y recibe contactos por WhatsApp.",
       },
     ],
   }),
@@ -16,5 +16,5 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  return <App />;
+  return <LandingPage />;
 }

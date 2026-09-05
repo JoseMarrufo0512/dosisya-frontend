@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TerminosRouteImport } from './routes/terminos'
 import { Route as PrivacidadRouteImport } from './routes/privacidad'
+import { Route as BuscarRouteImport } from './routes/buscar'
 import { Route as AcercaDeRouteImport } from './routes/acerca-de'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SuperLoginRouteImport } from './routes/super.login'
@@ -27,6 +28,11 @@ const TerminosRoute = TerminosRouteImport.update({
 const PrivacidadRoute = PrivacidadRouteImport.update({
   id: '/privacidad',
   path: '/privacidad',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BuscarRoute = BuscarRouteImport.update({
+  id: '/buscar',
+  path: '/buscar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AcercaDeRoute = AcercaDeRouteImport.update({
@@ -69,6 +75,7 @@ const ProductoFarmaciaIdMedicamentoIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/acerca-de': typeof AcercaDeRoute
+  '/buscar': typeof BuscarRoute
   '/privacidad': typeof PrivacidadRoute
   '/terminos': typeof TerminosRoute
   '/admin/dashboard': typeof AdminDashboardRoute
@@ -80,6 +87,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/acerca-de': typeof AcercaDeRoute
+  '/buscar': typeof BuscarRoute
   '/privacidad': typeof PrivacidadRoute
   '/terminos': typeof TerminosRoute
   '/admin/dashboard': typeof AdminDashboardRoute
@@ -92,6 +100,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/acerca-de': typeof AcercaDeRoute
+  '/buscar': typeof BuscarRoute
   '/privacidad': typeof PrivacidadRoute
   '/terminos': typeof TerminosRoute
   '/admin/dashboard': typeof AdminDashboardRoute
@@ -105,6 +114,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/acerca-de'
+    | '/buscar'
     | '/privacidad'
     | '/terminos'
     | '/admin/dashboard'
@@ -116,6 +126,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/acerca-de'
+    | '/buscar'
     | '/privacidad'
     | '/terminos'
     | '/admin/dashboard'
@@ -127,6 +138,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/acerca-de'
+    | '/buscar'
     | '/privacidad'
     | '/terminos'
     | '/admin/dashboard'
@@ -139,6 +151,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AcercaDeRoute: typeof AcercaDeRoute
+  BuscarRoute: typeof BuscarRoute
   PrivacidadRoute: typeof PrivacidadRoute
   TerminosRoute: typeof TerminosRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
@@ -162,6 +175,13 @@ declare module '@tanstack/react-router' {
       path: '/privacidad'
       fullPath: '/privacidad'
       preLoaderRoute: typeof PrivacidadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/buscar': {
+      id: '/buscar'
+      path: '/buscar'
+      fullPath: '/buscar'
+      preLoaderRoute: typeof BuscarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/acerca-de': {
@@ -219,6 +239,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AcercaDeRoute: AcercaDeRoute,
+  BuscarRoute: BuscarRoute,
   PrivacidadRoute: PrivacidadRoute,
   TerminosRoute: TerminosRoute,
   AdminDashboardRoute: AdminDashboardRoute,
