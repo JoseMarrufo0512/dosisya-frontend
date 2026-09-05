@@ -58,7 +58,8 @@ export function ListaMedicaDrawer({ abierta, onOpenChange, lat, lng }: ListaMedi
       toast.error("Esta farmacia no tiene WhatsApp registrado");
       return;
     }
-    registrarLeadLista(
+    // No se espera: serializa internamente, pero no debe retrasar el wa.me de abajo.
+    void registrarLeadLista(
       farmaciaUnica.id,
       lista.map((i) => ({ medicamentoId: i.medicamentoId, origen: i.origen })),
     );
