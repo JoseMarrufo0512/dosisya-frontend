@@ -55,18 +55,21 @@ export interface LeadPayload {
 
 /**
  * Único punto de envío de leads CPC (POST /api/v1/leads/, con trailing slash).
- * Fire-and-forget: los errores se tragan para nunca romper el UX.
+ * Nunca rechaza (los errores de red se tragan internamente) para no romper
+ * el UX del caller — pero SÍ retorna la promesa del fetch, para que quien
+ * necesite serializar varios leads (ver registrarLeadLista) pueda hacer
+ * `await postLead(...)` de verdad.
  *
  * ⚠️ Si el backend añade soporte de array en medicamento_buscado_id, este es el
  * único lugar (junto a registrarLeadLista) que hay que cambiar.
  */
-export function postLead(p: LeadPayload): void {
+export function postLead(p: LeadPayload): Promise<void> {
   track(p.tipo, {
     farmacia_id: p.farmaciaId,
     medicamento_id: p.medicamentoId,
     origen: p.origen,
   });
-  void fetch(`${API_BASE}/api/v1/leads/`, {
+  return fetch(`${API_BASE}/api/v1/leads/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -78,20 +81,22 @@ export function postLead(p: LeadPayload): void {
     // keepalive: la petición sobrevive si el navegador abandona la página
     // (crítico cuando el clic abre wa.me).
     keepalive: p.keepalive ?? false,
-  }).catch((err) => {
-    // Fire-and-forget: los leads CPC nunca deben romper el UX,
-    // pero SÍ reportamos a Sentry para detectar pérdida de revenue.
-    Sentry.captureMessage("lead_perdido", {
-      level: "warning",
-      extra: {
-        farmacia_id: p.farmaciaId,
-        tipo: p.tipo,
-        medicamento_id: p.medicamentoId,
-        origen: p.origen,
-        error: err instanceof Error ? err.message : String(err),
-      },
+  })
+    .then(() => undefined)
+    .catch((err) => {
+      // Fire-and-forget: los leads CPC nunca deben romper el UX,
+      // pero SÍ reportamos a Sentry para detectar pérdida de revenue.
+      Sentry.captureMessage("lead_perdido", {
+        level: "warning",
+        extra: {
+          farmacia_id: p.farmaciaId,
+          tipo: p.tipo,
+          medicamento_id: p.medicamentoId,
+          origen: p.origen,
+          error: err instanceof Error ? err.message : String(err),
+        },
+      });
     });
-  });
 }
 
 /**

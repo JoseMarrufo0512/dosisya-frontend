@@ -116,3 +116,33 @@ describe("registrarLead — origen por defecto", () => {
     expect(ultimaLlamadaFetch().body.origen).toBe("escaner_recipe");
   });
 });
+
+describe("postLead — retorna una promesa que resuelve tras el fetch real", () => {
+  it("el await se resuelve DESPUÉS de que el fetch resuelva, no en el mismo tick", async () => {
+    let fetchResuelto = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            setTimeout(() => {
+              fetchResuelto = true;
+              resolve(new Response(null, { status: 201 }));
+            }, 0);
+          }),
+      ),
+    );
+
+    await postLead({ farmaciaId: "f1", tipo: "clic_whatsapp", origen: "busqueda" });
+
+    expect(fetchResuelto).toBe(true);
+  });
+
+  it("el await no lanza aunque el fetch rechace (sigue fire-and-forget)", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
+
+    await expect(
+      postLead({ farmaciaId: "f1", tipo: "clic_whatsapp", origen: "busqueda" }),
+    ).resolves.toBeUndefined();
+  });
+});
