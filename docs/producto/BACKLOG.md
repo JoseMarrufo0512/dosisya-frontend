@@ -2,6 +2,8 @@
 
 > Última actualización: 2026-09-05.
 
+> **Nota de esta actualización:** B-001 se resolvió en `main` vía PR #21 (`d9692ee`, "serializa el fan-out de verdad") mientras este backlog estaba en revisión — no lo cerró este trabajo. Se movió a "Hecho" sin haber sido ejecutado desde aquí; verificado con `npx vitest run` (75/75 en verde) antes de mover la marca.
+
 ## Reglas de ejecución
 - Ejecutar tareas en orden de prioridad (P0 antes que P1).
 - No empezar una tarea marcada como bloqueada — pasar a la siguiente P0 no bloqueada.
@@ -10,10 +12,6 @@
 - Al cerrar una tarea, actualizar este archivo y `ESTADO-PROYECTO.md` en el mismo commit o el siguiente.
 
 ## P0 — Bloquea el lanzamiento
-
-- [ ] **B-001: Reparar la regresión de fan-out en `src/lib/leadsLista.test.ts`.**
-  3 de 74 tests fallan hoy en `main` (`npx vitest run`), lo que rompe el job `verify` de `.github/workflows/ci.yml` en cada push/PR. Ver memoria `regresion-leadslista-fanout-2026-08.md`. Antes de tocar código: leer `src/lib/leadsLista.ts` y su test, correr `npx vitest run src/lib/leadsLista.test.ts` para ver el fallo exacto, aplicar el skill `systematic-debugging`.
-  **Criterio de aceptación:** `npx vitest run` en verde (74/74), `npx tsc --noEmit` sigue en verde, `npm run build` sigue en verde (verificado en verde el 2026-09-05 antes de esta regresión; re-confirmar tras tocar `leadsLista.ts`).
 
 - [ ] **B-002: Verificación manual end-to-end de los 10 flujos del MVP en un solo recorrido.**
   Cada flujo de `VISION-MVP.md` se validó por separado en su propio plan; nunca se confirmaron los 10 juntos, en desktop y móvil, contra la API real. Usar el skill `webapp-testing`.
@@ -34,3 +32,5 @@
 
 ## Hecho (referencia — no repetir)
 Los 10 flujos obligatorios y las features adicionales listadas en `VISION-MVP.md` ya están mergeados; su historial vive en `docs/superpowers/specs/` y `docs/superpowers/plans/`. Este backlog no repite trabajo ya cerrado — solo lo que falta para el gate de lanzamiento.
+
+- **B-001** (regresión de fan-out en `leadsLista.test.ts`) — resuelto en `main` por PR #21 (`d9692ee`, 2026-09-05), fuera de este backlog. `npx vitest run` en verde (75/75) al momento de mover esta marca.
