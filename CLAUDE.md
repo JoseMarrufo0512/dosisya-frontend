@@ -43,12 +43,13 @@ Este archivo es la fuente de verdad para el contexto persistente de Claude Code.
 
 ## 6. Comandos
 - `npm run dev` (puerto 5173) · `npm run build` · `npm run lint` · `npm run format`
-- Verificación mínima antes de commit/push: `npx tsc --noEmit && npm run build` (los builds de Vercel ya se rompieron dos veces por saltarse esto).
+- Verificación mínima antes de commit/push: `npx tsc --noEmit && npm run build && npx vitest run` (los builds de Vercel ya se rompieron dos veces por saltarse esto; `npx vitest run` se agregó tras la regresión de fan-out de agosto 2026 que quedó sin detectar tres semanas por no correr los tests antes de commitear).
 - `scripts/test-leads-cpc.sh` — prueba end-to-end de leads CPC; correrlo tras tocar `leads*.ts` o `whatsapp.ts`.
 
 ## 7. Más Contexto
 - `docs/contexto/` — decisiones cerradas, errores conocidos, glosario, convenciones. Leer antes de proponer cambios grandes.
 - `docs/features/` — specs por funcionalidad (el "ticket" de lo que se va a construir).
+- `docs/producto/` — backlog priorizado, gate de lanzamiento del MVP, estado del proyecto y decisiones pendientes (ver también §8).
 
 ## 8. Protocolo de Trabajo Autónomo
 

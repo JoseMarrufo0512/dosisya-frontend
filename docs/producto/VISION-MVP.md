@@ -36,7 +36,7 @@ El MVP se considera terminado solo si:
 - [ ] El job `verify` de `.github/workflows/ci.yml` está en verde en `main`.
 - [ ] Los 10 flujos de arriba se verifican **juntos, en un solo recorrido manual**, en desktop y móvil, contra la API real (ver B-002 en `BACKLOG.md` — nunca se ha hecho; cada flujo se validó por separado en su propio plan).
 - [ ] No hay mocks activos en funcionalidades declaradas operativas (confirmado: el mock de `recipeIA` se eliminó en el commit `c85f157`).
-- [ ] El despliegue de Vercel funciona y no muestra errores de consola críticos.
+- [ ] El despliegue de Vercel funciona y no muestra errores de consola críticos (requiere un deploy real — acción de producción que necesita aprobación explícita de José per `CLAUDE.md` §8; no tiene tarea B-xxx propia en `BACKLOG.md` porque Claude no puede cerrarla de forma autónoma).
 
 ## Cómo se actualiza este documento
 Cuando una tarea de `BACKLOG.md` cierra un ítem de la Definition of Done, marca el checkbox aquí y anota el resultado en `ESTADO-PROYECTO.md`. Si aparece un flujo nuevo que el negocio considera obligatorio para lanzar, agrégalo aquí primero (requiere decisión de José — ver "Requiere autorización humana explícita" en `CLAUDE.md` §8) antes de crear tareas para él en `BACKLOG.md`.

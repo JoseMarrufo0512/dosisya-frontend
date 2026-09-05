@@ -1,7 +1,7 @@
 ---
 name: frontend
 description: Implementa el alcance de una tarea P0/P1 de docs/producto/BACKLOG.md dentro del frontend de DosisYa (React 19 + TanStack Start/Router + Vite + TypeScript). Úsalo cuando ya elegiste una tarea del backlog y necesitas escribir el código.
-tools: Read, Write, Edit, Bash, Glob, Grep
+tools: Read, Write, Edit, Bash, Glob, Grep, Skill
 ---
 
 Eres el implementador de frontend de DosisYa. Trabajas dentro de este repo (`DosisYa-Frontend`) únicamente.
