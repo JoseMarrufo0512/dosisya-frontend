@@ -43,9 +43,55 @@ Este archivo es la fuente de verdad para el contexto persistente de Claude Code.
 
 ## 6. Comandos
 - `npm run dev` (puerto 5173) · `npm run build` · `npm run lint` · `npm run format`
-- Verificación mínima antes de commit/push: `npx tsc --noEmit && npm run build` (los builds de Vercel ya se rompieron dos veces por saltarse esto).
+- Verificación mínima antes de commit/push: `npx tsc --noEmit && npm run build && npx vitest run` (los builds de Vercel ya se rompieron dos veces por saltarse esto; `npx vitest run` se agregó tras la regresión de fan-out de agosto 2026 que quedó sin detectar tres semanas por no correr los tests antes de commitear).
 - `scripts/test-leads-cpc.sh` — prueba end-to-end de leads CPC; correrlo tras tocar `leads*.ts` o `whatsapp.ts`.
 
 ## 7. Más Contexto
 - `docs/contexto/` — decisiones cerradas, errores conocidos, glosario, convenciones. Leer antes de proponer cambios grandes.
 - `docs/features/` — specs por funcionalidad (el "ticket" de lo que se va a construir).
+- `docs/producto/` — backlog priorizado, gate de lanzamiento del MVP, estado del proyecto y decisiones pendientes (ver también §8).
+
+## 8. Protocolo de Trabajo Autónomo
+
+### Misión
+Llevar el frontend de DosisYa al gate de lanzamiento definido en `docs/producto/VISION-MVP.md` de forma iterativa, segura y verificable — sin depender de una aprobación por cada microdecisión de desarrollo local.
+
+### Orden de lectura antes de tomar una tarea
+1. Este archivo (`CLAUDE.md`).
+2. `docs/producto/VISION-MVP.md` — qué falta para poder llamar "lanzable" al MVP.
+3. `docs/producto/BACKLOG.md` — la cola de trabajo priorizada.
+4. `docs/producto/ESTADO-PROYECTO.md` — qué se hizo en la última sesión y cuál es el próximo paso exacto.
+5. La especificación aplicable en `docs/features/` (si la tarea es una feature con spec propia).
+6. `docs/contexto/` antes de cambios grandes.
+
+### Selección de tarea
+Elegir siempre la tarea P0 no bloqueada de mayor prioridad en `docs/producto/BACKLOG.md`. No inventar tareas nuevas ni reordenar prioridades sin registrar la propuesta en `docs/producto/DECISIONES-PENDIENTES.md`.
+
+### Cómo ejecutar una tarea
+El ciclo de trabajo ya existe como skills — no lo reinventes:
+`brainstorming` (si la tarea cambia alcance o UX) → `writing-plans` → `executing-plans` o `subagent-driven-development` → `verification-before-completion` → `requesting-code-review`.
+Antes de escribir cualquier llamada HTTP nueva o modificada, verificar el contrato real con el skill `contrato-api`.
+
+### Niveles de autonomía
+
+| Nivel | Puedes hacerlo solo | Requiere aprobación explícita de José |
+|---|---|---|
+| Desarrollo local | Leer frontend y backend, editar frontend, crear/editar tests y docs, refactors pequeños, correr lint/tsc/build/tests, commits locales atómicos | — |
+| Integración | — | Cambios en `DosisYa-Backend`, Supabase, n8n; nuevas dependencias de producción; variables de entorno o secretos |
+| Producción | — | Push, PR, merge a `main`, deploy manual, cambios de modelo de negocio/precios/flujo de pacientes |
+
+### Requiere autorización humana explícita
+Detente y registra la pregunta en `docs/producto/DECISIONES-PENDIENTES.md` si necesitas:
+- Modificar el backend, la base de datos, Supabase o n8n.
+- Desplegar manualmente, cambiar variables de entorno o secretos.
+- Hacer push, crear PR o tocar la rama principal.
+- Cambiar el modelo de negocio, precios, cobros o flujo de pacientes.
+- Agregar dependencias de producción.
+- Inventar o alterar contratos de API.
+- Eliminar funcionalidad, datos o archivos relevantes.
+- Tomar una decisión de UX o negocio sin una especificación existente.
+
+Cuando haya un bloqueo, no te quedes detenido: documenta el bloqueo en `docs/producto/DECISIONES-PENDIENTES.md` y continúa con la siguiente tarea P0 no bloqueada de `docs/producto/BACKLOG.md`.
+
+### Cierre de tarea
+Al terminar una tarea (o al bloquearte), actualiza `docs/producto/ESTADO-PROYECTO.md` y marca el ítem correspondiente en `docs/producto/BACKLOG.md`.
