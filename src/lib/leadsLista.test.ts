@@ -73,7 +73,7 @@ describe("registrarLeadLista — fan-out (un POST por medicamento)", () => {
     postLeadSpy.mockRestore();
   });
 
-  it("serializa las llamadas: no dispara el siguiente POST hasta que el anterior resuelve", async () => {
+  it("dispara todos los leads en paralelo (no espera a que termine uno para iniciar el siguiente)", async () => {
     const orden: string[] = [];
     const postLeadSpy = vi
       .spyOn(leadsModule, "postLead")
@@ -95,8 +95,8 @@ describe("registrarLeadLista — fan-out (un POST por medicamento)", () => {
 
     expect(orden).toEqual([
       "start:med-a",
-      "end:med-a",
       "start:med-b",
+      "end:med-a",
       "end:med-b",
     ]);
     postLeadSpy.mockRestore();

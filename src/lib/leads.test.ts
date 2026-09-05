@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { postLead, registrarLead } from "./leads";
 import { API_BASE } from "./api";
+import * as Sentry from "@sentry/tanstackstart-react";
 
 function ultimaLlamadaFetch() {
   const mockFetch = fetch as unknown as ReturnType<typeof vi.fn>;
@@ -144,5 +145,20 @@ describe("postLead — retorna una promesa que resuelve tras el fetch real", () 
     await expect(
       postLead({ farmaciaId: "f1", tipo: "clic_whatsapp", origen: "busqueda" }),
     ).resolves.toBeUndefined();
+  });
+
+  it("nunca rechaza aunque Sentry.captureMessage lance (invariante fire-and-forget)", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
+    const sentrySpy = vi
+      .spyOn(Sentry, "captureMessage")
+      .mockImplementation(() => {
+        throw new Error("Sentry SDK crashed");
+      });
+
+    await expect(
+      postLead({ farmaciaId: "f1", tipo: "clic_whatsapp", origen: "busqueda" }),
+    ).resolves.toBeUndefined();
+
+    sentrySpy.mockRestore();
   });
 });

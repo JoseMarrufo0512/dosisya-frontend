@@ -28,19 +28,25 @@ export async function registrarLeadLista(
   if (items.length === 0) return;
 
   // Fan-out: un lead por medicamento (schema actual de leads_interacciones).
-  // Serializamos los fetch con await (postLead ahora retorna la promesa real
-  // del fetch) para evitar saturar la cola de conexiones del navegador
-  // (max 6 por origen), lo cual provocaba que leads masivos se abortaran
-  // o perdieran.
-  for (const { medicamentoId, origen } of items) {
-    await postLead({
-      farmaciaId,
-      tipo: "clic_whatsapp",
-      medicamentoId,
-      // Items previos a la feature no traen origen → lista_medica (nunca
-      // premium por accidente, misma regla que el backend)
-      origen: origen ?? "lista_medica",
-      keepalive: true,
-    });
-  }
+  // Disparamos los N POST en PARALELO (Promise.all), no serializados: al
+  // abrir wa.me el navegador pasa a segundo plano de inmediato, y no hay
+  // garantía de que la pestaña siga viva el tiempo suficiente para esperar
+  // leads secuenciales — eso arriesgaría perder leads 2..N (revenue CPC
+  // real). keepalive:true protege cada request individualmente aunque la
+  // página se descargue. postLead nunca rechaza (ver leads.ts), así que
+  // Promise.all es seguro: no hay excepción de un item que pueda abortar
+  // los demás.
+  await Promise.all(
+    items.map(({ medicamentoId, origen }) =>
+      postLead({
+        farmaciaId,
+        tipo: "clic_whatsapp",
+        medicamentoId,
+        // Items previos a la feature no traen origen → lista_medica (nunca
+        // premium por accidente, misma regla que el backend)
+        origen: origen ?? "lista_medica",
+        keepalive: true,
+      }),
+    ),
+  );
 }

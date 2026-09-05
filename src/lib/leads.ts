@@ -86,16 +86,23 @@ export function postLead(p: LeadPayload): Promise<void> {
     .catch((err) => {
       // Fire-and-forget: los leads CPC nunca deben romper el UX,
       // pero SÍ reportamos a Sentry para detectar pérdida de revenue.
-      Sentry.captureMessage("lead_perdido", {
-        level: "warning",
-        extra: {
-          farmacia_id: p.farmaciaId,
-          tipo: p.tipo,
-          medicamento_id: p.medicamentoId,
-          origen: p.origen,
-          error: err instanceof Error ? err.message : String(err),
-        },
-      });
+      // El try/catch es necesario: si Sentry.captureMessage lanzara, ese
+      // throw haría rechazar la promesa que retornamos, y quien la espere
+      // (ej. registrarLeadLista) vería el fan-out abortado a mitad de camino.
+      try {
+        Sentry.captureMessage("lead_perdido", {
+          level: "warning",
+          extra: {
+            farmacia_id: p.farmaciaId,
+            tipo: p.tipo,
+            medicamento_id: p.medicamentoId,
+            origen: p.origen,
+            error: err instanceof Error ? err.message : String(err),
+          },
+        });
+      } catch {
+        // Ni siquiera el reporte a Sentry puede romper el fan-out de leads.
+      }
     });
 }
 
