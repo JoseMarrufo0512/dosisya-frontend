@@ -1,5 +1,11 @@
 import type { ItemLista } from "@/hooks/useListaMedica";
 
+/**
+ * Línea comercial de DosisYa (soporte a farmacias, prensa, inversores).
+ * Mismo número usado en /acerca-de y en el panel de farmacia.
+ */
+export const WHATSAPP_COMERCIAL = "+584245928624";
+
 /** Deja solo dígitos — mismo criterio de sanitización que TarjetaResultado. */
 export function sanitizarTelefono(telefono?: string | null): string {
   return telefono?.replace(/\D/g, "") ?? "";
