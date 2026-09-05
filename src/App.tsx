@@ -288,7 +288,9 @@ export default function App() {
           setTerminoBuscado={setTerminoBuscado}
           cargando={api.cargando}
           error={api.error}
-          onReintentar={() => void api.buscar(terminoBuscado, latEfectiva, lngEfectiva, conDelivery, radio)}
+          onReintentar={() =>
+            void api.buscar(terminoBuscado, latEfectiva, lngEfectiva, conDelivery, radio)
+          }
           totalResultados={api.totalResultados}
           resultados={api.resultados}
           resultadosOrdenados={resultadosOrdenados}

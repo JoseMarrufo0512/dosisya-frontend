@@ -9,9 +9,11 @@ describe("verificarRifDisponible", () => {
   it("devuelve 'available' cuando el backend dice disponible: true", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(
-        new Response(JSON.stringify({ data: { disponible: true } }), { status: 200 }),
-      ),
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(JSON.stringify({ data: { disponible: true } }), { status: 200 }),
+        ),
     );
 
     const result = await verificarRifDisponible("J-12345678-9");
@@ -22,9 +24,11 @@ describe("verificarRifDisponible", () => {
   it("devuelve 'taken' cuando el backend dice disponible: false", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(
-        new Response(JSON.stringify({ data: { disponible: false } }), { status: 200 }),
-      ),
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(JSON.stringify({ data: { disponible: false } }), { status: 200 }),
+        ),
     );
 
     const result = await verificarRifDisponible("J-12345678-9");
@@ -49,9 +53,11 @@ describe("verificarRifDisponible", () => {
   });
 
   it("codifica el RIF como query param en la URL correcta", async () => {
-    const mockFetch = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ data: { disponible: true } }), { status: 200 }),
-    );
+    const mockFetch = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ data: { disponible: true } }), { status: 200 }),
+      );
     vi.stubGlobal("fetch", mockFetch);
 
     await verificarRifDisponible("J-12345678-9");

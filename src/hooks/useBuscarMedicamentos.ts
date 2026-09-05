@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { buscarMedicamentos, type ResultadoFarmacia } from "@/lib/api";
 import { track } from "@/lib/analytics";
-import * as Sentry from '@sentry/tanstackstart-react';
+import * as Sentry from "@sentry/tanstackstart-react";
 
 export interface UseBuscarMedicamentosReturn {
   resultados: ResultadoFarmacia[];
@@ -13,7 +13,7 @@ export interface UseBuscarMedicamentosReturn {
     lat: number,
     lng: number,
     conDelivery?: boolean,
-    radio?: number
+    radio?: number,
   ) => Promise<void>;
 }
 
@@ -35,22 +35,25 @@ export function useBuscarMedicamentos(): UseBuscarMedicamentosReturn {
       }
       const controller = new AbortController();
       abortControllerRef.current = controller;
-      
+
       const idBusqueda = ++idBusquedaRef.current;
       setCargando(true);
       setError(null);
-      
+
       try {
-        const resp = await buscarMedicamentos({
-          q,
-          lat,
-          lng,
-          con_delivery: conDelivery,
-          radio,
-        }, controller.signal);
-        
+        const resp = await buscarMedicamentos(
+          {
+            q,
+            lat,
+            lng,
+            con_delivery: conDelivery,
+            radio,
+          },
+          controller.signal,
+        );
+
         if (idBusqueda !== idBusquedaRef.current) return;
-        
+
         if (resp.status === "error" || !resp.data) {
           setError(resp.message || "Error al buscar medicamentos");
           setResultados([]);

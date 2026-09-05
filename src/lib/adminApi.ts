@@ -40,10 +40,7 @@ export interface AdminLoginResponse {
   usuario_id: string;
 }
 
-export async function adminLogin(
-  correo: string,
-  password: string,
-): Promise<AdminLoginResponse> {
+export async function adminLogin(correo: string, password: string): Promise<AdminLoginResponse> {
   const res = await fetch(`${API_BASE}/api/v1/auth/admin/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -60,11 +57,7 @@ export async function adminLogin(
  * redirigir a /super/login (ver manejarNoAutorizado en adminAuth.ts).
  * El Content-Type solo se añade cuando hay body (peticiones GET no lo llevaban).
  */
-async function adminFetch(
-  path: string,
-  token: string,
-  init?: RequestInit,
-): Promise<Response> {
+async function adminFetch(path: string, token: string, init?: RequestInit): Promise<Response> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
@@ -86,9 +79,7 @@ const TOTALES_VACIOS: TotalesRed = {
   deuda_red_usd: 0,
 };
 
-export async function getFarmaciasAdmin(
-  token: string,
-): Promise<AdminFarmaciasResponse> {
+export async function getFarmaciasAdmin(token: string): Promise<AdminFarmaciasResponse> {
   const res = await adminFetch("/api/v1/admin/farmacias", token);
   if (!res.ok) throw new Error("No se pudo cargar la lista de farmacias");
 

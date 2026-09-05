@@ -80,11 +80,19 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "DosisYa — Medicamentos en Acarigua y Araure" },
-      { name: "description", content: "Busca medicamentos disponibles en farmacias de Acarigua y Araure al instante. Precios en USD y VES. Sin registro." },
+      {
+        name: "description",
+        content:
+          "Busca medicamentos disponibles en farmacias de Acarigua y Araure al instante. Precios en USD y VES. Sin registro.",
+      },
       { name: "theme-color", content: "#0f4c3a" },
       { name: "author", content: "DosisYa" },
       { property: "og:title", content: "DosisYa — Medicamentos en Acarigua y Araure" },
-      { property: "og:description", content: "Busca medicamentos disponibles en farmacias de Acarigua y Araure al instante. Precios en USD y VES. Sin registro." },
+      {
+        property: "og:description",
+        content:
+          "Busca medicamentos disponibles en farmacias de Acarigua y Araure al instante. Precios en USD y VES. Sin registro.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@DosisYa" },

@@ -55,7 +55,7 @@ export default function App() {
         () => {
           // El hook global normalmente reacciona, pero forzamos un refresh visual si fuera necesario.
         },
-        () => {}
+        () => {},
       );
     }
   };
@@ -130,7 +130,8 @@ export default function App() {
 
         <div className="max-w-4xl mx-auto mt-3 flex items-center justify-between text-sm text-gray-600">
           <p>
-            <span className="font-semibold text-gray-900">{api.totalResultados}</span> resultado(s) para '{terminoBuscado}'
+            <span className="font-semibold text-gray-900">{api.totalResultados}</span> resultado(s)
+            para '{terminoBuscado}'
           </p>
           <div className="flex items-center gap-2">
             <span>Radio: {radio / 1000}km</span>
@@ -153,13 +154,15 @@ export default function App() {
         >
           {api.cargando && <EstadoCargando />}
 
-          {!api.cargando && api.resultados.length === 0 && (
-            <EstadoVacio termino={terminoBuscado} />
-          )}
+          {!api.cargando && api.resultados.length === 0 && <EstadoVacio termino={terminoBuscado} />}
 
-          {!api.cargando && api.resultados.map((res, i) => (
-            <TarjetaResultado key={`${res.farmacia_id}-${res.medicamento_id}-${i}`} resultado={res} />
-          ))}
+          {!api.cargando &&
+            api.resultados.map((res, i) => (
+              <TarjetaResultado
+                key={`${res.farmacia_id}-${res.medicamento_id}-${i}`}
+                resultado={res}
+              />
+            ))}
         </div>
       </main>
     </div>

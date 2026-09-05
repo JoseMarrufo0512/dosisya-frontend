@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useListaMedica } from "@/hooks/useListaMedica";
 import { analizarRecipe, validarImagen, type MedicamentoRecetaUI } from "@/lib/recipeIA";
-import * as Sentry from '@sentry/tanstackstart-react';
+import * as Sentry from "@sentry/tanstackstart-react";
 import { track } from "@/lib/analytics";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -90,7 +90,7 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
       const respuesta = await analizarRecipe(file);
 
       if (respuesta.status === "success" && respuesta.data && respuesta.data.length > 0) {
-        track('receta_escaneada', { medicamentos: respuesta.data?.length ?? 0 });
+        track("receta_escaneada", { medicamentos: respuesta.data?.length ?? 0 });
         const conId: MedicamentoRecetaUI[] = respuesta.data.map((med) => ({
           ...med,
           id: crypto.randomUUID(),
@@ -101,14 +101,14 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
         const errorMsg = respuesta.message || "No pudimos leer los medicamentos del récipe.";
         setErrorMsg(errorMsg);
         setEstado("error");
-        track('receta_error', { motivo: errorMsg });
+        track("receta_error", { motivo: errorMsg });
       }
     } catch (err) {
       Sentry.captureException(err);
       const errorMsg = "Error inesperado al analizar el récipe.";
       setErrorMsg(errorMsg);
       setEstado("error");
-      track('receta_error', { motivo: errorMsg });
+      track("receta_error", { motivo: errorMsg });
     }
   }, []);
 
@@ -313,7 +313,10 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
                 </div>
 
                 {/* Texto de estado */}
-                <div aria-live="polite" className="mt-6 flex flex-col items-center gap-2 text-center">
+                <div
+                  aria-live="polite"
+                  className="mt-6 flex flex-col items-center gap-2 text-center"
+                >
                   <div className="flex items-center gap-2">
                     <Sparkles className="h-5 w-5 text-emerald-500 animate-pulse" />
                     <p className="font-semibold text-foreground">
@@ -362,9 +365,8 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
                 <div className="mx-5 mb-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
                   <p>
-                    <strong>Resultado generado por IA.</strong> Puede contener errores —
-                    verifica los medicamentos antes de continuar. El farmacéutico también
-                    debe confirmarlos.
+                    <strong>Resultado generado por IA.</strong> Puede contener errores — verifica
+                    los medicamentos antes de continuar. El farmacéutico también debe confirmarlos.
                   </p>
                 </div>
 
@@ -464,7 +466,9 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
 
                                 <button
                                   type="button"
-                                  onClick={() => handleAgregarMedicamento(med.medicamento, med.cantidad)}
+                                  onClick={() =>
+                                    handleAgregarMedicamento(med.medicamento, med.cantidad)
+                                  }
                                   className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all active:scale-[0.97] ${
                                     enLista
                                       ? "border border-emerald-300 bg-emerald-50 text-emerald-700"

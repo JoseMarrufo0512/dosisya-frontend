@@ -51,9 +51,7 @@ export function CartSummary({ onVerLista }: CartSummaryProps) {
                   ? "1 medicamento en tu lista"
                   : `${totalDistintos} medicamentos en tu lista`}
               </span>
-              <span className="block text-xs text-muted-foreground">
-                Toca para elegir farmacia
-              </span>
+              <span className="block text-xs text-muted-foreground">Toca para elegir farmacia</span>
             </span>
 
             <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />

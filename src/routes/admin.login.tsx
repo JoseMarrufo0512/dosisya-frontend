@@ -79,9 +79,7 @@ const step1Schema = z.object({
     .max(120, "Máximo 120 caracteres")
     .regex(NOMBRE_REGEX, "Solo letras, números y . , ' & -"),
   rif: z.string().regex(RIF_REGEX, "Formato: J-12345678-9"),
-  whatsapp: z
-    .string()
-    .regex(TELEFONO_VE_REGEX, "Formato: +58 seguido de 10 dígitos"),
+  whatsapp: z.string().regex(TELEFONO_VE_REGEX, "Formato: +58 seguido de 10 dígitos"),
 });
 
 const step2Schema = z.object({
@@ -139,8 +137,7 @@ function AuthPage() {
       <aside
         className="relative lg:w-1/2 px-8 py-12 lg:p-16 flex flex-col justify-between overflow-hidden text-white"
         style={{
-          background:
-            "linear-gradient(140deg, #0f4c3a 0%, #0e5a41 48%, #1d9e75 100%)",
+          background: "linear-gradient(140deg, #0f4c3a 0%, #0e5a41 48%, #1d9e75 100%)",
         }}
       >
         {/* glow accents */}
@@ -157,9 +154,7 @@ function AuthPage() {
           </div>
           <div>
             <div className="text-xl font-bold leading-none">DosisYa</div>
-            <div className="text-xs text-white/70 font-medium mt-1">
-              Portal B2B Farmacias
-            </div>
+            <div className="text-xs text-white/70 font-medium mt-1">Portal B2B Farmacias</div>
           </div>
         </Link>
 
@@ -169,13 +164,12 @@ function AuthPage() {
             Acarigua · Araure · Portuguesa
           </div>
           <h1 className="mt-5 text-3xl lg:text-5xl font-extrabold leading-tight tracking-tight">
-            Únete a la red de farmacias{" "}
-            <span className="text-secondary">más rápida</span> de Portuguesa.
+            Únete a la red de farmacias <span className="text-secondary">más rápida</span> de
+            Portuguesa.
           </h1>
           <p className="mt-5 text-base lg:text-lg text-white/80 leading-relaxed">
-            Más visibilidad, más pacientes llegando directo a tu WhatsApp.
-            DosisYa conecta cada búsqueda de medicamento con la farmacia
-            correcta — la tuya.
+            Más visibilidad, más pacientes llegando directo a tu WhatsApp. DosisYa conecta cada
+            búsqueda de medicamento con la farmacia correcta — la tuya.
           </p>
 
           <ul className="mt-8 space-y-3">
@@ -281,9 +275,7 @@ function LoginCard({ onSwitch }: { onSwitch: () => void }) {
   return (
     <div>
       <h2 className="text-2xl font-bold text-foreground">Bienvenido de nuevo</h2>
-      <p className="text-sm text-muted-foreground mt-1">
-        Accede al panel de tu farmacia.
-      </p>
+      <p className="text-sm text-muted-foreground mt-1">Accede al panel de tu farmacia.</p>
 
       <form onSubmit={onSubmit} className="mt-6 space-y-4" noValidate>
         <Field
@@ -528,7 +520,10 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         throw new Error(
-          json?.error?.message || json?.detail || json?.message || "No se pudo completar el registro",
+          json?.error?.message ||
+            json?.detail ||
+            json?.message ||
+            "No se pudo completar el registro",
         );
       }
       const farmaciaId = json?.data?.farmacia_id || json?.farmacia_id;
@@ -552,12 +547,10 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
         <div className="mx-auto h-14 w-14 rounded-full bg-secondary/20 border border-secondary/40 flex items-center justify-center">
           <Check className="h-7 w-7 text-secondary-foreground" />
         </div>
-        <h2 className="mt-4 text-xl font-bold text-foreground">
-          ¡Recibimos tu afiliación!
-        </h2>
+        <h2 className="mt-4 text-xl font-bold text-foreground">¡Recibimos tu afiliación!</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Estamos revisando tu farmacia. Te activaremos pronto para que empieces a
-          recibir pacientes. Mientras, ya puedes preparar tu inventario en el panel.
+          Estamos revisando tu farmacia. Te activaremos pronto para que empieces a recibir
+          pacientes. Mientras, ya puedes preparar tu inventario en el panel.
         </p>
       </div>
     );
@@ -580,9 +573,7 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
         )}
       </div>
 
-      <h2 className="mt-3 text-2xl font-bold text-foreground">
-        Afilia tu farmacia
-      </h2>
+      <h2 className="mt-3 text-2xl font-bold text-foreground">Afilia tu farmacia</h2>
       <p className="text-sm text-muted-foreground mt-1">
         Solo 3 pasos · te toma menos de 2 minutos.
       </p>
@@ -620,7 +611,11 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
               (rifStatus === "error" ? "No pudimos verificar el RIF. Intenta de nuevo." : undefined)
             }
             maxLength={12}
-            hint={rifStatus === "checking" ? "Verificando disponibilidad…" : "Empieza con J, V, E, G o P."}
+            hint={
+              rifStatus === "checking"
+                ? "Verificando disponibilidad…"
+                : "Empieza con J, V, E, G o P."
+            }
           />
           <Field
             id="whatsapp"
@@ -639,7 +634,9 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
           {error && <ErrorBox text={error} />}
           <Button
             type="submit"
-            disabled={saving || rifStatus === "checking" || rifStatus === "taken" || rifStatus === "error"}
+            disabled={
+              saving || rifStatus === "checking" || rifStatus === "taken" || rifStatus === "error"
+            }
             className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
           >
             {saving ? (
@@ -678,9 +675,7 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
                 );
               })}
             </div>
-            {fieldErrors.sector && (
-              <p className="text-xs text-destructive">{fieldErrors.sector}</p>
-            )}
+            {fieldErrors.sector && <p className="text-xs text-destructive">{fieldErrors.sector}</p>}
             <p className="text-[11px] text-muted-foreground">
               Pronto sumaremos más ciudades de Venezuela.
             </p>
@@ -722,12 +717,7 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
 
           {error && <ErrorBox text={error} />}
           <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setStep(1)}
-              className="h-11"
-            >
+            <Button type="button" variant="outline" onClick={() => setStep(1)} className="h-11">
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <Button
@@ -830,8 +820,8 @@ function Stepper({ step }: { step: 1 | 2 | 3 }) {
                 complete
                   ? "bg-secondary text-secondary-foreground border-secondary"
                   : active
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-muted text-muted-foreground border-border"
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-muted text-muted-foreground border-border"
               }`}
             >
               {complete ? <Check className="h-3.5 w-3.5" /> : n}
@@ -844,11 +834,7 @@ function Stepper({ step }: { step: 1 | 2 | 3 }) {
               {label}
             </div>
             {i < labels.length - 1 && (
-              <div
-                className={`flex-1 h-0.5 rounded ${
-                  complete ? "bg-secondary" : "bg-border"
-                }`}
-              />
+              <div className={`flex-1 h-0.5 rounded ${complete ? "bg-secondary" : "bg-border"}`} />
             )}
           </div>
         );
@@ -886,15 +872,7 @@ function Field({
   error?: string;
   hint?: string;
   maxLength?: number;
-  inputMode?:
-    | "text"
-    | "tel"
-    | "email"
-    | "numeric"
-    | "search"
-    | "url"
-    | "none"
-    | "decimal";
+  inputMode?: "text" | "tel" | "email" | "numeric" | "search" | "url" | "none" | "decimal";
 }) {
   const invalid = Boolean(error);
   return (
@@ -914,9 +892,7 @@ function Field({
           onBlur={onBlur}
           placeholder={placeholder}
           aria-invalid={invalid}
-          aria-describedby={
-            invalid ? `${id}-error` : hint ? `${id}-hint` : undefined
-          }
+          aria-describedby={invalid ? `${id}-error` : hint ? `${id}-hint` : undefined}
           className={`pl-9 h-11 ${
             invalid ? "border-destructive focus-visible:ring-destructive" : ""
           }`}

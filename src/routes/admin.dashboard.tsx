@@ -94,8 +94,7 @@ function AdminDashboard() {
   const [error, setError] = useState(false);
 
   const cargarDashboard = useCallback(async () => {
-    const farmaciaId =
-      typeof window !== "undefined" ? localStorage.getItem("farmacia_id") : null;
+    const farmaciaId = typeof window !== "undefined" ? localStorage.getItem("farmacia_id") : null;
     if (!farmaciaId) {
       navigate({ to: "/admin/login" });
       return;
@@ -103,14 +102,10 @@ function AdminDashboard() {
     setLoading(true);
     setError(false);
     try {
-      const token =
-        typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
-      const res = await fetch(
-        `${API_BASE}/api/v1/farmacias/${farmaciaId}/dashboard`,
-        {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        },
-      );
+      const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+      const res = await fetch(`${API_BASE}/api/v1/farmacias/${farmaciaId}/dashboard`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       // 401/403 → sesión inválida, redirigir al login
       if (res.status === 401 || res.status === 403) {
         navigate({ to: "/admin/login" });
@@ -142,7 +137,7 @@ function AdminDashboard() {
 
   const [nombre, setNombre] = useState<string>(
     typeof window !== "undefined"
-      ? localStorage.getItem("nombre_farmacia") ?? "tu farmacia"
+      ? (localStorage.getItem("nombre_farmacia") ?? "tu farmacia")
       : "tu farmacia",
   );
 
@@ -178,10 +173,7 @@ function AdminDashboard() {
         style={{ background: "var(--dy-verde-cruz)", padding: "22px 16px" }}
       >
         <LogoNegocios />
-        <div
-          className="px-1.5 pb-4 text-[11.5px]"
-          style={{ color: "rgba(255,255,255,0.5)" }}
-        >
+        <div className="px-1.5 pb-4 text-[11.5px]" style={{ color: "rgba(255,255,255,0.5)" }}>
           Panel de tu farmacia
         </div>
         <nav className="flex flex-col gap-0.5">
@@ -267,7 +259,10 @@ function AdminDashboard() {
         <main className="flex-1 px-4 sm:px-6 lg:px-10 py-6 sm:py-8 max-w-6xl w-full mx-auto">
           {/* Título en móvil (sin topbar) */}
           <div className="md:hidden mb-5">
-            <div className="text-[20px] font-bold" style={{ letterSpacing: "-0.02em", color: "var(--dy-tinta)" }}>
+            <div
+              className="text-[20px] font-bold"
+              style={{ letterSpacing: "-0.02em", color: "var(--dy-tinta)" }}
+            >
               {titulo}
             </div>
             <div className="text-[12.5px] mt-px" style={{ color: "var(--dy-tinta-tenue)" }}>
@@ -299,9 +294,7 @@ function AdminDashboard() {
                   onIrAConfiguracion={() => setSection("configuracion")}
                 />
               )}
-              {section === "facturacion" && (
-                <FacturacionSection loading={loading} data={data} />
-              )}
+              {section === "facturacion" && <FacturacionSection loading={loading} data={data} />}
               {section === "configuracion" && (
                 <ConfiguracionSection
                   data={data}
@@ -338,7 +331,11 @@ function LogoNegocios({ compact = false }: { compact?: boolean }) {
       </div>
       <span
         className="text-[10px] font-semibold rounded-md px-1.5 py-0.5"
-        style={{ background: "var(--dy-verde-claro)", color: "var(--dy-verde-cruz)", letterSpacing: "0.02em" }}
+        style={{
+          background: "var(--dy-verde-claro)",
+          color: "var(--dy-verde-cruz)",
+          letterSpacing: "0.02em",
+        }}
       >
         NEGOCIOS
       </span>
@@ -452,7 +449,10 @@ function InicioSection({
             disabled={loading}
             className="border-red-300 text-red-800 hover:bg-red-100 self-start sm:self-auto"
           >
-            <RefreshCw className={`h-4 w-4 mr-1.5 ${loading ? "animate-spin" : ""}`} aria-hidden="true" />
+            <RefreshCw
+              className={`h-4 w-4 mr-1.5 ${loading ? "animate-spin" : ""}`}
+              aria-hidden="true"
+            />
             {loading ? "Reintentando…" : "Reintentar"}
           </Button>
         </div>
@@ -482,8 +482,8 @@ function InicioSection({
                 : "Aún no has cargado inventario"}
             </h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Mantén tu inventario al día para aparecer en más búsquedas y recibir
-              más pacientes interesados.
+              Mantén tu inventario al día para aparecer en más búsquedas y recibir más pacientes
+              interesados.
             </p>
           </div>
         </div>
@@ -509,14 +509,12 @@ function InventarioSection({
   const esPremium = data?.nivel_suscripcion === "premium";
 
   // Búsqueda client-side (sin backend): filtra por nombre o marca.
-  const norm = (s: string) =>
-    s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
   const filtro = norm(q.trim());
   const visibles = filtro
     ? items.filter(
         (it) =>
-          norm(it.nombre ?? "").includes(filtro) ||
-          norm(it.marca_comercial ?? "").includes(filtro),
+          norm(it.nombre ?? "").includes(filtro) || norm(it.marca_comercial ?? "").includes(filtro),
       )
     : items;
   const disponibles = items.filter((it) => it.stock).length;
@@ -588,7 +586,11 @@ function InventarioSection({
               borderRadius: 10,
             }}
           >
-            <Search className="h-4 w-4" style={{ color: "var(--dy-tinta-tenue)" }} aria-hidden="true" />
+            <Search
+              className="h-4 w-4"
+              style={{ color: "var(--dy-tinta-tenue)" }}
+              aria-hidden="true"
+            />
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
@@ -614,13 +616,19 @@ function InventarioSection({
           </div>
         ) : items.length === 0 ? (
           <div className="p-12 text-center">
-            <Package className="h-10 w-10 mx-auto mb-3" style={{ color: "var(--dy-tinta-tenue)", opacity: 0.5 }} />
+            <Package
+              className="h-10 w-10 mx-auto mb-3"
+              style={{ color: "var(--dy-tinta-tenue)", opacity: 0.5 }}
+            />
             <p style={{ fontSize: 14, color: "var(--dy-tinta-suave)" }}>
               Aún no tienes inventario cargado. Sube tu Excel para empezar.
             </p>
           </div>
         ) : visibles.length === 0 ? (
-          <div className="p-10 text-center" style={{ fontSize: 13, color: "var(--dy-tinta-tenue)" }}>
+          <div
+            className="p-10 text-center"
+            style={{ fontSize: 13, color: "var(--dy-tinta-tenue)" }}
+          >
             Ningún medicamento coincide con «{q}».
           </div>
         ) : (
@@ -639,7 +647,9 @@ function InventarioSection({
                     }}
                   >
                     <th style={{ padding: "11px 16px", fontWeight: 600 }}>Medicamento</th>
-                    <th style={{ padding: "11px 8px", fontWeight: 600, textAlign: "right" }}>Precio USD</th>
+                    <th style={{ padding: "11px 8px", fontWeight: 600, textAlign: "right" }}>
+                      Precio USD
+                    </th>
                     <th style={{ padding: "11px 16px", fontWeight: 600 }}>Disponibilidad</th>
                   </tr>
                 </thead>
@@ -649,14 +659,21 @@ function InventarioSection({
                       <td style={{ padding: "13px 16px" }}>
                         <div style={{ fontWeight: 600, color: "var(--dy-tinta)" }}>{it.nombre}</div>
                         {(it.presentacion || it.marca_comercial) && (
-                          <div style={{ fontSize: 11.5, color: "var(--dy-tinta-tenue)", marginTop: 1 }}>
+                          <div
+                            style={{ fontSize: 11.5, color: "var(--dy-tinta-tenue)", marginTop: 1 }}
+                          >
                             {[it.marca_comercial, it.presentacion].filter(Boolean).join(" · ")}
                           </div>
                         )}
                       </td>
                       <td
                         className="dy-num"
-                        style={{ padding: "13px 8px", textAlign: "right", fontWeight: 600, color: "var(--dy-verde-cruz)" }}
+                        style={{
+                          padding: "13px 8px",
+                          textAlign: "right",
+                          fontWeight: 600,
+                          color: "var(--dy-verde-cruz)",
+                        }}
                       >
                         {fmt(it.precio_usd ?? 0)}
                       </td>
@@ -681,14 +698,20 @@ function InventarioSection({
                     <div style={{ fontWeight: 600, color: "var(--dy-tinta)" }} className="truncate">
                       {it.nombre}
                     </div>
-                    <div style={{ fontSize: 11.5, color: "var(--dy-tinta-tenue)" }} className="truncate">
+                    <div
+                      style={{ fontSize: 11.5, color: "var(--dy-tinta-tenue)" }}
+                      className="truncate"
+                    >
                       {[it.marca_comercial, it.presentacion].filter(Boolean).join(" · ")}
                     </div>
                     <div style={{ marginTop: 6 }}>
                       <BadgeDisponibilidad disponible={Boolean(it.stock)} />
                     </div>
                   </div>
-                  <div className="dy-num shrink-0" style={{ fontWeight: 700, color: "var(--dy-verde-cruz)" }}>
+                  <div
+                    className="dy-num shrink-0"
+                    style={{ fontWeight: 700, color: "var(--dy-verde-cruz)" }}
+                  >
                     {fmt(it.precio_usd ?? 0)}
                   </div>
                 </li>
@@ -698,7 +721,14 @@ function InventarioSection({
         )}
 
         {items.length > 0 && (
-          <div style={{ padding: "12px 16px", borderTop: "1px solid #eef0eb", fontSize: 12, color: "var(--dy-tinta-tenue)" }}>
+          <div
+            style={{
+              padding: "12px 16px",
+              borderTop: "1px solid #eef0eb",
+              fontSize: 12,
+              color: "var(--dy-tinta-tenue)",
+            }}
+          >
             Actualiza precios y disponibilidad volviendo a subir tu archivo.
           </div>
         )}
@@ -777,9 +807,7 @@ const configSchema = z.object({
     .trim()
     .min(2, "Mínimo 2 caracteres")
     .max(200, "Máximo 200 caracteres"),
-  whatsapp: z
-    .string()
-    .regex(/^\+58\d{10}$/, "Formato: +58 seguido de 10 dígitos"),
+  whatsapp: z.string().regex(/^\+58\d{10}$/, "Formato: +58 seguido de 10 dígitos"),
   sector: z.string().min(1, "Selecciona un sector"),
   punto_referencia: z
     .string()
@@ -878,10 +906,8 @@ function ConfiguracionSection({
     // Sin coords, el PATCH va sin lat/lng y el backend conserva la ubicación.
     const payload = coords ? { ...parsed.data, ...coords } : parsed.data;
 
-    const farmaciaId =
-      typeof window !== "undefined" ? localStorage.getItem("farmacia_id") : null;
-    const token =
-      typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+    const farmaciaId = typeof window !== "undefined" ? localStorage.getItem("farmacia_id") : null;
+    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
     if (!farmaciaId) {
       setError("Sesión no encontrada. Inicia sesión de nuevo.");
       return;
@@ -935,7 +961,11 @@ function ConfiguracionSection({
       <form
         onSubmit={onSubmit}
         className="p-5 sm:p-6 space-y-4"
-        style={{ background: "var(--dy-blanco)", border: "1px solid var(--dy-borde)", borderRadius: 16 }}
+        style={{
+          background: "var(--dy-blanco)",
+          border: "1px solid var(--dy-borde)",
+          borderRadius: 16,
+        }}
         noValidate
       >
         <div className="space-y-1.5">
@@ -990,9 +1020,7 @@ function ConfiguracionSection({
               );
             })}
           </div>
-          {fieldErrors.sector && (
-            <p className="text-xs text-destructive">{fieldErrors.sector}</p>
-          )}
+          {fieldErrors.sector && <p className="text-xs text-destructive">{fieldErrors.sector}</p>}
         </div>
 
         <div className="space-y-1.5">
@@ -1085,7 +1113,9 @@ function SoporteSection() {
           </div>
           <div>
             <div style={{ fontWeight: 700, color: "var(--dy-tinta)" }}>Escríbenos por WhatsApp</div>
-            <div style={{ fontSize: 14, color: "var(--dy-tinta-suave)" }}>Respuesta en menos de 1 hora</div>
+            <div style={{ fontSize: 14, color: "var(--dy-tinta-suave)" }}>
+              Respuesta en menos de 1 hora
+            </div>
           </div>
         </div>
       </a>
@@ -1139,7 +1169,8 @@ function formatoFechaLead(iso: string): string {
 
 // Tono del pill de interacción: verde = contacto real; ámbar = captura; neutral = navegación.
 function tonoInteraccion(tipo: string): "verde" | "ambar" | "neutral" {
-  if (tipo === "clic_whatsapp" || tipo === "click_whatsapp" || tipo === "clic_llamar") return "verde";
+  if (tipo === "clic_whatsapp" || tipo === "click_whatsapp" || tipo === "clic_llamar")
+    return "verde";
   if (tipo === "capture_pantalla") return "ambar";
   return "neutral";
 }
@@ -1156,13 +1187,7 @@ const factCard: React.CSSProperties = {
   borderRadius: 16,
 };
 
-function FacturacionSection({
-  loading,
-  data,
-}: {
-  loading: boolean;
-  data: DashboardData | null;
-}) {
+function FacturacionSection({ loading, data }: { loading: boolean; data: DashboardData | null }) {
   const leadsMes = data?.total_leads_mes_actual ?? 0;
   const leadsRecipe = data?.leads_recipe_mes_actual ?? 0;
   const tarifa = data?.tarifa_por_lead_usd ?? 0;
@@ -1183,16 +1208,36 @@ function FacturacionSection({
         <KpiFact
           etiqueta="Leads este mes"
           valor={loading ? null : String(leadsMes)}
-          nota={leadsRecipe > 0 ? `${leadsRecipe} con récipe (premium)` : "Interacciones facturables"}
+          nota={
+            leadsRecipe > 0 ? `${leadsRecipe} con récipe (premium)` : "Interacciones facturables"
+          }
         />
-        <KpiFact etiqueta="Tarifa por lead" valor={loading ? null : fmt(tarifa)} nota="Costo por interacción" verde />
+        <KpiFact
+          etiqueta="Tarifa por lead"
+          valor={loading ? null : fmt(tarifa)}
+          nota="Costo por interacción"
+          verde
+        />
         {/* Deuda destacada (verde-cruz) */}
-        <div style={{ background: "var(--dy-verde-cruz)", borderRadius: 16, padding: 18, color: "#fff", flex: "1 1 200px" }}>
-          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>Deuda estimada del mes</div>
+        <div
+          style={{
+            background: "var(--dy-verde-cruz)",
+            borderRadius: 16,
+            padding: 18,
+            color: "#fff",
+            flex: "1 1 200px",
+          }}
+        >
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>
+            Deuda estimada del mes
+          </div>
           {loading ? (
             <Skeleton className="h-8 w-24 mt-2" />
           ) : (
-            <div className="dy-num" style={{ fontSize: 30, fontWeight: 700, marginTop: 6, letterSpacing: "-0.02em" }}>
+            <div
+              className="dy-num"
+              style={{ fontSize: 30, fontWeight: 700, marginTop: 6, letterSpacing: "-0.02em" }}
+            >
               {fmt(deuda)}
             </div>
           )}
@@ -1224,7 +1269,10 @@ function FacturacionSection({
           </div>
         ) : leads.length === 0 ? (
           <div className="p-12 text-center">
-            <Clock className="h-10 w-10 mx-auto mb-3" style={{ color: "var(--dy-tinta-tenue)", opacity: 0.5 }} />
+            <Clock
+              className="h-10 w-10 mx-auto mb-3"
+              style={{ color: "var(--dy-tinta-tenue)", opacity: 0.5 }}
+            />
             <p style={{ fontSize: 14, color: "var(--dy-tinta-suave)" }}>
               Aún no hay leads este período. Aparecerán aquí en cuanto lleguen.
             </p>
@@ -1247,7 +1295,9 @@ function FacturacionSection({
                     <th style={{ padding: "11px 16px", fontWeight: 600 }}>Fecha</th>
                     <th style={{ padding: "11px 8px", fontWeight: 600 }}>Interacción</th>
                     <th style={{ padding: "11px 8px", fontWeight: 600 }}>Medicamento</th>
-                    <th style={{ padding: "11px 16px", fontWeight: 600, textAlign: "right" }}>Costo</th>
+                    <th style={{ padding: "11px 16px", fontWeight: 600, textAlign: "right" }}>
+                      Costo
+                    </th>
                   </tr>
                 </thead>
                 <tbody style={{ fontSize: 13 }}>
@@ -1255,20 +1305,46 @@ function FacturacionSection({
                     const t = TONO_FACT[tonoInteraccion(l.tipo_interaccion)];
                     return (
                       <tr key={l.lead_id} style={{ borderTop: "1px solid #f1f2ee" }}>
-                        <td className="dy-num" style={{ padding: "12px 16px", color: "var(--dy-tinta-suave)", whiteSpace: "nowrap" }}>
+                        <td
+                          className="dy-num"
+                          style={{
+                            padding: "12px 16px",
+                            color: "var(--dy-tinta-suave)",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
                           {formatoFechaLead(l.fecha_hora)}
                         </td>
                         <td style={{ padding: "12px 8px" }}>
-                          <span style={{ fontSize: 11, fontWeight: 600, color: t.color, background: t.bg, borderRadius: 999, padding: "3px 9px" }}>
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 600,
+                              color: t.color,
+                              background: t.bg,
+                              borderRadius: 999,
+                              padding: "3px 9px",
+                            }}
+                          >
                             {etiquetaInteraccion(l.tipo_interaccion)}
                           </span>
                         </td>
-                        <td style={{ padding: "12px 8px", color: "var(--dy-tinta)", fontWeight: 500 }}>
+                        <td
+                          style={{ padding: "12px 8px", color: "var(--dy-tinta)", fontWeight: 500 }}
+                        >
                           {l.medicamento_nombre
                             ? `${l.medicamento_nombre}${l.medicamento_marca ? ` · ${l.medicamento_marca}` : ""}`
                             : "—"}
                         </td>
-                        <td className="dy-num" style={{ padding: "12px 16px", textAlign: "right", color: "var(--dy-verde-cruz)", fontWeight: 600 }}>
+                        <td
+                          className="dy-num"
+                          style={{
+                            padding: "12px 16px",
+                            textAlign: "right",
+                            color: "var(--dy-verde-cruz)",
+                            fontWeight: 600,
+                          }}
+                        >
                           {fmt(tarifa)}
                         </td>
                       </tr>
@@ -1285,20 +1361,45 @@ function FacturacionSection({
                 return (
                   <li key={l.lead_id} style={{ padding: 14, borderTop: "1px solid #f1f2ee" }}>
                     <div className="flex items-center justify-between gap-3">
-                      <span style={{ fontSize: 11, fontWeight: 600, color: t.color, background: t.bg, borderRadius: 999, padding: "3px 9px" }}>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: t.color,
+                          background: t.bg,
+                          borderRadius: 999,
+                          padding: "3px 9px",
+                        }}
+                      >
                         {etiquetaInteraccion(l.tipo_interaccion)}
                       </span>
-                      <span className="dy-num" style={{ fontSize: 12, color: "var(--dy-tinta-tenue)", whiteSpace: "nowrap" }}>
+                      <span
+                        className="dy-num"
+                        style={{
+                          fontSize: 12,
+                          color: "var(--dy-tinta-tenue)",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
                         {formatoFechaLead(l.fecha_hora)}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between gap-3" style={{ marginTop: 6 }}>
-                      <span className="truncate" style={{ fontSize: 12.5, color: "var(--dy-tinta)" }}>
+                    <div
+                      className="flex items-center justify-between gap-3"
+                      style={{ marginTop: 6 }}
+                    >
+                      <span
+                        className="truncate"
+                        style={{ fontSize: 12.5, color: "var(--dy-tinta)" }}
+                      >
                         {l.medicamento_nombre
                           ? `${l.medicamento_nombre}${l.medicamento_marca ? ` · ${l.medicamento_marca}` : ""}`
                           : "Sin medicamento asociado"}
                       </span>
-                      <span className="dy-num shrink-0" style={{ fontSize: 12.5, fontWeight: 600, color: "var(--dy-verde-cruz)" }}>
+                      <span
+                        className="dy-num shrink-0"
+                        style={{ fontSize: 12.5, fontWeight: 600, color: "var(--dy-verde-cruz)" }}
+                      >
                         {fmt(tarifa)}
                       </span>
                     </div>
@@ -1350,10 +1451,8 @@ function HistorialFacturas() {
   >({});
 
   useEffect(() => {
-    const farmaciaId =
-      typeof window !== "undefined" ? localStorage.getItem("farmacia_id") : null;
-    const token =
-      typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+    const farmaciaId = typeof window !== "undefined" ? localStorage.getItem("farmacia_id") : null;
+    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
     if (!farmaciaId) return;
     let cancelado = false;
     (async () => {
@@ -1382,19 +1481,16 @@ function HistorialFacturas() {
     if (!nueva || leadsPorFactura[f.id]) return;
 
     setLeadsPorFactura((prev) => ({ ...prev, [f.id]: "cargando" }));
-    const farmaciaId =
-      typeof window !== "undefined" ? localStorage.getItem("farmacia_id") : null;
-    const token =
-      typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+    const farmaciaId = typeof window !== "undefined" ? localStorage.getItem("farmacia_id") : null;
+    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
     try {
       const params = new URLSearchParams({
         periodo_inicio: f.periodo_inicio,
         periodo_fin: f.periodo_fin,
       });
-      const res = await fetch(
-        `${API_BASE}/api/v1/farmacias/${farmaciaId}/leads?${params}`,
-        { headers: token ? { Authorization: `Bearer ${token}` } : {} },
-      );
+      const res = await fetch(`${API_BASE}/api/v1/farmacias/${farmaciaId}/leads?${params}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       if (!res.ok) throw new Error("leads fetch failed");
       const json = await res.json();
       setLeadsPorFactura((prev) => ({ ...prev, [f.id]: json?.data?.leads ?? [] }));
@@ -1427,10 +1523,13 @@ function HistorialFacturas() {
 
       {facturas !== null && !error && facturas.length === 0 && (
         <div className="p-12 text-center">
-          <Receipt className="h-10 w-10 mx-auto mb-3" style={{ color: "var(--dy-tinta-tenue)", opacity: 0.5 }} />
+          <Receipt
+            className="h-10 w-10 mx-auto mb-3"
+            style={{ color: "var(--dy-tinta-tenue)", opacity: 0.5 }}
+          />
           <p style={{ fontSize: 14, color: "var(--dy-tinta-suave)" }}>
-            Todavía no hay meses cerrados. En cuanto DosisYa cierre el corte mensual,
-            tus facturas aparecerán acá.
+            Todavía no hay meses cerrados. En cuanto DosisYa cierre el corte mensual, tus facturas
+            aparecerán acá.
           </p>
         </div>
       )}
@@ -1491,7 +1590,13 @@ function HistorialFacturas() {
                           Sin leads registrados en este periodo.
                         </p>
                       ) : (
-                        <ul style={{ border: "1px solid #eef0eb", borderRadius: 10, overflow: "hidden" }}>
+                        <ul
+                          style={{
+                            border: "1px solid #eef0eb",
+                            borderRadius: 10,
+                            overflow: "hidden",
+                          }}
+                        >
                           {detalle.map((l) => {
                             const t2 = TONO_FACT[tonoInteraccion(l.tipo_interaccion)];
                             return (
@@ -1504,7 +1609,9 @@ function HistorialFacturas() {
                                   fontSize: 12.5,
                                 }}
                               >
-                                <span style={{ color: "var(--dy-tinta-tenue)", whiteSpace: "nowrap" }}>
+                                <span
+                                  style={{ color: "var(--dy-tinta-tenue)", whiteSpace: "nowrap" }}
+                                >
                                   {formatoFechaLead(l.fecha_hora)}
                                 </span>
                                 <span
@@ -1520,7 +1627,10 @@ function HistorialFacturas() {
                                 >
                                   {etiquetaInteraccion(l.tipo_interaccion)}
                                 </span>
-                                <span className="truncate flex-1" style={{ color: "var(--dy-tinta)" }}>
+                                <span
+                                  className="truncate flex-1"
+                                  style={{ color: "var(--dy-tinta)" }}
+                                >
                                   {l.medicamento_nombre ?? "—"}
                                 </span>
                               </li>
@@ -1539,7 +1649,17 @@ function HistorialFacturas() {
   );
 }
 
-function KpiFact({ etiqueta, valor, nota, verde }: { etiqueta: string; valor: string | null; nota: string; verde?: boolean }) {
+function KpiFact({
+  etiqueta,
+  valor,
+  nota,
+  verde,
+}: {
+  etiqueta: string;
+  valor: string | null;
+  nota: string;
+  verde?: boolean;
+}) {
   return (
     <div style={{ ...factCard, flex: "1 1 200px", padding: 16 }}>
       <div style={{ fontSize: 12, color: "var(--dy-tinta-tenue)" }}>{etiqueta}</div>
@@ -1548,7 +1668,13 @@ function KpiFact({ etiqueta, valor, nota, verde }: { etiqueta: string; valor: st
       ) : (
         <div
           className="dy-num"
-          style={{ fontSize: 28, fontWeight: 700, color: verde ? "var(--dy-verde-cruz)" : "var(--dy-tinta)", marginTop: 6, letterSpacing: "-0.02em" }}
+          style={{
+            fontSize: 28,
+            fontWeight: 700,
+            color: verde ? "var(--dy-verde-cruz)" : "var(--dy-tinta)",
+            marginTop: 6,
+            letterSpacing: "-0.02em",
+          }}
         >
           {valor}
         </div>

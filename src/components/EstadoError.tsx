@@ -20,12 +20,8 @@ export function EstadoError({ mensaje, onReintentar }: EstadoErrorProps) {
       <div className="mb-4 flex justify-center text-6xl" aria-hidden="true">
         ⚠️
       </div>
-      <h3 className="mb-2 text-lg font-medium text-foreground">
-        Algo salió mal
-      </h3>
-      <p className="mx-auto mb-6 max-w-sm text-sm">
-        {mensaje}
-      </p>
+      <h3 className="mb-2 text-lg font-medium text-foreground">Algo salió mal</h3>
+      <p className="mx-auto mb-6 max-w-sm text-sm">{mensaje}</p>
       {onReintentar && (
         <button
           type="button"

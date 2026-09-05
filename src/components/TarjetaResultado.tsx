@@ -213,15 +213,15 @@ export function TarjetaResultado({
             className="absolute -right-2 -top-2 flex h-[32px] w-[32px] items-center justify-center rounded-full border border-[var(--borde)] bg-white shadow-[0_1px_3px_rgba(22,24,26,0.12)] transition-transform active:scale-90"
           >
             <div className="flex items-center justify-center h-full w-full p-1.5">
-            <Heart
-              size={13}
-              className={
-                favorito
-                  ? "fill-[var(--verde-cruz)] text-[var(--verde-cruz)]"
-                  : "text-[color:var(--tinta-tenue)]"
-              }
-              aria-hidden="true"
-            />
+              <Heart
+                size={13}
+                className={
+                  favorito
+                    ? "fill-[var(--verde-cruz)] text-[var(--verde-cruz)]"
+                    : "text-[color:var(--tinta-tenue)]"
+                }
+                aria-hidden="true"
+              />
             </div>
           </button>
         </div>

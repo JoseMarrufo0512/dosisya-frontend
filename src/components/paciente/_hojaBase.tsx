@@ -22,11 +22,7 @@ export function HojaBase({
     // repositionInputs=false: vaul desplaza el sheet para despejar el teclado
     // al enfocar un input, pero al cerrarlo no siempre revierte el offset —
     // queda un espacio en blanco donde estaba el teclado (bug conocido de vaul).
-    <Drawer.Root
-      open={open}
-      onOpenChange={(v) => !v && onClose()}
-      repositionInputs={false}
-    >
+    <Drawer.Root open={open} onOpenChange={(v) => !v && onClose()} repositionInputs={false}>
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-40 bg-black/40" />
         <Drawer.Content

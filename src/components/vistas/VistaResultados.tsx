@@ -168,7 +168,9 @@ export function VistaResultados({
 
           {!cargando && error && <EstadoError mensaje={error} onReintentar={onReintentar} />}
 
-          {!cargando && !error && resultados.length === 0 && <EstadoVacio termino={terminoBuscado} />}
+          {!cargando && !error && resultados.length === 0 && (
+            <EstadoVacio termino={terminoBuscado} />
+          )}
 
           {!cargando && resultadosOrdenados.length > 0 && (
             <div

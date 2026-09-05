@@ -159,7 +159,9 @@ export function ListaMedicaDrawer({ abierta, onOpenChange, lat, lng }: ListaMedi
                   <div className="shrink-0 border-t border-border px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3">
                     {hayPrecioRef && (
                       <div className="mb-3 flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Gasto estimado hasta ahora</span>
+                        <span className="text-sm text-muted-foreground">
+                          Gasto estimado hasta ahora
+                        </span>
                         <span className="text-lg font-bold tabular-nums text-foreground">
                           ${totalUsd.toFixed(2)}
                         </span>

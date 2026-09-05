@@ -9,10 +9,7 @@ function ultimaLlamadaFetch() {
 }
 
 beforeEach(() => {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn().mockResolvedValue(new Response(null, { status: 201 })),
-  );
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 201 })));
 });
 
 afterEach(() => {
@@ -51,7 +48,12 @@ describe("postLead — guardia UUID de medicamento_buscado_id", () => {
     postLead({ farmaciaId: "f1", tipo: "clic_whatsapp", medicamentoId: null, origen: "busqueda" });
     expect(ultimaLlamadaFetch().body.medicamento_buscado_id).toBeNull();
 
-    postLead({ farmaciaId: "f1", tipo: "clic_whatsapp", medicamentoId: undefined, origen: "busqueda" });
+    postLead({
+      farmaciaId: "f1",
+      tipo: "clic_whatsapp",
+      medicamentoId: undefined,
+      origen: "busqueda",
+    });
     expect(ultimaLlamadaFetch().body.medicamento_buscado_id).toBeNull();
   });
 });
@@ -66,9 +68,7 @@ describe("postLead — contrato HTTP (POST /api/v1/leads/)", () => {
     postLead({ farmaciaId: "f1", tipo: "clic_whatsapp", origen: "busqueda" });
     const { init } = ultimaLlamadaFetch();
     expect(init.method).toBe("POST");
-    expect((init.headers as Record<string, string>)["Content-Type"]).toBe(
-      "application/json",
-    );
+    expect((init.headers as Record<string, string>)["Content-Type"]).toBe("application/json");
   });
 
   it("envía el body en snake_case con los campos del contrato", () => {

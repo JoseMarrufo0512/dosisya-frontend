@@ -79,10 +79,9 @@ export async function obtenerDashboardFarmacia(): Promise<ResultadoDashboard> {
   if (!cred) return { status: "unauthorized" };
 
   try {
-    const res = await fetch(
-      `${API_BASE}/api/v1/farmacias/${cred.farmaciaId}/dashboard`,
-      { headers: { Authorization: `Bearer ${cred.token}` } },
-    );
+    const res = await fetch(`${API_BASE}/api/v1/farmacias/${cred.farmaciaId}/dashboard`, {
+      headers: { Authorization: `Bearer ${cred.token}` },
+    });
     if (res.status === 401 || res.status === 403) return { status: "unauthorized" };
     if (!res.ok) return { status: "error" };
     const json = await res.json();
@@ -146,7 +145,12 @@ export function mapearDashboard(data: DashboardFarmaciaData): DashboardFarmaciaP
       valor: String(totalMes),
       nota: recipeMes > 0 ? `${recipeMes} con récipe digital` : "clics facturables",
     },
-    { etiqueta: "Costo por lead", valor: fmtUsd(tarifa), nota: "por clic a WhatsApp", valorVerde: true },
+    {
+      etiqueta: "Costo por lead",
+      valor: fmtUsd(tarifa),
+      nota: "por clic a WhatsApp",
+      valorVerde: true,
+    },
     { etiqueta: "Inversión del mes", valor: fmtUsd(deuda), nota: `${totalMes} leads facturados` },
     { etiqueta: "Pacientes hoy", valor: String(hoy), nota: "clics a WhatsApp hoy" },
   ];

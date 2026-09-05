@@ -12,7 +12,7 @@
 
 import { API_BASE } from "./api";
 import { comprimirImagen } from "./comprimirImagen";
-import * as Sentry from '@sentry/tanstackstart-react';
+import * as Sentry from "@sentry/tanstackstart-react";
 
 // ── Tipos del contrato backend ──────────────────────────────────────────────
 
@@ -106,7 +106,8 @@ export async function analizarRecipe(imagen: File): Promise<RespuestaRecipe> {
       } else if (res.status === 503) {
         message = "El servicio de IA está temporalmente saturado. Intenta en unos segundos.";
       } else if (res.status === 504) {
-        message = "El análisis tardó demasiado. Intenta con una foto más clara o con mejor iluminación.";
+        message =
+          "El análisis tardó demasiado. Intenta con una foto más clara o con mejor iluminación.";
       } else {
         message = txt || `Error del servidor (${res.status})`;
       }

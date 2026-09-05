@@ -3,7 +3,13 @@ import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AlertTriangle } from "lucide-react";
-import { cambiarEstadoFarmacia, requiereUbicacionAntesDeActivar, type AdminFarmaciasResponse, type EstadoAfiliacion, type FarmaciaAdmin } from "@/lib/adminApi";
+import {
+  cambiarEstadoFarmacia,
+  requiereUbicacionAntesDeActivar,
+  type AdminFarmaciasResponse,
+  type EstadoAfiliacion,
+  type FarmaciaAdmin,
+} from "@/lib/adminApi";
 import { manejarNoAutorizado } from "@/lib/adminAuth";
 import { parsearParCoordenadas } from "@/lib/coordenadas";
 import { Button } from "@/components/ui/button";
@@ -32,8 +38,14 @@ const BADGE: Record<EstadoAfiliacion, string> = {
 };
 
 export function TablaFarmacias({
-  data, token, onReload,
-}: { data: AdminFarmaciasResponse; token: string; onReload: () => void }) {
+  data,
+  token,
+  onReload,
+}: {
+  data: AdminFarmaciasResponse;
+  token: string;
+  onReload: () => void;
+}) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [filtro, setFiltro] = useState<"todas" | EstadoAfiliacion>("todas");
@@ -96,10 +108,15 @@ export function TablaFarmacias({
 
       <div className="flex gap-2 flex-wrap">
         {FILTROS.map((f) => (
-          <button key={f.value} onClick={() => setFiltro(f.value)}
+          <button
+            key={f.value}
+            onClick={() => setFiltro(f.value)}
             className={`h-8 px-3 rounded-full text-xs font-medium border ${
-              filtro === f.value ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-accent"
-            }`}>
+              filtro === f.value
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background hover:bg-accent"
+            }`}
+          >
             {f.label}
           </button>
         ))}
@@ -117,7 +134,10 @@ export function TablaFarmacias({
           </thead>
           <tbody>
             {filas.map((f) => (
-              <Fila key={f.id} f={f} pending={mut.isPending}
+              <Fila
+                key={f.id}
+                f={f}
+                pending={mut.isPending}
                 onEstado={(estado) => {
                   // Activar una farmacia sin coordenadas la deja invisible en
                   // el buscador: se piden antes en vez de aprobar a ciegas.
@@ -127,10 +147,15 @@ export function TablaFarmacias({
                   }
                   mut.mutate({ id: f.id, estado });
                 }}
-                onEditar={() => setEditar(f)} />
+                onEditar={() => setEditar(f)}
+              />
             ))}
             {filas.length === 0 && (
-              <tr><td colSpan={4} className="px-3 py-6 text-center text-muted-foreground">Sin farmacias en este filtro.</td></tr>
+              <tr>
+                <td colSpan={4} className="px-3 py-6 text-center text-muted-foreground">
+                  Sin farmacias en este filtro.
+                </td>
+              </tr>
             )}
           </tbody>
         </table>
@@ -140,8 +165,12 @@ export function TablaFarmacias({
         farmacia={editar}
         token={token}
         open={editar !== null}
-        onOpenChange={(o) => { if (!o) setEditar(null); }}
-        onSaved={() => { onReload(); }}
+        onOpenChange={(o) => {
+          if (!o) setEditar(null);
+        }}
+        onSaved={() => {
+          onReload();
+        }}
       />
 
       <DialogoAprobarSinUbicacion
@@ -213,7 +242,12 @@ function DialogoAprobarSinUbicacion({
   };
 
   return (
-    <Dialog open={farmacia !== null} onOpenChange={(o) => { if (!o) onCancelar(); }}>
+    <Dialog
+      open={farmacia !== null}
+      onOpenChange={(o) => {
+        if (!o) onCancelar();
+      }}
+    >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Ubicar «{farmacia?.nombre}» antes de aprobar</DialogTitle>
@@ -247,8 +281,16 @@ function DialogoAprobarSinUbicacion({
   );
 }
 
-function Fila({ f, pending, onEstado, onEditar }: {
-  f: FarmaciaAdmin; pending: boolean; onEstado: (e: EstadoAfiliacion) => void; onEditar: () => void;
+function Fila({
+  f,
+  pending,
+  onEstado,
+  onEditar,
+}: {
+  f: FarmaciaAdmin;
+  pending: boolean;
+  onEstado: (e: EstadoAfiliacion) => void;
+  onEditar: () => void;
 }) {
   return (
     <tr className="border-t">
@@ -259,7 +301,9 @@ function Fila({ f, pending, onEstado, onEditar }: {
       <td className="px-3 py-2 text-muted-foreground">{f.sector}</td>
       <td className="px-3 py-2">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className={`inline-block text-xs px-2 py-0.5 rounded-full border ${BADGE[f.estado_afiliacion]}`}>
+          <span
+            className={`inline-block text-xs px-2 py-0.5 rounded-full border ${BADGE[f.estado_afiliacion]}`}
+          >
             {f.estado_afiliacion}
           </span>
           {f.ubicacion_configurada === false && (
@@ -276,20 +320,42 @@ function Fila({ f, pending, onEstado, onEditar }: {
         <div className="flex gap-1.5 justify-end">
           {f.estado_afiliacion === "pendiente" && (
             <>
-              <Button size="sm" disabled={pending} onClick={() => onEstado("activa")}>Aprobar</Button>
-              <Button size="sm" variant="outline" disabled={pending} onClick={() => onEstado("inactiva")}>Rechazar</Button>
+              <Button size="sm" disabled={pending} onClick={() => onEstado("activa")}>
+                Aprobar
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={pending}
+                onClick={() => onEstado("inactiva")}
+              >
+                Rechazar
+              </Button>
             </>
           )}
           {f.estado_afiliacion === "activa" && (
             <>
-              <Button size="sm" variant="outline" disabled={pending} onClick={() => onEstado("inactiva")}>Suspender</Button>
-              <Button size="sm" variant="ghost" disabled={pending} onClick={onEditar}>Editar</Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={pending}
+                onClick={() => onEstado("inactiva")}
+              >
+                Suspender
+              </Button>
+              <Button size="sm" variant="ghost" disabled={pending} onClick={onEditar}>
+                Editar
+              </Button>
             </>
           )}
           {f.estado_afiliacion === "inactiva" && (
             <>
-              <Button size="sm" disabled={pending} onClick={() => onEstado("activa")}>Reactivar</Button>
-              <Button size="sm" variant="ghost" disabled={pending} onClick={onEditar}>Editar</Button>
+              <Button size="sm" disabled={pending} onClick={() => onEstado("activa")}>
+                Reactivar
+              </Button>
+              <Button size="sm" variant="ghost" disabled={pending} onClick={onEditar}>
+                Editar
+              </Button>
             </>
           )}
         </div>

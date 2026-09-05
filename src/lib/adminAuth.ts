@@ -18,8 +18,7 @@ export function getSuperToken(): string | null {
 
 export function esSuperadmin(): boolean {
   if (typeof window === "undefined") return false;
-  return Boolean(localStorage.getItem(K_TOKEN)) &&
-    localStorage.getItem(K_ROL) === "superadmin";
+  return Boolean(localStorage.getItem(K_TOKEN)) && localStorage.getItem(K_ROL) === "superadmin";
 }
 
 export function cerrarSesionSuper(): void {

@@ -38,19 +38,14 @@ const BUSQUEDAS_KEY = "busquedasRecientes";
 const MAX_BUSQUEDAS = 5;
 
 export function useBusquedasRecientes() {
-  const [busquedas, setBusquedas, clear] = useLocalStorage<string[]>(
-    BUSQUEDAS_KEY,
-    [],
-  );
+  const [busquedas, setBusquedas, clear] = useLocalStorage<string[]>(BUSQUEDAS_KEY, []);
 
   const agregar = useCallback(
     (termino: string) => {
       const t = termino.trim();
       if (!t) return;
       setBusquedas((prev) => {
-        const sinDuplicado = prev.filter(
-          (x) => x.toLowerCase() !== t.toLowerCase(),
-        );
+        const sinDuplicado = prev.filter((x) => x.toLowerCase() !== t.toLowerCase());
         return [t, ...sinDuplicado].slice(0, MAX_BUSQUEDAS);
       });
     },
@@ -87,9 +82,7 @@ export function useRecordatorios() {
       if (!t) return;
       const ahora = Date.now();
       setRecordatorios((prev) => {
-        const sinDuplicado = prev.filter(
-          (r) => r.termino.toLowerCase() !== t.toLowerCase(),
-        );
+        const sinDuplicado = prev.filter((r) => r.termino.toLowerCase() !== t.toLowerCase());
         return [
           { termino: t, creadoMs: ahora, proximoMs: ahora + dias * MS_POR_DIA },
           ...sinDuplicado,
