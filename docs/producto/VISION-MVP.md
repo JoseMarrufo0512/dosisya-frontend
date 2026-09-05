@@ -34,7 +34,7 @@ El MVP se considera terminado solo si:
 - [x] `npx vitest run` pasa en verde (75/75, confirmado 2026-09-05 en `origin/main`).
 - [ ] `scripts/test-leads-cpc.sh` pasa.
 - [x] El job `verify` de `.github/workflows/ci.yml` está en verde en `main` (confirmado 2026-09-05 con `gh run list`, run en `5d40738`).
-- [ ] Los 10 flujos de arriba se verifican **juntos, en un solo recorrido manual**, en desktop y móvil, contra la API real (ver B-002 en `BACKLOG.md` — nunca se ha hecho; cada flujo se validó por separado en su propio plan).
+- [ ] Los 10 flujos de arriba se verifican **juntos, en un solo recorrido manual**, en desktop y móvil, contra la API real (ver B-002 en `BACKLOG.md` — **parcial**: 1-6 confirmados el 2026-09-05 contra `dosisya-frontend.vercel.app`; 7-10 bloqueados por falta de credenciales de prueba, ver D-004 en `DECISIONES-PENDIENTES.md`).
 - [ ] No hay mocks activos en funcionalidades declaradas operativas (confirmado: el mock de `recipeIA` se eliminó en el commit `c85f157`).
 - [ ] El despliegue de Vercel funciona y no muestra errores de consola críticos (requiere un deploy real — acción de producción que necesita aprobación explícita de José per `CLAUDE.md` §8; no tiene tarea B-xxx propia en `BACKLOG.md` porque Claude no puede cerrarla de forma autónoma).
 
