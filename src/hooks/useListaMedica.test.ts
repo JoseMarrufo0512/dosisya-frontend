@@ -53,7 +53,9 @@ describe("farmaciaUnicaDeLista", () => {
   });
 
   test("ítem sin farmacia (del escáner de récipe) → null", () => {
-    const lista = [crearItem({ farmaciaId: undefined, farmaciaNombre: undefined, farmaciaWhatsapp: undefined })];
+    const lista = [
+      crearItem({ farmaciaId: undefined, farmaciaNombre: undefined, farmaciaWhatsapp: undefined }),
+    ];
     expect(farmaciaUnicaDeLista(lista)).toBeNull();
   });
 });

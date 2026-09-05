@@ -15,12 +15,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import {
-  AnimatePresence,
-  motion,
-  useReducedMotion,
-  type Transition,
-} from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion, type Transition } from "framer-motion";
 import {
   Search,
   MapPin,
@@ -92,8 +87,18 @@ export default function NavegacionPaciente({
         boxShadow: "0 -8px 28px -14px rgba(22,24,26,0.16)",
       }}
     >
-      <TabBoton {...TABS[0]} activo={activo === "buscar"} onSel={onSeleccionar} siempre={etiquetasSiempre} />
-      <TabBoton {...TABS[1]} activo={activo === "farmacias"} onSel={onSeleccionar} siempre={etiquetasSiempre} />
+      <TabBoton
+        {...TABS[0]}
+        activo={activo === "buscar"}
+        onSel={onSeleccionar}
+        siempre={etiquetasSiempre}
+      />
+      <TabBoton
+        {...TABS[1]}
+        activo={activo === "farmacias"}
+        onSel={onSeleccionar}
+        siempre={etiquetasSiempre}
+      />
 
       <BotonEscanear onEscanear={onEscanear} />
 
@@ -104,7 +109,12 @@ export default function NavegacionPaciente({
         siempre={etiquetasSiempre}
         badge={listaCount}
       />
-      <TabBoton {...TABS[3]} activo={activo === "mas"} onSel={onSeleccionar} siempre={etiquetasSiempre} />
+      <TabBoton
+        {...TABS[3]}
+        activo={activo === "mas"}
+        onSel={onSeleccionar}
+        siempre={etiquetasSiempre}
+      />
     </nav>
   );
 }

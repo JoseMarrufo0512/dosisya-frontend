@@ -40,7 +40,9 @@ export function useGeolocalizacion(): GeolocalizacionState {
           cargando: false,
         });
       });
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return state;

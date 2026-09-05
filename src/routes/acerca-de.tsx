@@ -55,10 +55,7 @@ function AcercaDe() {
             Volver a DosisYa
           </Link>
 
-          <h1
-            className="relative mt-5 text-3xl font-black"
-            style={{ letterSpacing: "-0.02em" }}
-          >
+          <h1 className="relative mt-5 text-3xl font-black" style={{ letterSpacing: "-0.02em" }}>
             <span style={{ color: "#ffffff" }}>Dosis</span>
             <span style={{ color: "var(--verde-claro)" }}>Ya</span>
           </h1>
@@ -66,9 +63,9 @@ function AcercaDe() {
             className="relative mt-2.5 max-w-[440px] text-[15px] leading-relaxed"
             style={{ color: "rgba(255,255,255,0.85)" }}
           >
-            Marketplace hiperlocal de medicamentos en Acarigua y Araure. Buscamos que
-            cualquier paciente encuentre, compare y contacte a la farmacia más cercana con
-            su medicamento en stock — sin registrarse, sin fricción.
+            Marketplace hiperlocal de medicamentos en Acarigua y Araure. Buscamos que cualquier
+            paciente encuentre, compare y contacte a la farmacia más cercana con su medicamento en
+            stock — sin registrarse, sin fricción.
           </p>
 
           <ul className="relative mt-[22px] flex list-none flex-col gap-[11px] p-0">
@@ -147,15 +144,19 @@ function AcercaDe() {
               className="flex h-11 w-11 items-center justify-center rounded-2xl"
               style={{ background: "var(--disp-fondo)" }}
             >
-              <Search className="h-5 w-5" style={{ color: "var(--verde-cruz)" }} aria-hidden="true" />
+              <Search
+                className="h-5 w-5"
+                style={{ color: "var(--verde-cruz)" }}
+                aria-hidden="true"
+              />
             </div>
             <h2 className="mt-3.5 text-lg font-semibold" style={{ color: "var(--verde-cruz)" }}>
               Para pacientes
             </h2>
             <p className="mt-2 text-[15px] leading-relaxed" style={{ color: "var(--tinta-suave)" }}>
-              Busca tu medicamento, compara precio y disponibilidad entre farmacias cercanas,
-              arma tu Lista Médica si necesitas varios productos, y contacta a la farmacia
-              directo por WhatsApp. Todo sin crear cuenta ni iniciar sesión.
+              Busca tu medicamento, compara precio y disponibilidad entre farmacias cercanas, arma
+              tu Lista Médica si necesitas varios productos, y contacta a la farmacia directo por
+              WhatsApp. Todo sin crear cuenta ni iniciar sesión.
             </p>
             <Link
               to="/"
@@ -190,10 +191,10 @@ function AcercaDe() {
               Para farmacias
             </h2>
             <p className="mt-2 text-[15px] leading-relaxed" style={{ color: "var(--tinta)" }}>
-              Aparece frente a pacientes de Acarigua y Araure que ya están buscando ese
-              medicamento cerca de ti. Cobramos por cada contacto que te llega por WhatsApp —
-              no cobramos comisión por venta, y tu logística de entrega sigue siendo tuya
-              (motorizado propio o Yummy).
+              Aparece frente a pacientes de Acarigua y Araure que ya están buscando ese medicamento
+              cerca de ti. Cobramos por cada contacto que te llega por WhatsApp — no cobramos
+              comisión por venta, y tu logística de entrega sigue siendo tuya (motorizado propio o
+              Yummy).
             </p>
             {urlFarmacias && (
               <a
@@ -221,16 +222,20 @@ function AcercaDe() {
               className="flex h-11 w-11 items-center justify-center rounded-2xl"
               style={{ background: "var(--disp-fondo)" }}
             >
-              <TrendingUp className="h-5 w-5" style={{ color: "var(--verde-cruz)" }} aria-hidden="true" />
+              <TrendingUp
+                className="h-5 w-5"
+                style={{ color: "var(--verde-cruz)" }}
+                aria-hidden="true"
+              />
             </div>
             <h2 className="mt-3.5 text-lg font-semibold" style={{ color: "var(--verde-cruz)" }}>
               Para inversores y prensa
             </h2>
             <p className="mt-2 text-[15px] leading-relaxed" style={{ color: "var(--tinta-suave)" }}>
-              DosisYa conecta oferta y demanda de medicamentos a nivel hiperlocal con un
-              modelo de leads B2B: las farmacias pagan por cada contacto que reciben, no por
-              transacción. La última milla la resuelve cada farmacia, lo que nos permite
-              crecer sin operar flota propia.
+              DosisYa conecta oferta y demanda de medicamentos a nivel hiperlocal con un modelo de
+              leads B2B: las farmacias pagan por cada contacto que reciben, no por transacción. La
+              última milla la resuelve cada farmacia, lo que nos permite crecer sin operar flota
+              propia.
             </p>
             {urlInversores && (
               <a

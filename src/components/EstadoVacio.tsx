@@ -14,8 +14,8 @@ export function EstadoVacio({ termino }: EstadoVacioProps) {
         No encontramos “{termino}” cerca de ti
       </h3>
       <p className="mx-auto mb-6 max-w-sm text-sm">
-        Prueba con el nombre genérico, amplía el radio de búsqueda, o verifica el
-        nombre del medicamento.
+        Prueba con el nombre genérico, amplía el radio de búsqueda, o verifica el nombre del
+        medicamento.
       </p>
       <a
         href={searchUrl}

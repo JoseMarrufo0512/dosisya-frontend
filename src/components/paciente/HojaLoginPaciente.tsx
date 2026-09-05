@@ -35,11 +35,22 @@ export function HojaLoginPaciente({
         >
           <div
             aria-hidden="true"
-            style={{ width: 38, height: 4, borderRadius: 999, background: "#d8dad3", margin: "2px auto 14px" }}
+            style={{
+              width: 38,
+              height: 4,
+              borderRadius: 999,
+              background: "#d8dad3",
+              margin: "2px auto 14px",
+            }}
           />
           <div className="flex items-center justify-between">
             <Drawer.Title
-              style={{ fontSize: 17, fontWeight: 500, color: "var(--tinta)", letterSpacing: "-0.02em" }}
+              style={{
+                fontSize: 17,
+                fontWeight: 500,
+                color: "var(--tinta)",
+                letterSpacing: "-0.02em",
+              }}
             >
               Iniciar sesión
             </Drawer.Title>
@@ -54,9 +65,16 @@ export function HojaLoginPaciente({
             </button>
           </div>
 
-          <p style={{ fontSize: 13, color: "var(--tinta-suave)", lineHeight: 1.5, margin: "10px 0 16px" }}>
-            Es <span style={{ color: "var(--tinta)", fontWeight: 500 }}>opcional</span>. Inicia sesión
-            para guardar tu Lista Médica y acceder a beneficios.
+          <p
+            style={{
+              fontSize: 13,
+              color: "var(--tinta-suave)",
+              lineHeight: 1.5,
+              margin: "10px 0 16px",
+            }}
+          >
+            Es <span style={{ color: "var(--tinta)", fontWeight: 500 }}>opcional</span>. Inicia
+            sesión para guardar tu Lista Médica y acceder a beneficios.
           </p>
 
           <button

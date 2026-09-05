@@ -7,7 +7,7 @@
  * qué pasó en vez de un "no pude responder" para todo.
  */
 import { API_BASE } from "./api";
-import * as Sentry from '@sentry/tanstackstart-react';
+import * as Sentry from "@sentry/tanstackstart-react";
 
 export type MensajeChat = { rol: "usuario" | "asistente"; texto: string };
 

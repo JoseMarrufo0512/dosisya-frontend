@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Upload, Sparkles, FileSpreadsheet, Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { API_BASE } from "@/lib/api";
-import * as Sentry from '@sentry/tanstackstart-react';
+import * as Sentry from "@sentry/tanstackstart-react";
 import { track } from "@/lib/analytics";
 
 const ACCEPTED_EXT = [".csv", ".xlsx"];
@@ -158,13 +158,13 @@ export function UploadInventory({ onUploaded }: Props) {
         } else {
           toast.success("¡Inventario actualizado con éxito!");
         }
-        track('inventario_subido', { total: (payload as any).total_procesados ?? 0 });
+        track("inventario_subido", { total: Number(payload.total_procesados) || 0 });
         onUploaded?.(payload);
       } catch (e) {
         Sentry.captureException(e);
         const msg = e instanceof Error ? e.message : "Error subiendo el archivo";
         toast.error(msg);
-        track('inventario_error', { motivo: msg });
+        track("inventario_error", { motivo: msg });
       } finally {
         setUploading(false);
         setProgreso(null);

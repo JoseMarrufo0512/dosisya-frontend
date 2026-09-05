@@ -21,7 +21,11 @@ const formatoTelefonoVE = (raw: string) => {
 };
 
 export function EditarFarmaciaDrawer({
-  farmacia, token, open, onOpenChange, onSaved,
+  farmacia,
+  token,
+  open,
+  onOpenChange,
+  onSaved,
 }: {
   farmacia: FarmaciaAdmin | null;
   token: string;
@@ -75,7 +79,10 @@ export function EditarFarmaciaDrawer({
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          nombre_farmacia: nombre, whatsapp, sector, punto_referencia: referencia,
+          nombre_farmacia: nombre,
+          whatsapp,
+          sector,
+          punto_referencia: referencia,
           ...(resultadoCoords.estado === "ok" ? resultadoCoords.coords : {}),
         }),
       });
@@ -124,20 +131,41 @@ export function EditarFarmaciaDrawer({
           <div className="mt-4 space-y-4 max-w-md">
             <div className="space-y-1.5">
               <Label htmlFor="e-nombre">Nombre</Label>
-              <Input id="e-nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={200} />
+              <Input
+                id="e-nombre"
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                maxLength={200}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="e-wa">WhatsApp</Label>
-              <Input id="e-wa" value={whatsapp} onChange={(e) => setWhatsapp(formatoTelefonoVE(e.target.value))}
-                placeholder="+584121234567" maxLength={13} inputMode="tel" />
+              <Input
+                id="e-wa"
+                value={whatsapp}
+                onChange={(e) => setWhatsapp(formatoTelefonoVE(e.target.value))}
+                placeholder="+584121234567"
+                maxLength={13}
+                inputMode="tel"
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="e-sector">Sector</Label>
-              <Input id="e-sector" value={sector} onChange={(e) => setSector(e.target.value)} maxLength={100} />
+              <Input
+                id="e-sector"
+                value={sector}
+                onChange={(e) => setSector(e.target.value)}
+                maxLength={100}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="e-ref">Punto de referencia</Label>
-              <Input id="e-ref" value={referencia} onChange={(e) => setReferencia(e.target.value)} maxLength={180} />
+              <Input
+                id="e-ref"
+                value={referencia}
+                onChange={(e) => setReferencia(e.target.value)}
+                maxLength={180}
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Ubicación en el mapa</Label>
@@ -161,9 +189,17 @@ export function EditarFarmaciaDrawer({
               />
             </div>
             <div className="flex gap-2 pt-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancelar</Button>
+              <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+                Cancelar
+              </Button>
               <Button onClick={guardar} disabled={saving} className="flex-1">
-                {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Guardando…</> : "Guardar cambios"}
+                {saving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Guardando…
+                  </>
+                ) : (
+                  "Guardar cambios"
+                )}
               </Button>
             </div>
           </div>

@@ -37,10 +37,7 @@ export async function comprimirImagen(file: File): Promise<File> {
   try {
     const bitmap = await createImageBitmap(file);
     try {
-      const escala = Math.min(
-        1,
-        MAX_DIMENSION_PX / Math.max(bitmap.width, bitmap.height),
-      );
+      const escala = Math.min(1, MAX_DIMENSION_PX / Math.max(bitmap.width, bitmap.height));
       const ancho = Math.max(1, Math.round(bitmap.width * escala));
       const alto = Math.max(1, Math.round(bitmap.height * escala));
 

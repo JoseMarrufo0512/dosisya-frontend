@@ -67,11 +67,36 @@ const KPIS_MOCK: KpiItem[] = [
 ];
 
 const LEADS_MOCK: LeadFila[] = [
-  { hora: "10:24", medicamento: "Losartán 50 mg", interaccion: { texto: "WhatsApp", tono: "verde" }, costo: "$0,35" },
-  { hora: "09:58", medicamento: "Amoxicilina 500 mg", interaccion: { texto: "Vio detalle", tono: "neutral" }, costo: "$0,35" },
-  { hora: "09:12", medicamento: "Metformina 850 mg", interaccion: { texto: "WhatsApp", tono: "verde" }, costo: "$0,35" },
-  { hora: "08:40", medicamento: "Atorvastatina 20 mg", interaccion: { texto: "Vio el mapa", tono: "neutral" }, costo: "$0,35" },
-  { hora: "08:03", medicamento: "Ibuprofeno 400 mg", interaccion: { texto: "Llamada", tono: "verde" }, costo: "$0,35" },
+  {
+    hora: "10:24",
+    medicamento: "Losartán 50 mg",
+    interaccion: { texto: "WhatsApp", tono: "verde" },
+    costo: "$0,35",
+  },
+  {
+    hora: "09:58",
+    medicamento: "Amoxicilina 500 mg",
+    interaccion: { texto: "Vio detalle", tono: "neutral" },
+    costo: "$0,35",
+  },
+  {
+    hora: "09:12",
+    medicamento: "Metformina 850 mg",
+    interaccion: { texto: "WhatsApp", tono: "verde" },
+    costo: "$0,35",
+  },
+  {
+    hora: "08:40",
+    medicamento: "Atorvastatina 20 mg",
+    interaccion: { texto: "Vio el mapa", tono: "neutral" },
+    costo: "$0,35",
+  },
+  {
+    hora: "08:03",
+    medicamento: "Ibuprofeno 400 mg",
+    interaccion: { texto: "Llamada", tono: "verde" },
+    costo: "$0,35",
+  },
 ];
 
 const RESUMEN_MOCK: TarjetaResumen = {
@@ -128,7 +153,14 @@ export default function DashboardFarmacia({
             <span style={{ fontSize: 12, color: "var(--dy-tinta-tenue)" }}>{leadsSubtitulo}</span>
           </header>
           {leads.length === 0 ? (
-            <div style={{ padding: "34px 16px", textAlign: "center", color: "var(--dy-tinta-tenue)", fontSize: 13 }}>
+            <div
+              style={{
+                padding: "34px 16px",
+                textAlign: "center",
+                color: "var(--dy-tinta-tenue)",
+                fontSize: 13,
+              }}
+            >
               Aún no hay leads este periodo.
             </div>
           ) : (
@@ -155,7 +187,10 @@ export default function DashboardFarmacia({
                     const t = TONO_INTERACCION[lead.interaccion.tono];
                     return (
                       <tr key={`${lead.hora}-${i}`} style={{ borderTop: "1px solid #f1f2ee" }}>
-                        <td className="dy-num" style={{ padding: "12px 16px", color: "var(--dy-tinta-suave)" }}>
+                        <td
+                          className="dy-num"
+                          style={{ padding: "12px 16px", color: "var(--dy-tinta-suave)" }}
+                        >
                           {lead.hora}
                         </td>
                         <td style={{ padding: "12px 8px", fontWeight: 500 }}>{lead.medicamento}</td>
@@ -195,12 +230,24 @@ export default function DashboardFarmacia({
 
         <div style={{ flex: "1 1 240px", display: "flex", flexDirection: "column", gap: 16 }}>
           {/* Resumen financiero (deuda) */}
-          <div style={{ background: "var(--dy-verde-cruz)", borderRadius: 16, padding: 18, color: "#fff" }}>
+          <div
+            style={{
+              background: "var(--dy-verde-cruz)",
+              borderRadius: 16,
+              padding: 18,
+              color: "#fff",
+            }}
+          >
             <div style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>{resumen.titulo}</div>
-            <div className="dy-num" style={{ fontSize: 30, fontWeight: 700, marginTop: 6, letterSpacing: "-0.02em" }}>
+            <div
+              className="dy-num"
+              style={{ fontSize: 30, fontWeight: 700, marginTop: 6, letterSpacing: "-0.02em" }}
+            >
               {resumen.monto}
             </div>
-            <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.6)", marginTop: 4 }}>{resumen.nota}</div>
+            <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.6)", marginTop: 4 }}>
+              {resumen.nota}
+            </div>
             {resumen.accion && (
               <button
                 type="button"
@@ -282,7 +329,13 @@ function GraficaBarras({ barras }: { barras: BarraDia[] }) {
         return (
           <div
             key={`${b.dia}-${i}`}
-            style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 6,
+            }}
           >
             <motion.div
               initial={reduce ? false : { height: 0 }}

@@ -64,9 +64,7 @@ function credencialesSesion(): { farmaciaId: string; token: string } | null {
  * Envía la imagen del récipe al backend para análisis en modo farmacéutico.
  * Requiere sesión de farmacia activa (login del panel B2B) y plan Premium.
  */
-export async function analizarRecipeFarmacia(
-  imagen: File,
-): Promise<RespuestaRecipeFarmacia> {
+export async function analizarRecipeFarmacia(imagen: File): Promise<RespuestaRecipeFarmacia> {
   const cred = credencialesSesion();
   if (!cred) {
     return {
@@ -85,15 +83,12 @@ export async function analizarRecipeFarmacia(
     const formData = new FormData();
     formData.append("file", imagenAEnviar);
 
-    const res = await fetch(
-      `${API_BASE}/api/v1/farmacias/${cred.farmaciaId}/ia/analizar-recipe`,
-      {
-        method: "POST",
-        headers: { Authorization: `Bearer ${cred.token}` },
-        body: formData,
-        signal: controller.signal,
-      },
-    );
+    const res = await fetch(`${API_BASE}/api/v1/farmacias/${cred.farmaciaId}/ia/analizar-recipe`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${cred.token}` },
+      body: formData,
+      signal: controller.signal,
+    });
 
     if (res.status === 403) {
       return {

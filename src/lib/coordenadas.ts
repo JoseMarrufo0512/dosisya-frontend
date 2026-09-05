@@ -41,10 +41,7 @@ export type ResultadoCoordenadas =
  * "0": una farmacia sin configurar está literalmente en 0, y tratar el 0 como
  * ausente la dejaría sin poder corregirse.
  */
-export function parsearParCoordenadas(
-  latTexto: string,
-  lngTexto: string,
-): ResultadoCoordenadas {
+export function parsearParCoordenadas(latTexto: string, lngTexto: string): ResultadoCoordenadas {
   const latVacio = latTexto.trim() === "";
   const lngVacio = lngTexto.trim() === "";
 

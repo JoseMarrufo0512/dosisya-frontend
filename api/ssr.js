@@ -24,11 +24,8 @@ export default async function handler(req, res) {
   const server = await getServer();
 
   // Reconstruir URL absoluta (x-forwarded-* los pone Vercel/el proxy)
-  const proto = (req.headers["x-forwarded-proto"] || "https")
-    .split(",")[0]
-    .trim();
-  const host =
-    req.headers["x-forwarded-host"] || req.headers["host"] || "localhost";
+  const proto = (req.headers["x-forwarded-proto"] || "https").split(",")[0].trim();
+  const host = req.headers["x-forwarded-host"] || req.headers["host"] || "localhost";
   const absoluteUrl = `${proto}://${host}${req.url}`;
 
   // Leer el body para métodos que lo admiten
@@ -93,4 +90,4 @@ export default async function handler(req, res) {
     res.setHeader("content-type", "text/plain; charset=utf-8");
     res.end("Internal Server Error");
   }
-};
+}

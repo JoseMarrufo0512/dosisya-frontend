@@ -63,11 +63,7 @@ const CAMPOS_EDITABLES = [
 ] as const;
 
 function normalizar(s: string): string {
-  return s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .trim();
+  return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
 }
 
 function tieneIlegibles(med: MedicamentoRecetaFarmaciaUI): boolean {

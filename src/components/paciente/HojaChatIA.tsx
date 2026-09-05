@@ -18,7 +18,7 @@ import {
   type CodigoErrorChat,
   type MensajeChat,
 } from "@/lib/chatIA";
-import * as Sentry from '@sentry/tanstackstart-react';
+import * as Sentry from "@sentry/tanstackstart-react";
 
 /**
  * `error: true` marca las burbujas que escribimos nosotros cuando falla la

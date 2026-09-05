@@ -139,7 +139,10 @@ export function SelectorFarmacia({ lista, lat, lng }: SelectorFarmaciaProps) {
           Consultando inventarios cercanos…
         </p>
         {[0, 1, 2].map((i) => (
-          <div key={i} className="animate-pulse rounded-xl border border-border bg-card p-4 shadow-sm">
+          <div
+            key={i}
+            className="animate-pulse rounded-xl border border-border bg-card p-4 shadow-sm"
+          >
             <div className="h-4 w-1/2 rounded bg-muted" />
             <div className="mt-3 h-3 w-1/3 rounded bg-muted" />
             <div className="mt-3 h-1.5 w-full rounded bg-muted" />
@@ -244,7 +247,9 @@ export function SelectorFarmacia({ lista, lat, lng }: SelectorFarmaciaProps) {
             {/* Cobertura */}
             <div className="mt-3">
               <div className="flex items-baseline justify-between text-sm">
-                <span className={`font-semibold ${completa ? "text-emerald-700" : "text-foreground"}`}>
+                <span
+                  className={`font-semibold ${completa ? "text-emerald-700" : "text-foreground"}`}
+                >
                   {completa
                     ? "✓ Tiene tu lista completa"
                     : `Tiene ${cuantos} de ${totalLista} de tu lista`}

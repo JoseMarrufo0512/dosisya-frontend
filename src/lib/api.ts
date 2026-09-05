@@ -7,7 +7,7 @@
 //   - lat / lng      → ST_Y/ST_X(f.ubicacion) AS lat/lng
 //   - medicamento_nombre → im.principio_activo AS medicamento_nombre
 
-import * as Sentry from '@sentry/tanstackstart-react';
+import * as Sentry from "@sentry/tanstackstart-react";
 
 /** Nivel de suscripción de una farmacia (columna nivel_suscripcion en BD). */
 export type NivelSuscripcion = "gratuita" | "premium";
@@ -72,9 +72,7 @@ export const API_BASE: string =
 
 // Log de diagnóstico solo en desarrollo (no llega a producción)
 if (import.meta.env.DEV) {
-  console.log(
-    `[DosisYa API] Backend → ${API_BASE || "(proxy Vite → localhost:8000)"}`
-  );
+  console.log(`[DosisYa API] Backend → ${API_BASE || "(proxy Vite → localhost:8000)"}`);
 }
 
 export async function buscarMedicamentos(
@@ -87,14 +85,9 @@ export async function buscarMedicamentos(
       lat: String(params.lat),
       lng: String(params.lng),
       ...(params.radio !== undefined ? { radio: String(params.radio) } : {}),
-      ...(params.con_delivery !== undefined
-        ? { con_delivery: String(params.con_delivery) }
-        : {}),
+      ...(params.con_delivery !== undefined ? { con_delivery: String(params.con_delivery) } : {}),
     });
-    const res = await fetch(
-      `${API_BASE}/api/v1/medicamentos/buscar?${qs.toString()}`,
-      { signal }
-    );
+    const res = await fetch(`${API_BASE}/api/v1/medicamentos/buscar?${qs.toString()}`, { signal });
     if (!res.ok) {
       Sentry.captureException(new Error(`API Error: ${res.status}`));
       return { status: "error", message: `Error ${res.status}`, data: null };

@@ -70,7 +70,10 @@ export function ListaMedicaDrawer({ abierta, onOpenChange, lat, lng }: ListaMedi
                 <>
                   <ul className="min-h-0 flex-1 divide-y divide-border overflow-y-auto px-5">
                     {lista.map((item) => (
-                      <li key={String(item.medicamentoId)} className="flex items-center gap-3 py-3.5">
+                      <li
+                        key={String(item.medicamentoId)}
+                        className="flex items-center gap-3 py-3.5"
+                      >
                         <div className="min-w-0 flex-1">
                           <p className="truncate font-medium leading-snug text-foreground">
                             {item.nombre}
@@ -80,7 +83,9 @@ export function ListaMedicaDrawer({ abierta, onOpenChange, lat, lng }: ListaMedi
                               </span>
                             )}
                           </p>
-                          <p className="truncate text-xs text-muted-foreground">{item.presentacion}</p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {item.presentacion}
+                          </p>
                         </div>
 
                         {/* Stepper de cantidad */}

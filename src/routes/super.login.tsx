@@ -58,18 +58,34 @@ function SuperLogin() {
             <Label htmlFor="s-correo">Correo</Label>
             <div className="relative">
               <Mail className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input id="s-correo" type="email" autoComplete="email" required
-                value={correo} onChange={(e) => setCorreo(e.target.value)}
-                placeholder="admin@dosisya.com" className="pl-9 h-11" maxLength={255} />
+              <Input
+                id="s-correo"
+                type="email"
+                autoComplete="email"
+                required
+                value={correo}
+                onChange={(e) => setCorreo(e.target.value)}
+                placeholder="admin@dosisya.com"
+                className="pl-9 h-11"
+                maxLength={255}
+              />
             </div>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="s-pass">Contraseña</Label>
             <div className="relative">
               <Lock className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input id="s-pass" type="password" autoComplete="current-password" required
-                value={password} onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••" className="pl-9 h-11" maxLength={128} />
+              <Input
+                id="s-pass"
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="pl-9 h-11"
+                maxLength={128}
+              />
             </div>
           </div>
           {error && (
@@ -77,9 +93,18 @@ function SuperLogin() {
               {error}
             </div>
           )}
-          <Button type="submit" disabled={loading}
-            className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
-            {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Ingresando…</> : "Iniciar sesión"}
+          <Button
+            type="submit"
+            disabled={loading}
+            className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Ingresando…
+              </>
+            ) : (
+              "Iniciar sesión"
+            )}
           </Button>
         </form>
       </div>

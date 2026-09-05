@@ -65,10 +65,18 @@ function SuperDashboard() {
 
       <div className="max-w-6xl mx-auto px-4 py-6">
         <nav className="flex gap-2 mb-6">
-          <TabBtn active={seccion === "farmacias"} onClick={() => setSeccion("farmacias")}
-            icon={<Building2 className="h-4 w-4" />} label="Farmacias" />
-          <TabBtn active={seccion === "facturacion"} onClick={() => setSeccion("facturacion")}
-            icon={<Receipt className="h-4 w-4" />} label="Facturación" />
+          <TabBtn
+            active={seccion === "farmacias"}
+            onClick={() => setSeccion("farmacias")}
+            icon={<Building2 className="h-4 w-4" />}
+            label="Farmacias"
+          />
+          <TabBtn
+            active={seccion === "facturacion"}
+            onClick={() => setSeccion("facturacion")}
+            icon={<Receipt className="h-4 w-4" />}
+            label="Facturación"
+          />
         </nav>
 
         {/* Orden: error → datos → cargando. El último es el caso "todo lo demás"
@@ -81,7 +89,10 @@ function SuperDashboard() {
             de las pestañas — sin forma de reintentar otra vez. */}
         {query.isError ? (
           <div className="text-sm text-destructive">
-            No pudimos cargar los datos. <button className="underline" onClick={() => query.refetch()}>Reintentar</button>
+            No pudimos cargar los datos.{" "}
+            <button className="underline" onClick={() => query.refetch()}>
+              Reintentar
+            </button>
           </div>
         ) : query.data ? (
           seccion === "farmacias" ? (
@@ -101,14 +112,24 @@ function SuperDashboard() {
   );
 }
 
-function TabBtn({ active, onClick, icon, label }: {
-  active: boolean; onClick: () => void; icon: React.ReactNode; label: string;
+function TabBtn({
+  active,
+  onClick,
+  icon,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
 }) {
   return (
-    <button onClick={onClick}
+    <button
+      onClick={onClick}
       className={`inline-flex items-center gap-2 h-9 px-4 rounded-lg text-sm font-medium transition-colors ${
         active ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-accent"
-      }`}>
+      }`}
+    >
       {icon} {label}
     </button>
   );

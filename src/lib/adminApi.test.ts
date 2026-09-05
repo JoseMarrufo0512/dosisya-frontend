@@ -14,9 +14,11 @@ const ACARIGUA = { lat: 9.5578, lng: -69.2113 };
 
 /** fetch falso que captura el body y devuelve 200. */
 function stubFetch() {
-  const spy = vi.fn().mockResolvedValue(
-    new Response(JSON.stringify({ status: "success", data: {} }), { status: 200 }),
-  );
+  const spy = vi
+    .fn()
+    .mockResolvedValue(
+      new Response(JSON.stringify({ status: "success", data: {} }), { status: 200 }),
+    );
   vi.stubGlobal("fetch", spy);
   return spy;
 }
@@ -114,7 +116,10 @@ describe("getFarmaciasAdmin — respuestas mal formadas", () => {
     ["cuerpo que no es JSON", null],
   ])("lanza en vez de dejar reventar el render: %s", async (_caso, body) => {
     if (body === null) {
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("<html>502</html>", { status: 200 })));
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(new Response("<html>502</html>", { status: 200 })),
+      );
     } else {
       responder(body);
     }

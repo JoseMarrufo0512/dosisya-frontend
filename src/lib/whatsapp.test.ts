@@ -61,30 +61,29 @@ describe("construirMensajeLista", () => {
   });
 
   it("incluye la marca comercial entre paréntesis cuando existe", () => {
-    const mensaje = construirMensajeLista("Farmacia Central", [
-      item({ marcaComercial: "Cozaar" }),
-    ]);
+    const mensaje = construirMensajeLista("Farmacia Central", [item({ marcaComercial: "Cozaar" })]);
     expect(mensaje).toContain("Losartán (Cozaar) ·");
   });
 
   it("añade la nota de confirmación cuando hay items de escaner_recipe", () => {
-    const mensaje = construirMensajeLista("Farmacia Central", [
-      item({ origen: "escaner_recipe" }),
-    ]);
+    const mensaje = construirMensajeLista("Farmacia Central", [item({ origen: "escaner_recipe" })]);
     expect(mensaje).toContain("confirma contra la receta física");
   });
 
   it("NO añade la nota si ningún item viene del escáner", () => {
-    const mensaje = construirMensajeLista("Farmacia Central", [
-      item({ origen: "lista_medica" }),
-    ]);
+    const mensaje = construirMensajeLista("Farmacia Central", [item({ origen: "lista_medica" })]);
     expect(mensaje).not.toContain("confirma contra la receta física");
   });
 });
 
 describe("construirMensajeProducto", () => {
   it("incluye nombre, presentación y precio formateado a 2 decimales", () => {
-    const mensaje = construirMensajeProducto("Farmacia Central", "Losartán", "Tabletas 50mg x 30", 12.5);
+    const mensaje = construirMensajeProducto(
+      "Farmacia Central",
+      "Losartán",
+      "Tabletas 50mg x 30",
+      12.5,
+    );
     expect(mensaje).toContain("Losartán (Tabletas 50mg x 30)");
     expect(mensaje).toContain("$12.50");
   });
