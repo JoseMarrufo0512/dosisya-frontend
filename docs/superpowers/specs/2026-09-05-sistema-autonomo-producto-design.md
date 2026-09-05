@@ -13,8 +13,8 @@ El documento asume un proyecto que empieza de cero. **No es el caso.** Antes de 
   1. Búsqueda geolocalizada — spec/plan `2026-07-12-busqueda-v2`.
   2. Resultados y detalle de farmacia con stock real — mismo spec + ruta `producto.$farmaciaId.$medicamentoId.tsx`.
   3. Lista Médica multi-medicamento — commit `ddbb253` ("Lista Médica multi-producto — carrito, drawer y selector de farmacia"), componentes en `src/components/lista/`.
-  4. Selección de farmacia y contacto por WhatsApp — `SelectorFarmacia.tsx`, spec `2026-07-13-lead-premium-origen`.
-  5. Registro correcto de leads CPC (fan-out) — `docs/contexto/decisiones.md` §"Consolidación de la capa de red", spec `2026-07-13-lead-premium-escaner`.
+  4. Selección de farmacia y contacto por WhatsApp — `SelectorFarmacia.tsx` (creado en el mismo commit `ddbb253`).
+  5. Registro correcto de leads CPC (fan-out) — `docs/contexto/decisiones.md` §"Consolidación de la capa de red", spec `2026-07-13-lead-premium-escaner-design.md` (origen `busqueda`/`lista_medica`/`escaner_recipe` para facturación premium).
   6. Flujo de receta con IA — `docs/features/receta-ia-y-carrito.md`, `receta-ia-optimizacion-gemini.md`, spec/plan `2026-08-05/06-modo-farmaceutico-escaner-recipe`.
   7. Dashboard de farmacia — spec/plan `2026-07-13-admin-farmacia-completar`, commits `0aace62` (progreso de upload), `91fa24d` (fijar ubicación).
   8. Validación de ubicación antes de aprobación de farmacia — commit `c2d4fe5`, documentado en `CLAUDE.md` §5.
