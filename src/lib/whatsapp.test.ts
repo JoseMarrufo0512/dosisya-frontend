@@ -88,3 +88,67 @@ describe("construirMensajeProducto", () => {
     expect(mensaje).toContain("$12.50");
   });
 });
+
+describe("construirMensajeLista — marcador de récipe (hallazgo B-03)", () => {
+  it("marca solo las líneas que requieren récipe", () => {
+    const mensaje = construirMensajeLista("Farmacia San Rafael", [
+      item({ nombre: "Losartán", condicionDispensacion: "receta" }),
+      item({ medicamentoId: "med-2", nombre: "Acetaminofén", condicionDispensacion: "libre" }),
+    ]);
+
+    expect(mensaje).toContain("1. Losartán · Tabletas 50mg x 30 (requiere récipe)");
+    expect(mensaje).toContain("2. Acetaminofén · Tabletas 50mg x 30");
+    expect(mensaje).not.toContain("Acetaminofén · Tabletas 50mg x 30 (requiere récipe)");
+  });
+
+  it("no marca nada cuando la condición es desconocida", () => {
+    const mensaje = construirMensajeLista("Farmacia San Rafael", [
+      item({ nombre: "Vitamina C" }), // sin condicionDispensacion
+    ]);
+
+    expect(mensaje).not.toContain("requiere récipe");
+  });
+
+  it("nunca afirma que el paciente tiene el récipe", () => {
+    // Decisión explícita de la spec: el mensaje no pone palabras en boca del
+    // paciente. El recordatorio va en la app, no en el texto.
+    const mensaje = construirMensajeLista("Farmacia San Rafael", [
+      item({ condicionDispensacion: "receta" }),
+    ]);
+
+    expect(mensaje).not.toMatch(/tengo (el|mi) récipe/i);
+    expect(mensaje).not.toMatch(/llevo (el|mi) récipe/i);
+  });
+
+  it("el marcador convive con la nota del escáner de récipe", () => {
+    const mensaje = construirMensajeLista("Farmacia San Rafael", [
+      item({ origen: "escaner_recipe", condicionDispensacion: "receta" }),
+    ]);
+
+    expect(mensaje).toContain("(requiere récipe)");
+    expect(mensaje).toContain("leídos por IA");
+  });
+});
+
+describe("construirMensajeProducto — marcador de récipe", () => {
+  it("añade el marcador cuando el producto requiere récipe", () => {
+    const mensaje = construirMensajeProducto(
+      "Farmacia San Rafael",
+      "Losartán",
+      "Tabletas 50mg x 30",
+      3.5,
+      "receta",
+    );
+
+    expect(mensaje).toContain("(requiere récipe)");
+  });
+
+  it("no añade nada si es libre o desconocido", () => {
+    expect(
+      construirMensajeProducto("F", "Vitamina C", "Tabletas x 10", 1.5, "libre"),
+    ).not.toContain("requiere récipe");
+    expect(
+      construirMensajeProducto("F", "Vitamina C", "Tabletas x 10", 1.5, null),
+    ).not.toContain("requiere récipe");
+  });
+});

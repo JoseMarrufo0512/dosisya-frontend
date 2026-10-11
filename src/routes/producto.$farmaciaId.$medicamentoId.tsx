@@ -108,6 +108,7 @@ function ProductoPage() {
         p.medicamento_nombre,
         p.presentacion,
         p.precio_usd,
+        p.condicion_dispensacion,
       ),
     );
     if (!url) {
