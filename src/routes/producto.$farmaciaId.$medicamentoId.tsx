@@ -1,7 +1,7 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { MapPin, Pill, ArrowLeft } from "lucide-react";
-import { API_BASE } from "@/lib/api";
+import { API_BASE, type CondicionDispensacion } from "@/lib/api";
 import { registrarLead } from "@/lib/leads";
 import { construirMensajeProducto, construirUrlWhatsApp } from "@/lib/whatsapp";
 import { toast } from "sonner";
@@ -20,6 +20,7 @@ interface ProductoDetalle {
   precio_usd: number;
   precio_ves: number;
   stock_disponible: boolean;
+  condicion_dispensacion: CondicionDispensacion;
 }
 
 // El loader corre isomórfico: en el servidor durante SSR/la primera carga, y
