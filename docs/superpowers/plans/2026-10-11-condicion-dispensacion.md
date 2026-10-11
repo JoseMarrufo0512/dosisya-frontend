@@ -263,152 +263,45 @@ git commit -m "feat(db): tabla y función de condición de dispensación (migrac
 - Consumes: de Task 1 — `canon_principio(text)`, `principios_activos_dispensacion.principio_canonico`, `principios_activos_dispensacion.condicion`
 - Produces: campo `condicion_dispensacion` (valores `"libre"`, `"receta"` o `null`) en cada objeto de `data.resultados[]` de `GET /api/v1/medicamentos/buscar` y en `data` de `GET /api/v1/medicamentos/{medicamento_id}/farmacias/{farmacia_id}`
 
-- [ ] **Step 1: Escribir los tests fallidos**
+- [x] **Step 1: Escribir los tests fallidos**
 
-Crear `tests/test_medicamentos_dispensacion.py`. `_FakeConn` del repo solo implementa `fetchrow`; el endpoint de búsqueda usa `fetch`, así que aquí se extiende:
+> **Corregido durante la ejecución (2026-10-11).** El plan pedía originalmente tests que mockearan
+> la conexión y afirmaran que `condicion_dispensacion` aparecía en el JSON. Se escribieron y
+> **pasaron sin la implementación**: el router serializa con `dict(row)`, así que cualquier clave
+> que el mock meta en la fila llega al cliente aunque el SELECT no la traiga. Eran tautológicos —
+> exactamente el teatro de tests que las Global Constraints de este plan advierten — y se
+> descartaron. Un test que pasa sin la feature es peor que ningún test.
+>
+> Lo que de verdad hay que proteger es el SQL, y ningún test de este repo ejecuta SQL. De ahí la
+> forma definitiva: guardas de regresión sobre el texto de las queries. Afirmar sobre strings de
+> SQL es normalmente un olor, pero aquí el string **es** la lógica, y lo que protege no es
+> cosmético: si alguien borra el predicado de controlados en un refactor, se publican
+> psicotrópicos en la búsqueda sin que nada avise.
 
-```python
-"""
-DosisYa — Tests del campo condicion_dispensacion (hallazgo B-03)
+El archivo definitivo es `tests/test_medicamentos_dispensacion.py` (ver el commit `8ee3ce6` del
+backend). Importa las dos queries y afirma, sobre el texto normalizado de ambas:
 
-Cubre que el campo viaje del SELECT a la respuesta JSON en los dos endpoints
-públicos. OJO: estos tests mockean la conexión, así que NO verifican el SQL
-(ni el LEFT JOIN ni el filtro de controlados). Eso se verifica contra la base
-real en los pasos de verificación del plan.
-"""
+- `LEFT JOIN principios_activos_dispensacion` presente — y que **no** sea un `INNER JOIN`, que
+  dejaría fuera todo lo no clasificado.
+- `canon_principio(im.principio_activo)` como clave del join — emparejar por texto plano perdería
+  los 15 pares duplicados del catálogo en silencio.
+- `AS condicion_dispensacion` en el SELECT.
+- `pad.condicion IS DISTINCT FROM 'controlado'` en el WHERE, **y** una guarda explícita de que no
+  se escribió `<>` ni `!=`, que filtrarían los NULL y vaciarían el buscador.
 
-from __future__ import annotations
-
-import uuid
-
-from fastapi.testclient import TestClient
-
-from dosisya.main import app
-
-client = TestClient(app)
-
-MEDICAMENTO_ID = str(uuid.uuid4())
-FARMACIA_ID = str(uuid.uuid4())
-
-_FILA_BASE = {
-    "farmacia_id": uuid.UUID(FARMACIA_ID),
-    "farmacia_nombre": "Farmacia San Rafael",
-    "direccion": "Av. Bolívar",
-    "whatsapp": "+584121234567",
-    "nivel_suscripcion": "premium",
-    "es_premium": True,
-    "tiene_delivery": True,
-    "lat": 9.5597,
-    "lng": -69.2036,
-    "medicamento_id": uuid.UUID(MEDICAMENTO_ID),
-    "medicamento_nombre": "Losartán",
-    "marca_comercial": "Genfar",
-    "presentacion": "Tabletas 50mg x30",
-    "precio_usd": 3.5,
-    "precio_ves": 511.0,
-    "stock_disponible": True,
-}
-
-FILA_BUSQUEDA = {**_FILA_BASE, "distancia_m": 1172.0, "score_similitud": 0.5}
-
-
-class _FakeConn:
-    """fetchrow() consume respuestas en orden; fetch() devuelve la lista fijada."""
-
-    def __init__(self, respuestas: list, filas: list | None = None):
-        self._respuestas = list(respuestas)
-        self._filas = list(filas or [])
-
-    async def fetchrow(self, query, *args):
-        return self._respuestas.pop(0)
-
-    async def fetch(self, query, *args):
-        return self._filas
-
-
-class _Ctx:
-    def __init__(self, conn):
-        self._conn = conn
-
-    async def __aenter__(self):
-        return self._conn
-
-    async def __aexit__(self, *exc):
-        return False
-
-
-def _mock_conn(monkeypatch, respuestas: list, filas: list | None = None):
-    monkeypatch.setattr(
-        "dosisya.routers.medicamentos.get_connection",
-        lambda: _Ctx(_FakeConn(respuestas, filas)),
-    )
-
-
-BUSCAR = "/api/v1/medicamentos/buscar?q=losartan&lat=9.55&lng=-69.20"
-DETALLE = f"/api/v1/medicamentos/{MEDICAMENTO_ID}/farmacias/{FARMACIA_ID}"
-
-
-class TestCondicionEnBusqueda:
-    def test_receta_llega_al_cliente(self, monkeypatch):
-        fila = {**FILA_BUSQUEDA, "condicion_dispensacion": "receta"}
-        _mock_conn(monkeypatch, [{"tasa_existe": True}], [fila])
-
-        r = client.get(BUSCAR)
-
-        assert r.status_code == 200
-        assert r.json()["data"]["resultados"][0]["condicion_dispensacion"] == "receta"
-
-    def test_libre_llega_al_cliente(self, monkeypatch):
-        fila = {**FILA_BUSQUEDA, "condicion_dispensacion": "libre"}
-        _mock_conn(monkeypatch, [{"tasa_existe": True}], [fila])
-
-        r = client.get(BUSCAR)
-
-        assert r.json()["data"]["resultados"][0]["condicion_dispensacion"] == "libre"
-
-    def test_desconocido_viaja_como_null(self, monkeypatch):
-        """Sin fila en la tabla curada el LEFT JOIN da NULL, y el producto
-        SIGUE siendo visible (decisión 4 de la spec)."""
-        fila = {**FILA_BUSQUEDA, "condicion_dispensacion": None}
-        _mock_conn(monkeypatch, [{"tasa_existe": True}], [fila])
-
-        r = client.get(BUSCAR)
-
-        data = r.json()["data"]
-        assert data["total"] == 1
-        assert data["resultados"][0]["condicion_dispensacion"] is None
-
-
-class TestCondicionEnDetalle:
-    def test_receta_llega_al_cliente(self, monkeypatch):
-        fila = {**_FILA_BASE, "condicion_dispensacion": "receta"}
-        _mock_conn(monkeypatch, [{"tasa_existe": True}, fila])
-
-        r = client.get(DETALLE)
-
-        assert r.status_code == 200
-        assert r.json()["data"]["condicion_dispensacion"] == "receta"
-
-    def test_desconocido_viaja_como_null(self, monkeypatch):
-        fila = {**_FILA_BASE, "condicion_dispensacion": None}
-        _mock_conn(monkeypatch, [{"tasa_existe": True}, fila])
-
-        r = client.get(DETALLE)
-
-        assert r.status_code == 200
-        assert r.json()["data"]["condicion_dispensacion"] is None
-```
-
-- [ ] **Step 2: Correr los tests y confirmar que fallan**
+- [x] **Step 2: Correr los tests y confirmar que fallan**
 
 ```bash
 cd /home/josemarrufo/Escritorio/DosisYa-Backend
 .venv/bin/python -m pytest tests/test_medicamentos_dispensacion.py -v
 ```
 
-Esperado: los 5 fallan con `KeyError: 'condicion_dispensacion'` o `assert None == 'receta'`, porque el SELECT todavía no trae la columna.
+Esperado: **4 fallan** con mensajes propios («la query 'busqueda' no hace LEFT JOIN con la tabla
+curada», etc.) y **2 pasan** — las dos guardas de ausencia, que hoy son ciertas por vacuidad y
+siguen siendo útiles después del cambio.
 
-**Si en cambio salen 429:** es la contaminación del limiter de slowapi documentada en el hallazgo B-17 (el endpoint de búsqueda tiene `@limiter.limit("60/minute")` y el almacenamiento es `memory://` compartido entre tests). Correr el archivo aislado antes de diagnosticar otra cosa.
+**Si en cambio salen 429:** es la contaminación del limiter de slowapi documentada en el hallazgo
+B-17. No aplica a la versión definitiva de estos tests, que no hacen peticiones HTTP.
 
 - [ ] **Step 3: Añadir el JOIN y la columna a `_BUSCAR_MEDICAMENTOS`**
 
