@@ -73,7 +73,7 @@ CREATE OR REPLACE FUNCTION canon_principio(texto text) RETURNS text
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS $$
   SELECT regexp_replace(
            regexp_replace(
-             lower(unaccent('public.unaccent'::regdictionary, trim(texto))),
+             lower(public.unaccent('public.unaccent'::regdictionary, trim(texto))),
              '\s+(succinato|fosfato|benzoato|besilato)?\s*(sodico|sodica|potasico|potasica|calcico|clorhidrato|hcl|maleato|lactato|tartrato|sulfato|acetato|mesilato|dipropionato|valerato|trihidratada|anhidro|base o trihidratada)$',
              ''),
            '\s+', ' ', 'g')
@@ -114,6 +114,12 @@ farmacia reclame.
 **Caveat del envoltorio `IMMUTABLE`:** declarar inmutable algo que depende de un diccionario es
 el truco documentado y lo que hace todo el mundo, pero es una promesa hecha a Postgres. Si el
 diccionario `unaccent` cambiara, habría que reindexar. Queda dicho a propósito.
+**`public.unaccent` va cualificado, y no es cosmético.** Sin el esquema, aplicar la migración falla
+con `function unaccent(regdictionary, text) does not exist`: dentro de una migración el
+`search_path` no incluye `public`. Verificado el 2026-10-11 — el primer intento de aplicarla se
+revirtió completo por esto, sin dejar nada a medias. Y una función `IMMUTABLE` que se usa en un
+índice no debería depender del `search_path` del llamador de todas formas.
+
 
 Hay que reflejar los cambios en `db/schema.sql`, que es la fuente canónica del esquema.
 

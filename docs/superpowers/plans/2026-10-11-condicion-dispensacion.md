@@ -91,6 +91,10 @@ CREATE TYPE condicion_dispensacion_enum AS ENUM ('libre','receta','controlado');
 -- truco documentado. Caveat asumido: si el diccionario unaccent cambiara,
 -- habría que reindexar.
 --
+-- POR QUÉ public.unaccent CUALIFICADO: sin el esquema, aplicar esta migración
+-- falla con «function unaccent(regdictionary, text) does not exist» — dentro
+-- de una migración el search_path no incluye public.
+--
 -- POR QUÉ EL GRUPO DE SAL COMPUESTA: medido contra los 422 principios activos
 -- reales del catálogo, la variante con sales simples en una sola pasada
 -- colapsa 12 de los 15 pares duplicados. Con el grupo opcional
@@ -102,7 +106,7 @@ CREATE OR REPLACE FUNCTION canon_principio(texto text) RETURNS text
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS $$
   SELECT regexp_replace(
            regexp_replace(
-             lower(unaccent('public.unaccent'::regdictionary, trim(texto))),
+             lower(public.unaccent('public.unaccent'::regdictionary, trim(texto))),
              '\s+(succinato|fosfato|benzoato|besilato)?\s*(sodico|sodica|potasico|potasica|calcico|clorhidrato|hcl|maleato|lactato|tartrato|sulfato|acetato|mesilato|dipropionato|valerato|trihidratada|anhidro|base o trihidratada)$',
              ''),
            '\s+', ' ', 'g')
@@ -218,7 +222,7 @@ diclofenac               Diclofenac | Diclofenac sódico
 diclofenaco              Diclofenaco | Diclofenaco sódico
 gentamicina              Gentamicina | Gentamicina sulfato
 hidrocortisona           Hidrocortisona | Hidrocortisona succinato sódico
-metformina clorhidrato   Metformina clorhidrato | Metformina Clorhidrato
+metformina               Metformina clorhidrato | Metformina Clorhidrato
 morfina                  Morfina | Morfina sulfato
 propranolol              Propranolol | Propranolol clorhidrato
 verapamilo               Verapamilo | Verapamilo clorhidrato
