@@ -147,8 +147,8 @@ describe("construirMensajeProducto — marcador de récipe", () => {
     expect(
       construirMensajeProducto("F", "Vitamina C", "Tabletas x 10", 1.5, "libre"),
     ).not.toContain("requiere récipe");
-    expect(
-      construirMensajeProducto("F", "Vitamina C", "Tabletas x 10", 1.5, null),
-    ).not.toContain("requiere récipe");
+    expect(construirMensajeProducto("F", "Vitamina C", "Tabletas x 10", 1.5, null)).not.toContain(
+      "requiere récipe",
+    );
   });
 });
