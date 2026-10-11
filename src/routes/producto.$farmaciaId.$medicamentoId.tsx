@@ -1,6 +1,7 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { MapPin, Pill, ArrowLeft } from "lucide-react";
+import { BadgeReceta } from "@/components/BadgeReceta";
 import { API_BASE, type CondicionDispensacion } from "@/lib/api";
 import { registrarLead } from "@/lib/leads";
 import { construirMensajeProducto, construirUrlWhatsApp } from "@/lib/whatsapp";
@@ -172,6 +173,11 @@ function ProductoPage() {
             <p className="text-[12.5px]" style={{ color: "var(--tinta-tenue)" }}>
               {p.marca_comercial}
             </p>
+          )}
+          {p.condicion_dispensacion === "receta" && (
+            <div className="mt-2">
+              <BadgeReceta />
+            </div>
           )}
 
           {p.stock_disponible ? (
