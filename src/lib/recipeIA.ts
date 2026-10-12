@@ -91,6 +91,11 @@ export async function analizarRecipe(imagen: File): Promise<RespuestaRecipe> {
   try {
     const formData = new FormData();
     formData.append("file", imagenAEnviar);
+    // Hallazgo B-04: el backend lo exige y responde 422 sin él. En un endpoint
+    // público no frena a un cliente malicioso — frena una regresión nuestra: si
+    // alguien se lleva por delante la pantalla de consentimiento, esto falla
+    // ruidosamente en vez de en silencio.
+    formData.append("consentimiento", "true");
 
     const res = await fetch(`${API_BASE}/api/v1/ia/analizar-recipe`, {
       method: "POST",

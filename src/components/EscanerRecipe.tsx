@@ -31,7 +31,7 @@ import { track } from "@/lib/analytics";
 // Regla #5 CLAUDE.md: la imagen va al backend, nunca a Gemini desde React.
 // ─────────────────────────────────────────────────────────────────────────────
 
-type Estado = "idle" | "scanning" | "results" | "error";
+type Estado = "idle" | "confirmando" | "scanning" | "results" | "error";
 
 interface EscanerRecipeProps {
   abierto: boolean;
@@ -42,6 +42,7 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [estado, setEstado] = useState<Estado>("idle");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [archivo, setArchivo] = useState<File | null>(null);
   const [resultados, setResultados] = useState<MedicamentoRecetaUI[]>([]);
   const [errorMsg, setErrorMsg] = useState("");
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
@@ -62,6 +63,7 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
       if (open) {
         setEstado("idle");
         setPreviewUrl(null);
+        setArchivo(null);
         setResultados([]);
         setErrorMsg("");
         setExpandidos(new Set());
@@ -74,20 +76,29 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
 
   // ── Procesamiento de imagen ──────────────────────────────────────────────
 
-  const procesarImagen = useCallback(async (file: File) => {
+  // ── Preparación: valida y muestra, NO transmite ──────────────────────────
+  // La separación es la garantía del hallazgo B-04: enviarImagen, que es la
+  // única función que llama a la red, no es alcanzable sin pasar por la
+  // pantalla de consentimiento. No es un flag que alguien pueda olvidar
+  // comprobar — es que no hay camino.
+  const prepararImagen = useCallback((file: File) => {
     const error = validarImagen(file);
     if (error) {
       toast.error(error);
       return;
     }
+    setArchivo(file);
+    setPreviewUrl(URL.createObjectURL(file));
+    setEstado("confirmando");
+  }, []);
 
-    // Preview
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
+  // ── Transmisión: solo desde el botón de consentimiento ───────────────────
+  const enviarImagen = useCallback(async () => {
+    if (!archivo) return;
     setEstado("scanning");
 
     try {
-      const respuesta = await analizarRecipe(file);
+      const respuesta = await analizarRecipe(archivo);
 
       if (respuesta.status === "success" && respuesta.data && respuesta.data.length > 0) {
         track("receta_escaneada", { medicamentos: respuesta.data?.length ?? 0 });
@@ -110,17 +121,20 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
       setEstado("error");
       track("receta_error", { motivo: errorMsg });
     }
-  }, []);
+  }, [archivo]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) void procesarImagen(file);
+    if (file) prepararImagen(file);
     e.target.value = "";
   };
 
+  // Sirve también para cancelar desde la pantalla de consentimiento: al poner
+  // previewUrl en null, el useEffect de arriba revoca el ObjectURL anterior.
   const volverAIdle = () => {
     setEstado("idle");
     setPreviewUrl(null);
+    setArchivo(null);
     setResultados([]);
     setErrorMsg("");
     setExpandidos(new Set());
@@ -277,6 +291,61 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
                   <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
                   Funciona con letra de médico — nuestra IA se encarga
                 </p>
+              </motion.div>
+            )}
+
+            {/* ── CONFIRMANDO: consentimiento previo (hallazgo B-04) ── */}
+            {estado === "confirmando" && (
+              <motion.div
+                key="confirmando"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                className="flex flex-col px-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-3"
+              >
+                <Drawer.Title className="text-lg font-bold text-foreground">
+                  ¿Enviamos esta foto?
+                </Drawer.Title>
+
+                {previewUrl && (
+                  <img
+                    src={previewUrl}
+                    alt="Récipe que estás por enviar"
+                    className="mt-3 h-48 w-full rounded-2xl object-cover"
+                  />
+                )}
+
+                {/* El texto NO dice qué hace Google con la imagen porque no lo
+                    sabemos (hallazgo B-05b, abierto). Dice lo que sabemos y
+                    calla lo que no: no rellenar este hueco con suposiciones. */}
+                <div
+                  className="mt-4 rounded-xl px-4 py-3 text-xs leading-relaxed"
+                  style={{ background: "var(--ambar-fondo)", color: "var(--ambar-receta)" }}
+                >
+                  <p>
+                    Para leer los medicamentos, esta foto se envía a nuestro servidor y de ahí al
+                    servicio de inteligencia artificial de <strong>Google (Gemini)</strong>.
+                  </p>
+                  <p className="mt-2">
+                    <strong>DosisYa no la guarda.</strong> Ten en cuenta que un récipe suele llevar
+                    tu nombre y el de tu médico.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => void enviarImagen()}
+                  className="mt-5 flex min-h-12 w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white transition-opacity hover:opacity-90"
+                >
+                  Enviar para que la lean
+                </button>
+                <button
+                  type="button"
+                  onClick={volverAIdle}
+                  className="mt-2 flex min-h-12 w-full items-center justify-center rounded-xl border border-border px-4 py-3 font-medium text-foreground transition-colors hover:bg-muted"
+                >
+                  Cancelar
+                </button>
               </motion.div>
             )}
 
