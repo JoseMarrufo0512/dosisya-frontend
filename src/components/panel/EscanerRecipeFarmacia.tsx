@@ -30,7 +30,7 @@ import {
 // Regla #5 CLAUDE.md: la imagen va al backend, nunca a un proveedor de IA desde React.
 // ─────────────────────────────────────────────────────────────────────────────
 
-type Estado = "idle" | "scanning" | "results" | "error";
+type Estado = "idle" | "confirmando" | "scanning" | "results" | "error";
 
 type ItemInventario = {
   nombre: string;
@@ -98,6 +98,8 @@ export function EscanerRecipeFarmacia({
   const inputRef = useRef<HTMLInputElement>(null);
   const [estado, setEstado] = useState<Estado>("idle");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [archivo, setArchivo] = useState<File | null>(null);
+  const [declaracionMarcada, setDeclaracionMarcada] = useState(false);
   const [resultados, setResultados] = useState<MedicamentoRecetaFarmaciaUI[]>([]);
   const [errorMsg, setErrorMsg] = useState("");
   const [editandoId, setEditandoId] = useState<string | null>(null);
@@ -108,6 +110,8 @@ export function EscanerRecipeFarmacia({
       if (open) {
         setEstado("idle");
         setPreviewUrl(null);
+        setArchivo(null);
+        setDeclaracionMarcada(false);
         setResultados([]);
         setErrorMsg("");
         setEditandoId(null);
@@ -117,19 +121,29 @@ export function EscanerRecipeFarmacia({
     [onOpenChange],
   );
 
-  const procesarImagen = useCallback(async (file: File) => {
+  // ── Preparación: valida y muestra, NO transmite ──────────────────────────
+  // Misma garantía estructural que el escáner del paciente (hallazgo B-04):
+  // enviarImagen es la única función que llama a la red y no es alcanzable sin
+  // pasar por la declaración.
+  const prepararImagen = useCallback((file: File) => {
     const error = validarImagen(file);
     if (error) {
       toast.error(error);
       return;
     }
+    setArchivo(file);
+    setPreviewUrl(URL.createObjectURL(file));
+    setDeclaracionMarcada(false);
+    setEstado("confirmando");
+  }, []);
 
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
+  // ── Transmisión: solo desde el botón, y solo con la casilla marcada ──────
+  const enviarImagen = useCallback(async () => {
+    if (!archivo || !declaracionMarcada) return;
     setEstado("scanning");
 
     try {
-      const respuesta = await analizarRecipeFarmacia(file);
+      const respuesta = await analizarRecipeFarmacia(archivo);
 
       if (respuesta.status === "success" && respuesta.data && respuesta.data.length > 0) {
         const conId: MedicamentoRecetaFarmaciaUI[] = respuesta.data.map((med) => ({
@@ -146,17 +160,20 @@ export function EscanerRecipeFarmacia({
       setErrorMsg("Error inesperado al analizar el récipe.");
       setEstado("error");
     }
-  }, []);
+  }, [archivo, declaracionMarcada]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) void procesarImagen(file);
+    if (file) prepararImagen(file);
     e.target.value = "";
   };
 
+  // Sirve también para cancelar desde la pantalla de declaración.
   const volverAIdle = () => {
     setEstado("idle");
     setPreviewUrl(null);
+    setArchivo(null);
+    setDeclaracionMarcada(false);
     setResultados([]);
     setErrorMsg("");
     setEditandoId(null);
@@ -233,6 +250,78 @@ export function EscanerRecipeFarmacia({
                       o selecciona una imagen de tu galería
                     </p>
                   </div>
+                </button>
+              </motion.div>
+            )}
+
+            {/* ── CONFIRMANDO: declaración del farmacéutico (hallazgo B-04) ── */}
+            {estado === "confirmando" && (
+              <motion.div
+                key="confirmando"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                className="flex flex-col px-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-3"
+              >
+                <Drawer.Title className="text-lg font-bold text-foreground">
+                  Confirma antes de analizar
+                </Drawer.Title>
+
+                {previewUrl && (
+                  <img
+                    src={previewUrl}
+                    alt="Récipe que estás por enviar"
+                    className="mt-3 h-48 w-full rounded-2xl object-cover"
+                  />
+                )}
+
+                <div
+                  className="mt-4 rounded-xl px-4 py-3 text-xs leading-relaxed"
+                  style={{ background: "var(--ambar-fondo)", color: "var(--ambar-receta)" }}
+                >
+                  <p>
+                    Esta foto se envía a nuestro servidor y de ahí al servicio de inteligencia
+                    artificial de <strong>Google (Gemini)</strong> para extraer los datos de
+                    dispensación. <strong>DosisYa no la guarda.</strong>
+                  </p>
+                  <p className="mt-2">
+                    El récipe contiene datos del paciente y del médico, y esa persona no está aquí
+                    para autorizarlo.
+                  </p>
+                </div>
+
+                {/* ⚠ TEXTO PENDIENTE DE REVISIÓN LEGAL — ver §6 de la spec
+                    2026-10-12-consentimiento-escaner-recipe-design.md. No corresponde a
+                    esta implementación decidir cuál es la base de tratamiento cuando el
+                    paciente no está presente: si es el deber profesional del regente, una
+                    autorización verbal del paciente, o ambas. */}
+                <label className="mt-4 flex cursor-pointer items-start gap-3 text-xs leading-relaxed text-foreground">
+                  <input
+                    type="checkbox"
+                    checked={declaracionMarcada}
+                    onChange={(e) => setDeclaracionMarcada(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 shrink-0"
+                  />
+                  <span>
+                    Declaro que estoy autorizado para procesar este récipe en el ejercicio de la
+                    dispensación.
+                  </span>
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => void enviarImagen()}
+                  disabled={!declaracionMarcada}
+                  className="mt-5 flex min-h-12 w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Enviar para analizar
+                </button>
+                <button
+                  type="button"
+                  onClick={volverAIdle}
+                  className="mt-2 flex min-h-12 w-full items-center justify-center rounded-xl border border-border px-4 py-3 font-medium text-foreground transition-colors hover:bg-muted"
+                >
+                  Cancelar
                 </button>
               </motion.div>
             )}
