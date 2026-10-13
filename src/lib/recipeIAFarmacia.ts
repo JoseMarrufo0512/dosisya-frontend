@@ -82,6 +82,10 @@ export async function analizarRecipeFarmacia(imagen: File): Promise<RespuestaRec
   try {
     const formData = new FormData();
     formData.append("file", imagenAEnviar);
+    // Hallazgo B-04: el backend lo exige, responde 422 sin él, y registra la
+    // declaración en consentimientos_recipe. Aquí sí es una barrera real, no
+    // solo una guarda: el endpoint va autenticado.
+    formData.append("declaracion_autorizacion", "true");
 
     const res = await fetch(`${API_BASE}/api/v1/farmacias/${cred.farmaciaId}/ia/analizar-recipe`, {
       method: "POST",
