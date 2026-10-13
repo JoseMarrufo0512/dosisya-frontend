@@ -314,6 +314,22 @@ function Fila({
               <AlertTriangle className="h-3 w-3" aria-hidden="true" /> sin ubicación
             </span>
           )}
+          {f.habilitacion_completa === false && (
+            <span
+              className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border bg-amber-50 text-amber-800 border-amber-200"
+              title="Faltan datos de habilitación (regente / SACS): no se puede aprobar"
+            >
+              <AlertTriangle className="h-3 w-3" aria-hidden="true" /> Sin habilitación
+            </span>
+          )}
+          {f.conflicto_regente && (
+            <span
+              className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border bg-red-50 text-red-800 border-red-200"
+              title={`Mismo regente que ${f.conflicto_regente}`}
+            >
+              <AlertTriangle className="h-3 w-3" aria-hidden="true" /> Regente duplicado
+            </span>
+          )}
         </div>
       </td>
       <td className="px-3 py-2">
