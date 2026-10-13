@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Drawer } from "vaul";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -104,6 +104,15 @@ export function EscanerRecipeFarmacia({
   const [errorMsg, setErrorMsg] = useState("");
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [borrador, setBorrador] = useState<MedicamentoRecetaFarmaciaUI | null>(null);
+
+  // Revoca el ObjectURL anterior al cambiar previewUrl y al desmontar. Mismo
+  // patrón que el escáner del paciente: sin esto, cada récipe elegido deja su
+  // blob en memoria hasta recargar la página.
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
 
   const handleOpenChange = useCallback(
     (open: boolean) => {
