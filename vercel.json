@@ -9,6 +9,10 @@
     }
   },
   "rewrites": [
+    {
+      "source": "/api/v1/:path*",
+      "destination": "https://proyecto-dosis-ya.vercel.app/api/v1/:path*"
+    },
     { "source": "/(.*)", "destination": "/api/ssr" }
   ]
 }
