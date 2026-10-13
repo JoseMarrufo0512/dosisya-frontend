@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import type { OrigenLead } from "@/lib/leads";
+import type { CondicionDispensacion } from "@/lib/api";
 import { track } from "@/lib/analytics";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -34,6 +35,13 @@ export interface ItemLista {
   farmaciaId?: string;
   farmaciaNombre?: string;
   farmaciaWhatsapp?: string | null;
+  /**
+   * Condición de dispensación vista al añadir (hallazgo B-03). Ausente en
+   * items guardados antes de esta feature y en los del escáner de récipe, que
+   * no tienen entrada de catálogo contra la que emparejar. Se trata igual que
+   * `null`: sin insignia y sin marcador en el mensaje.
+   */
+  condicionDispensacion?: CondicionDispensacion;
 }
 
 /** Clave de identidad de un item: mismo medicamento en la MISMA farmacia. */

@@ -1,0 +1,75 @@
+name: Salud de producción
+
+# Vigilante de producción. Existe por un incidente concreto: entre el 5 de
+# septiembre y el 11 de octubre de 2026 el proyecto de Supabase se pausó tres
+# veces y la última caída duró ~5 semanas sin que nadie se enterara.
+#
+# POR QUÉ NO BASTA CON PINGUEAR LA PORTADA: con la base de datos apagada,
+# https://dosisya-frontend.vercel.app/ responde 200 igual. Un monitor de
+# uptime normal no habría detectado nada. Hay que pegarle a la búsqueda real
+# y mirar el CUERPO de la respuesta, no el código HTTP.
+
+on:
+  schedule:
+    # Cada 30 minutos. GitHub puede retrasar los cron en horas de carga alta;
+    # para este uso (detectar una caída de días) da igual.
+    - cron: "*/30 * * * *"
+  workflow_dispatch: # para poder correrlo a mano desde la pestaña Actions
+
+# Sin permisos de escritura: este workflow solo lee.
+permissions:
+  contents: read
+
+jobs:
+  busqueda-real:
+    name: La búsqueda devuelve resultados reales
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Consultar el endpoint de búsqueda
+        env:
+          # Coordenadas del centro de Acarigua: cualquier farmacia sembrada
+          # cae dentro del radio por defecto.
+          URL: "https://proyecto-dosis-ya.vercel.app/api/v1/medicamentos/buscar?q=losartan&lat=9.55&lng=-69.20"
+        run: |
+          set -uo pipefail
+
+          echo "GET $URL"
+          cuerpo=$(mktemp)
+          codigo=$(curl --silent --show-error --max-time 45 \
+                        --write-out '%{http_code}' \
+                        --output "$cuerpo" \
+                        "$URL") || {
+            echo "::error title=Producción caída::curl no pudo completar la petición. El backend no responde."
+            exit 1
+          }
+
+          echo "HTTP $codigo"
+          echo "--- cuerpo ---"
+          head -c 2000 "$cuerpo"
+          echo
+          echo "--------------"
+
+          if [ "$codigo" != "200" ]; then
+            echo "::error title=Producción caída::La búsqueda devolvió HTTP $codigo en vez de 200."
+            echo "::notice::Causa más probable: el proyecto de Supabase está pausado (plan gratuito, se suspende tras 1 semana de inactividad). Verificar el status del proyecto ANTES de buscar un bug en el código — ver docs/contexto/errores-conocidos.md."
+            exit 1
+          fi
+
+          # Un 200 no alcanza: el envelope de la API siempre responde 200 en
+          # algunos caminos de error, así que se exige status=success explícito.
+          if ! grep -q '"status":"success"' "$cuerpo"; then
+            echo "::error title=Producción degradada::HTTP 200 pero el cuerpo no trae \"status\":\"success\"."
+            exit 1
+          fi
+
+          # Y un success con cero resultados también es un fallo: significa que
+          # el inventario o la ubicación de las farmacias se rompió, aunque la
+          # base esté levantada. Es el modo de fallo de farmacias en (0,0).
+          if grep -q '"total":0' "$cuerpo"; then
+            echo "::error title=Sin inventario visible::La búsqueda responde correctamente pero devuelve 0 resultados para un medicamento que debería existir."
+            echo "::notice::Revisar farmacias.ubicacion (el centinela (0,0) deja todo el inventario fuera del radio de ST_DWithin) y que haya inventario con stock_disponible=true."
+            exit 1
+          fi
+
+          echo "OK — la búsqueda responde con resultados reales."

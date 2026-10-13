@@ -201,95 +201,111 @@ export function SelectorFarmacia({ lista, lat, lng }: SelectorFarmaciaProps) {
 
   // ── Resultados ─────────────────────────────────────────────────────────────
   const totalLista = lista.length;
+  // Hallazgo B-03: el marcador en el mensaje de WhatsApp informa al
+  // farmacéutico; este aviso informa al paciente. Va en el render y no en un
+  // toast porque un toast se pierde justo cuando ya está saliendo hacia
+  // WhatsApp, que es el momento en que necesita leerlo.
+  const hayReceta = lista.some((i) => i.condicionDispensacion === "receta");
 
   return (
-    <ul className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-1">
-      {estado.farmacias.map((farmacia, idx) => {
-        const cuantos = farmacia.matches.size;
-        const completa = cuantos === totalLista;
-        const esMejor = idx === 0 && cuantos > 0;
-        const bloqueada = bloqueadaId === String(farmacia.farmaciaId);
+    <>
+      {hayReceta && (
+        <p
+          className="mx-5 mb-2 shrink-0 rounded-lg px-3 py-2 text-xs leading-relaxed"
+          style={{ background: "var(--ambar-fondo)", color: "var(--ambar-receta)" }}
+        >
+          Alguno de tus medicamentos requiere récipe médico. Lleva el tuyo cuando vayas a retirarlo
+          — la farmacia está obligada a pedírtelo.
+        </p>
+      )}
+      <ul className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-1">
+        {estado.farmacias.map((farmacia, idx) => {
+          const cuantos = farmacia.matches.size;
+          const completa = cuantos === totalLista;
+          const esMejor = idx === 0 && cuantos > 0;
+          const bloqueada = bloqueadaId === String(farmacia.farmaciaId);
 
-        const totalUsd = lista.reduce((acc, item) => {
-          const match = farmacia.matches.get(String(item.medicamentoId));
-          return match ? acc + match.precio_usd * item.cantidad : acc;
-        }, 0);
+          const totalUsd = lista.reduce((acc, item) => {
+            const match = farmacia.matches.get(String(item.medicamentoId));
+            return match ? acc + match.precio_usd * item.cantidad : acc;
+          }, 0);
 
-        const faltantes = lista.filter((i) => !farmacia.matches.has(String(i.medicamentoId)));
+          const faltantes = lista.filter((i) => !farmacia.matches.has(String(i.medicamentoId)));
 
-        return (
-          <li
-            key={String(farmacia.farmaciaId)}
-            className={`rounded-xl border bg-card p-4 shadow-sm ${
-              esMejor ? "border-secondary ring-1 ring-secondary/40" : "border-border"
-            }`}
-          >
-            {esMejor && (
-              <span className="mb-2 inline-flex rounded-full bg-secondary/15 px-2 py-0.5 text-xs font-semibold text-emerald-700">
-                Mejor opción para tu lista
-              </span>
-            )}
-
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0 flex-col gap-1">
-                <h3 className="truncate text-base font-semibold leading-tight text-foreground">
-                  {farmacia.nombre}
-                </h3>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {farmacia.esPremium && <BadgePremium />}
-                  {farmacia.tieneDelivery && <BadgeDelivery />}
-                </div>
-                <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                  <MapPin className="h-3 w-3 shrink-0" aria-hidden />
-                  <span className="truncate">
-                    {(farmacia.distanciaM / 1000).toFixed(1)} km · {farmacia.direccion}
-                  </span>
-                </p>
-              </div>
-            </div>
-
-            {/* Cobertura */}
-            <div className="mt-3">
-              <div className="flex items-baseline justify-between text-sm">
-                <span
-                  className={`font-semibold ${completa ? "text-emerald-700" : "text-foreground"}`}
-                >
-                  {completa
-                    ? "✓ Tiene tu lista completa"
-                    : `Tiene ${cuantos} de ${totalLista} de tu lista`}
+          return (
+            <li
+              key={String(farmacia.farmaciaId)}
+              className={`rounded-xl border bg-card p-4 shadow-sm ${
+                esMejor ? "border-secondary ring-1 ring-secondary/40" : "border-border"
+              }`}
+            >
+              {esMejor && (
+                <span className="mb-2 inline-flex rounded-full bg-secondary/15 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                  Mejor opción para tu lista
                 </span>
-                {totalUsd > 0 && (
-                  <span className="text-xs text-muted-foreground">
-                    ≈ ${totalUsd.toFixed(2)} USD
+              )}
+
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-col gap-1">
+                  <h3 className="truncate text-base font-semibold leading-tight text-foreground">
+                    {farmacia.nombre}
+                  </h3>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {farmacia.esPremium && <BadgePremium />}
+                    {farmacia.tieneDelivery && <BadgeDelivery />}
+                  </div>
+                  <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                    <MapPin className="h-3 w-3 shrink-0" aria-hidden />
+                    <span className="truncate">
+                      {(farmacia.distanciaM / 1000).toFixed(1)} km · {farmacia.direccion}
+                    </span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Cobertura */}
+              <div className="mt-3">
+                <div className="flex items-baseline justify-between text-sm">
+                  <span
+                    className={`font-semibold ${completa ? "text-emerald-700" : "text-foreground"}`}
+                  >
+                    {completa
+                      ? "✓ Tiene tu lista completa"
+                      : `Tiene ${cuantos} de ${totalLista} de tu lista`}
                   </span>
+                  {totalUsd > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      ≈ ${totalUsd.toFixed(2)} USD
+                    </span>
+                  )}
+                </div>
+                <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-secondary transition-all"
+                    style={{ width: `${(cuantos / totalLista) * 100}%` }}
+                  />
+                </div>
+                {faltantes.length > 0 && faltantes.length <= 2 && (
+                  <p className="mt-1.5 truncate text-xs text-muted-foreground">
+                    Le falta: {faltantes.map((f) => f.nombre).join(", ")}
+                  </p>
                 )}
               </div>
-              <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-secondary transition-all"
-                  style={{ width: `${(cuantos / totalLista) * 100}%` }}
-                />
-              </div>
-              {faltantes.length > 0 && faltantes.length <= 2 && (
-                <p className="mt-1.5 truncate text-xs text-muted-foreground">
-                  Le falta: {faltantes.map((f) => f.nombre).join(", ")}
-                </p>
-              )}
-            </div>
 
-            {/* Contactar → lead CPC multi-producto + WhatsApp */}
-            <button
-              type="button"
-              onClick={() => handleContactar(farmacia)}
-              disabled={bloqueada}
-              aria-label={`Contactar ${farmacia.nombre} por WhatsApp con tu lista`}
-              className="mt-4 flex min-h-12 w-full items-center justify-center rounded-lg bg-[#25D366] px-4 py-2.5 font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-            >
-              {bloqueada ? "Abriendo WhatsApp…" : "Contactar por WhatsApp"}
-            </button>
-          </li>
-        );
-      })}
-    </ul>
+              {/* Contactar → lead CPC multi-producto + WhatsApp */}
+              <button
+                type="button"
+                onClick={() => handleContactar(farmacia)}
+                disabled={bloqueada}
+                aria-label={`Contactar ${farmacia.nombre} por WhatsApp con tu lista`}
+                className="mt-4 flex min-h-12 w-full items-center justify-center rounded-lg bg-[#25D366] px-4 py-2.5 font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                {bloqueada ? "Abriendo WhatsApp…" : "Contactar por WhatsApp"}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </>
   );
 }

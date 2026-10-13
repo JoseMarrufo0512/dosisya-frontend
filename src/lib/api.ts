@@ -12,6 +12,20 @@ import * as Sentry from "@sentry/tanstackstart-react";
 /** Nivel de suscripción de una farmacia (columna nivel_suscripcion en BD). */
 export type NivelSuscripcion = "gratuita" | "premium";
 
+/**
+ * Condición de dispensación del medicamento (hallazgo B-03).
+ *
+ * `null` = desconocido: el principio activo no está en la tabla curada. NO
+ * significa "venta libre" — la app nunca afirma eso. Los errores no son
+ * simétricos: decir "requiere récipe" cuando no lo requiere cuesta un papel de
+ * más; decir "venta libre" cuando sí lo requiere cuesta un traslado en falso.
+ * Solo se hace la afirmación cautelosa.
+ *
+ * `"controlado"` no aparece en esta unión a propósito: el backend lo filtra en
+ * SQL y nunca llega al cliente.
+ */
+export type CondicionDispensacion = "libre" | "receta" | null;
+
 export interface ResultadoFarmacia {
   farmacia_id: string;
   farmacia_nombre: string;
@@ -34,6 +48,7 @@ export interface ResultadoFarmacia {
   precio_usd: number;
   precio_ves: number;
   stock_disponible: boolean;
+  condicion_dispensacion: CondicionDispensacion;
   distancia_m: number;
   score_similitud: number;
 }
