@@ -382,85 +382,99 @@ git commit -m "feat(b-02): la tabla del superadmin marca habilitación y conflic
 
 ---
 
-## Task 5: Frontend — confirmaciones de verificación en el drawer del superadmin
+## Task 5: Frontend — gate de verificación en el flujo de aprobación (TablaFarmacias)
 
-**Repo:** `dosisya-frontend` · **Rama:** `feat/habilitacion-sanitaria`
+**Repo:** `dosisya-frontend` · **Rama:** `plan/b02-habilitacion`
 
-**Por qué:** es donde el superadmin aprueba (cambia a `activa`). Spec §8: dos casillas separadas que condicionan "Aprobar"; si ya se verificó, mostrar quién y cuándo en vez de las casillas; y mostrar el 422/409 del backend de forma legible.
+> **Corrección del plan (2026-10-13):** la §8 de la spec ubicaba las casillas en `EditarFarmaciaDrawer.tsx`. Es incorrecto sobre el código real: ese drawer solo hace `PATCH /farmacias/{id}` (editar datos) y no se abre para farmacias `pendiente`. El cambio de estado vive en `TablaFarmacias.tsx` (`useMutation` → `cambiarEstadoFarmacia`, botones de fila Aprobar/Reactivar). Además, el gate del backend exige las dos confirmaciones en TODA transición a `activa`, así que no se puede "mostrar el rastro en lugar de las casillas" (rompería reactivar). Esta tarea implementa el gate en el componente correcto.
+
+**Por qué:** al aprobar (o reactivar) una farmacia (→ `activa`), el superadmin debe confirmar por separado que verificó la colegiatura del regente Y la autorización del SACS. El backend lo exige (422 sin ambas); el frontend debe capturarlo de forma deliberada (dos casillas, botón deshabilitado hasta marcarlas).
 
 **Files:**
-- Modify: `src/components/super/EditarFarmaciaDrawer.tsx` (estado + submit que llama a `cambiarEstadoFarmacia`; UI de coords ya existe ~línea 56-184)
+- Modify: `src/components/super/TablaFarmacias.tsx` (la mutación `mut` ~L56-65; los botones de fila Aprobar ~L340 / Reactivar ~L370 que hoy llaman `mut.mutate` directo ~L148; el componente `DialogoAprobarSinUbicacion` ~L205-)
 
 **Interfaces:**
-- Consumes: `cambiarEstadoFarmacia(..., { coords, verificacionRegente, verificacionSacs })` y los campos `habilitacion_completa`, `conflicto_regente`, `verificado_en`, `verificado_por_email` de `FarmaciaAdmin` (Task 2).
+- Consumes: `cambiarEstadoFarmacia(token, id, estado, { coords?, verificacionRegente?, verificacionSacs? })` (Task 2) y `FarmaciaAdmin.{habilitacion_completa,conflicto_regente,verificado_en,verificado_por_email}` (Tasks 1-2).
 
-- [ ] **Step 1: Estado de las dos casillas**
+- [ ] **Step 1: Ampliar la mutación con las confirmaciones**
+
+En `mut` (~L56), extender las variables y el cuerpo:
 
 ```ts
-const [verifRegente, setVerifRegente] = useState(false);
-const [verifSacs, setVerifSacs] = useState(false);
+const mut = useMutation({
+  mutationFn: ({ id, estado, coords, verificacionRegente, verificacionSacs }: {
+    id: string; estado: EstadoAfiliacion;
+    coords?: { lat: number; lng: number };
+    verificacionRegente?: boolean; verificacionSacs?: boolean;
+  }) => cambiarEstadoFarmacia(token, id, estado, { coords, verificacionRegente, verificacionSacs }),
+  // onSuccess/onError existentes se mantienen (el onError ya hace toast.error(e.message)).
+});
 ```
-Resetearlas a `false` cuando el drawer se abre/cambia de farmacia (en el `useEffect` que ya resetea `lat`/`lng`, ~línea 56).
 
-- [ ] **Step 2: UI condicional (solo relevante al aprobar)**
+- [ ] **Step 2: Enrutar Aprobar y Reactivar SIEMPRE por el diálogo**
 
-Mostrar el bloque de verificación **solo cuando el estado objetivo sea `activa`** y la farmacia no esté ya verificada. Si `farmacia.verificado_en` ya tiene valor, mostrar en su lugar una línea de rastro:
+Hoy el botón de fila hace `mut.mutate({ id, estado })` directo (~L148) salvo cuando falta ubicación. Cambiarlo para que **cualquier transición a `activa`** (Aprobar desde `pendiente`, Reactivar desde `inactiva`) abra el diálogo de aprobación. Suspender (→`inactiva`) y devolver a `pendiente` siguen siendo `mut.mutate` directo, sin diálogo ni casillas. Reutilizar el estado `setAprobarSinUbicar`/equivalente que ya dispara `DialogoAprobarSinUbicacion`, renombrándolo conceptualmente al "diálogo de aprobación" y abriéndolo siempre que el destino sea `activa` (no solo cuando falte ubicación).
+
+- [ ] **Step 3: El diálogo de aprobación: casillas siempre, ubicación condicional, rastro como contexto**
+
+Extender `DialogoAprobarSinUbicacion` (→ `DialogoAprobar`) para que, además de los campos de ubicación que ya muestra **solo cuando `farmacia.ubicacion_configurada === false`**, muestre **siempre** las dos casillas obligatorias:
 
 ```tsx
-{farmacia.verificado_en ? (
+const [verifRegente, setVerifRegente] = useState(false);
+const [verifSacs, setVerifSacs] = useState(false);
+// resetear a false cuando el diálogo abre / cambia de farmacia
+
+{farmacia.verificado_en && (
   <p className="text-xs text-muted-foreground">
-    Verificada el {new Date(farmacia.verificado_en).toLocaleDateString("es-VE")}
-    {farmacia.verificado_por_email ? ` por ${farmacia.verificado_por_email}` : ""}.
+    Verificada antes el {new Date(farmacia.verificado_en).toLocaleDateString("es-VE")}
+    {farmacia.verificado_por_email ? ` por ${farmacia.verificado_por_email}` : ""}. Confirma de nuevo para reactivar.
   </p>
-) : (
-  <fieldset className="mt-3 space-y-2">
-    <label className="flex items-start gap-2 text-sm">
-      <input type="checkbox" checked={verifRegente} onChange={(e) => setVerifRegente(e.target.checked)} className="mt-0.5" />
-      <span>Verifiqué la colegiatura del regente en el Colegio de Farmacéuticos / INH.</span>
-    </label>
-    <label className="flex items-start gap-2 text-sm">
-      <input type="checkbox" checked={verifSacs} onChange={(e) => setVerifSacs(e.target.checked)} className="mt-0.5" />
-      <span>Verifiqué la autorización de funcionamiento del SACS.</span>
-    </label>
-    {farmacia.conflicto_regente && (
-      <p className="text-xs text-red-700">
-        Este regente ya figura en «{farmacia.conflicto_regente}», que está activa. Suspéndela antes de aprobar esta.
-      </p>
-    )}
-  </fieldset>
+)}
+<label className="flex items-start gap-2 text-sm">
+  <input type="checkbox" checked={verifRegente} onChange={(e) => setVerifRegente(e.target.checked)} className="mt-0.5" />
+  <span>Verifiqué la colegiatura del regente en el Colegio de Farmacéuticos / INH.</span>
+</label>
+<label className="flex items-start gap-2 text-sm">
+  <input type="checkbox" checked={verifSacs} onChange={(e) => setVerifSacs(e.target.checked)} className="mt-0.5" />
+  <span>Verifiqué la autorización de funcionamiento del SACS.</span>
+</label>
+{farmacia.conflicto_regente && (
+  <p className="text-xs text-red-700">
+    Este regente ya figura en «{farmacia.conflicto_regente}», que está activa. Suspéndela antes de aprobar esta.
+  </p>
 )}
 ```
 
-- [ ] **Step 3: Gate del botón Aprobar + envío de las confirmaciones**
+El botón de confirmar del diálogo queda `disabled` si `!(verifRegente && verifSacs)`.
 
-El botón que pasa a `activa` queda `disabled` si `!(verifRegente && verifSacs)` (y la farmacia no está ya verificada). En el submit, pasar las confirmaciones:
+- [ ] **Step 4: Confirmar pasa las confirmaciones al `mut`**
+
+El handler de confirmar del diálogo:
 
 ```ts
-await cambiarEstadoFarmacia(token, farmacia.id, "activa", {
-  coords, // el que ya se calcula
+mut.mutate({
+  id: farmacia.id,
+  estado: "activa",
+  coords, // el que ya calcula el diálogo cuando pide ubicación; undefined si no
   verificacionRegente: verifRegente,
   verificacionSacs: verifSacs,
 });
 ```
-Las casillas solo gobiernan el flujo de `activa`; suspender o devolver a `pendiente` no las toca.
+El 422/409 del backend ya se muestra vía `mut.onError` (toast con `e.message`). No añadir manejo nuevo de error.
 
-- [ ] **Step 4: Mostrar el error del backend**
-
-El `catch` del submit debe pintar `error.message` (ahora trae el texto del 422/409 gracias a Task 2) — por ejemplo en un `toast.error(e.message)` o en el área de error del drawer. Así "Faltan: regente_inh, sacs_fecha." o "Ese regente ya figura en 'X'..." llegan al superadmin tal cual.
-
-- [ ] **Step 5: Verificar en navegador + tsc**
+- [ ] **Step 5: Verificar**
 
 Run: `npx tsc --noEmit && npm run build`
-En el navegador: aprobar sin marcar las casillas → botón deshabilitado; aprobar una farmacia sin los 6 campos → toast con "Faltan: ...". Aprobar una con regente ya activo en otra → toast con el 409. Aprobar una completa y verificada → éxito y, al reabrir, muestra el rastro.
+Expected: exit 0.
+Sin test de componente (spec §9). Verificación en navegador autenticado fuera de alcance (sin credenciales) — anotarlo. `EditarFarmaciaDrawer.tsx` **no se toca**.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/components/super/EditarFarmaciaDrawer.tsx
-git commit -m "feat(b-02): el superadmin confirma verificación de regente y SACS antes de aprobar"
+git add src/components/super/TablaFarmacias.tsx
+git commit -m "feat(b-02): el superadmin confirma regente y SACS antes de aprobar/reactivar"
 ```
 
----
 
 ## Task 6: Integración, verificación y despliegue
 
