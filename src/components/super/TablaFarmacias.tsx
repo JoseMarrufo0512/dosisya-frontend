@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { AlertTriangle } from "lucide-react";
 import {
   cambiarEstadoFarmacia,
+  faltaHabilitacion,
   requiereUbicacionAntesDeActivar,
   type AdminFarmaciasResponse,
   type EstadoAfiliacion,
@@ -58,11 +59,13 @@ export function TablaFarmacias({
       id,
       estado,
       coords,
+      verificaciones,
     }: {
       id: string;
       estado: EstadoAfiliacion;
       coords?: { lat: number; lng: number };
-    }) => cambiarEstadoFarmacia(token, id, estado, coords),
+      verificaciones?: { verificacion_regente: boolean; verificacion_sacs: boolean };
+    }) => cambiarEstadoFarmacia(token, id, estado, coords, verificaciones),
     onSuccess: () => {
       toast.success("Estado actualizado");
       qc.invalidateQueries({ queryKey: ["admin-farmacias"] });
@@ -139,9 +142,11 @@ export function TablaFarmacias({
                 f={f}
                 pending={mut.isPending}
                 onEstado={(estado) => {
-                  // Activar una farmacia sin coordenadas la deja invisible en
-                  // el buscador: se piden antes en vez de aprobar a ciegas.
-                  if (requiereUbicacionAntesDeActivar(f, estado)) {
+                  // Toda aprobación pasa por el diálogo: ahí viven las dos
+                  // confirmaciones de habilitación (hallazgo B-02) y el aviso de
+                  // ubicación. Suspender o devolver a pendiente nunca se bloquea
+                  // ni pide nada, así que muta directo.
+                  if (estado === "activa") {
                     setAprobando(f);
                     return;
                   }
@@ -173,11 +178,11 @@ export function TablaFarmacias({
         }}
       />
 
-      <DialogoAprobarSinUbicacion
+      <DialogoAprobar
         farmacia={aprobando}
         pending={mut.isPending}
         onCancelar={() => setAprobando(null)}
-        onConfirmar={(coords) => {
+        onConfirmar={(coords, verificaciones) => {
           if (!aprobando) return;
           // Cerrar solo si la mutación tiene éxito: closearlo antes (como antes)
           // hacía que el useEffect de "cambió de farmacia" limpiara lat/lng al
@@ -185,7 +190,7 @@ export function TablaFarmacias({
           // acababa de escribir. mut.onError ya muestra el toast de error; el
           // diálogo se queda abierto con los campos intactos para reintentar.
           mut.mutate(
-            { id: aprobando.id, estado: "activa", coords },
+            { id: aprobando.id, estado: "activa", coords, verificaciones },
             { onSuccess: () => setAprobando(null) },
           );
         }}
@@ -195,14 +200,19 @@ export function TablaFarmacias({
 }
 
 /**
- * Aprobar una farmacia que sigue en (0,0) la deja activa pero invisible en el
- * buscador. En vez de bloquear la aprobación —a veces el superadmin no tiene
- * las coordenadas a mano— se le muestra la consecuencia y se le deja decidir.
+ * Diálogo de aprobación (hallazgo B-02). Aprobar deja de ser un botón: exige
+ * dos confirmaciones separadas (colegiatura del regente y autorización del
+ * SACS) y se bloquea si faltan datos de habilitación o si el regente ya figura
+ * en otra farmacia activa. El backend reimpone las tres cosas (422/409/422); el
+ * diálogo es para que el superadmin no choque contra el error a ciegas.
+ *
+ * Además, si la farmacia sigue sin coordenadas, ofrece ubicarla en el mismo
+ * gesto: aprobarla en (0,0) la dejaría activa pero invisible en el buscador.
  *
  * Sin botón de GPS a propósito: el superadmin aprueba desde su escritorio, así
  * que su posición no es la de la farmacia.
  */
-function DialogoAprobarSinUbicacion({
+function DialogoAprobar({
   farmacia,
   pending,
   onCancelar,
@@ -211,18 +221,33 @@ function DialogoAprobarSinUbicacion({
   farmacia: FarmaciaAdmin | null;
   pending: boolean;
   onCancelar: () => void;
-  onConfirmar: (coords?: { lat: number; lng: number }) => void;
+  onConfirmar: (
+    coords?: { lat: number; lng: number },
+    verificaciones?: { verificacion_regente: boolean; verificacion_sacs: boolean },
+  ) => void;
 }) {
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
   const [errores, setErrores] = useState<Record<string, string>>({});
+  const [verifRegente, setVerifRegente] = useState(false);
+  const [verifSacs, setVerifSacs] = useState(false);
 
-  // Limpiar al cambiar de farmacia para no arrastrar las coordenadas de otra.
+  // Limpiar al cambiar de farmacia para no arrastrar datos de otra.
   useEffect(() => {
     setLat("");
     setLng("");
     setErrores({});
+    setVerifRegente(false);
+    setVerifSacs(false);
   }, [farmacia?.id]);
+
+  const sinUbicacion = farmacia ? requiereUbicacionAntesDeActivar(farmacia, "activa") : false;
+  const faltanDatos = faltaHabilitacion("activa", farmacia ?? {});
+  const conflicto = farmacia?.conflicto_regente ?? null;
+  // Los dos bloqueos duros (falta de datos, conflicto) no se pueden saltar: el
+  // backend los rechaza igual. Las confirmaciones son del superadmin.
+  const noSePuedeAprobar = faltanDatos || Boolean(conflicto) || !verifRegente || !verifSacs;
+  const verificaciones = { verificacion_regente: verifRegente, verificacion_sacs: verifSacs };
 
   const confirmarConUbicacion = () => {
     const res = parsearParCoordenadas(lat, lng);
@@ -238,7 +263,7 @@ function DialogoAprobarSinUbicacion({
       return;
     }
     setErrores({});
-    onConfirmar(res.coords);
+    onConfirmar(res.coords, verificaciones);
   };
 
   return (
@@ -250,31 +275,88 @@ function DialogoAprobarSinUbicacion({
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Ubicar «{farmacia?.nombre}» antes de aprobar</DialogTitle>
+          <DialogTitle>Aprobar «{farmacia?.nombre}»</DialogTitle>
           <DialogDescription>
-            Esta farmacia no tiene coordenadas. Si la apruebas así quedará activa, pero su
-            inventario no aparecerá en ninguna búsqueda porque los pacientes buscan por cercanía.
+            Antes de publicar la farmacia, verifica su habilitación sanitaria.
           </DialogDescription>
         </DialogHeader>
 
-        <CampoUbicacion
-          idPrefix="aprobar"
-          lat={lat}
-          lng={lng}
-          onLatChange={setLat}
-          onLngChange={setLng}
-          errorLat={errores.lat}
-          errorLng={errores.lng}
-          mostrarGps={false}
-        />
+        {conflicto && (
+          <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+            El regente ya figura en <strong>{conflicto}</strong>, que está activa. Ninguna persona
+            puede ser regente de más de un establecimiento: suspende esa antes de aprobar esta.
+          </p>
+        )}
+
+        {faltanDatos && (
+          <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            Faltan datos de habilitación (regente o permiso del SACS). La farmacia debe
+            completarlos en su panel antes de que puedas aprobarla.
+          </p>
+        )}
+
+        <div className="space-y-2">
+          <label className="flex cursor-pointer items-start gap-2 text-xs text-foreground">
+            <input
+              type="checkbox"
+              checked={verifRegente}
+              onChange={(e) => setVerifRegente(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0"
+            />
+            <span>Contrasté la colegiatura del regente contra el Colegio de Farmacéuticos.</span>
+          </label>
+          <label className="flex cursor-pointer items-start gap-2 text-xs text-foreground">
+            <input
+              type="checkbox"
+              checked={verifSacs}
+              onChange={(e) => setVerifSacs(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0"
+            />
+            <span>Verifiqué la autorización de funcionamiento del SACS.</span>
+          </label>
+        </div>
+
+        {sinUbicacion && (
+          <div className="space-y-2">
+            <p className="text-xs text-amber-700">
+              Sin coordenadas la farmacia queda activa pero invisible en el buscador. Ubícala ahora
+              o apruébala sin ubicar.
+            </p>
+            <CampoUbicacion
+              idPrefix="aprobar"
+              lat={lat}
+              lng={lng}
+              onLatChange={setLat}
+              onLngChange={setLng}
+              errorLat={errores.lat}
+              errorLng={errores.lng}
+              mostrarGps={false}
+            />
+          </div>
+        )}
 
         <DialogFooter className="gap-2 sm:gap-2">
-          <Button variant="ghost" disabled={pending} onClick={() => onConfirmar(undefined)}>
-            Aprobar sin ubicar
-          </Button>
-          <Button disabled={pending} onClick={confirmarConUbicacion}>
-            Ubicar y aprobar
-          </Button>
+          {sinUbicacion ? (
+            <>
+              <Button
+                variant="ghost"
+                disabled={pending || noSePuedeAprobar}
+                onClick={() => onConfirmar(undefined, verificaciones)}
+              >
+                Aprobar sin ubicar
+              </Button>
+              <Button disabled={pending || noSePuedeAprobar} onClick={confirmarConUbicacion}>
+                Ubicar y aprobar
+              </Button>
+            </>
+          ) : (
+            <Button
+              disabled={pending || noSePuedeAprobar}
+              onClick={() => onConfirmar(undefined, verificaciones)}
+            >
+              Aprobar
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -312,6 +394,25 @@ function Fila({
               title="Sin coordenadas: no aparece en el buscador"
             >
               <AlertTriangle className="h-3 w-3" aria-hidden="true" /> sin ubicación
+            </span>
+          )}
+          {/* Habilitación sanitaria (hallazgo B-02). El conflicto va en rojo y la
+              falta de datos en ámbar: uno es un bloqueo que exige resolver algo en
+              el mundo real, el otro es un dato que falta. */}
+          {f.habilitacion_completa === false && (
+            <span
+              className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border bg-amber-50 text-amber-800 border-amber-200"
+              title="Faltan datos de regente o permiso del SACS: no puede publicarse"
+            >
+              <AlertTriangle className="h-3 w-3" aria-hidden="true" /> sin habilitación
+            </span>
+          )}
+          {f.conflicto_regente && (
+            <span
+              className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border bg-red-50 text-red-800 border-red-200"
+              title={`El regente ya figura en ${f.conflicto_regente}`}
+            >
+              <AlertTriangle className="h-3 w-3" aria-hidden="true" /> regente duplicado
             </span>
           )}
         </div>

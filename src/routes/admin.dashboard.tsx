@@ -71,6 +71,13 @@ type DashboardData = {
   whatsapp?: string;
   sector?: string;
   punto_referencia?: string;
+  // Habilitación sanitaria (hallazgo B-02): el panel los precarga en Configuración.
+  regente_nombre?: string | null;
+  regente_colegiatura?: string | null;
+  regente_colegio_entidad?: string | null;
+  regente_inh?: string | null;
+  sacs_autorizacion?: string | null;
+  sacs_fecha?: string | null;
   lat?: number | null;
   lng?: number | null;
   /** false ⇒ la farmacia sigue en (0,0) y su inventario NO sale en el buscador. */
@@ -814,6 +821,19 @@ const configSchema = z.object({
     .trim()
     .min(5, "Describe brevemente (mín. 5 caracteres)")
     .max(180, "Máximo 180 caracteres"),
+  // Habilitación sanitaria (hallazgo B-02). Opcionales: guardar la
+  // configuración nunca se bloquea. Lo que se bloquea es publicar la farmacia,
+  // y de eso se encarga el superadmin.
+  regente_nombre: z.string().trim().max(200).optional().or(z.literal("")),
+  regente_colegiatura: z.string().trim().max(50).optional().or(z.literal("")),
+  regente_colegio_entidad: z.string().trim().max(100).optional().or(z.literal("")),
+  regente_inh: z.string().trim().max(50).optional().or(z.literal("")),
+  sacs_autorizacion: z.string().trim().max(100).optional().or(z.literal("")),
+  sacs_fecha: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato: AAAA-MM-DD")
+    .optional()
+    .or(z.literal("")),
 });
 
 const formatoTelefonoVE = (raw: string) => {
@@ -839,6 +859,13 @@ function ConfiguracionSection({
   const [whatsapp, setWhatsapp] = useState(data?.whatsapp ?? "");
   const [sector, setSector] = useState(data?.sector ?? "");
   const [referencia, setReferencia] = useState(data?.punto_referencia ?? "");
+  // Habilitación sanitaria (hallazgo B-02).
+  const [regenteNombre, setRegenteNombre] = useState("");
+  const [regenteColegiatura, setRegenteColegiatura] = useState("");
+  const [regenteEntidad, setRegenteEntidad] = useState("");
+  const [regenteInh, setRegenteInh] = useState("");
+  const [sacsAutorizacion, setSacsAutorizacion] = useState("");
+  const [sacsFecha, setSacsFecha] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -860,6 +887,12 @@ function ConfiguracionSection({
     setWhatsapp(data.whatsapp ?? "");
     setSector(data.sector ?? "");
     setReferencia(data.punto_referencia ?? "");
+    setRegenteNombre(data.regente_nombre ?? "");
+    setRegenteColegiatura(data.regente_colegiatura ?? "");
+    setRegenteEntidad(data.regente_colegio_entidad ?? "");
+    setRegenteInh(data.regente_inh ?? "");
+    setSacsAutorizacion(data.sacs_autorizacion ?? "");
+    setSacsFecha(data.sacs_fecha ?? "");
     if (data.ubicacion_configurada) {
       setLat(String(data.lat ?? ""));
       setLng(String(data.lng ?? ""));
@@ -874,6 +907,12 @@ function ConfiguracionSection({
       whatsapp,
       sector,
       punto_referencia: referencia,
+      regente_nombre: regenteNombre,
+      regente_colegiatura: regenteColegiatura,
+      regente_colegio_entidad: regenteEntidad,
+      regente_inh: regenteInh,
+      sacs_autorizacion: sacsAutorizacion,
+      sacs_fecha: sacsFecha,
     });
     const errs: Record<string, string> = {};
     if (!parsed.success) {
@@ -903,8 +942,22 @@ function ConfiguracionSection({
     }
     setFieldErrors({});
 
+    // Habilitación (hallazgo B-02): cadena vacía → undefined, para que el
+    // COALESCE del backend conserve lo guardado en vez de sobrescribir con "".
+    const vacioANull = (v: string) => (v.trim() === "" ? undefined : v.trim());
+    const habilitacion = {
+      regente_nombre: vacioANull(regenteNombre),
+      regente_colegiatura: vacioANull(regenteColegiatura),
+      regente_colegio_entidad: vacioANull(regenteEntidad),
+      regente_inh: vacioANull(regenteInh),
+      sacs_autorizacion: vacioANull(sacsAutorizacion),
+      sacs_fecha: vacioANull(sacsFecha),
+    };
+
     // Sin coords, el PATCH va sin lat/lng y el backend conserva la ubicación.
-    const payload = coords ? { ...parsed.data, ...coords } : parsed.data;
+    // habilitacion va después de parsed.data para pisar sus "" con undefined
+    // (JSON.stringify omite las claves undefined).
+    const payload = { ...parsed.data, ...habilitacion, ...(coords ?? {}) };
 
     const farmaciaId = typeof window !== "undefined" ? localStorage.getItem("farmacia_id") : null;
     const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
@@ -1036,6 +1089,103 @@ function ConfiguracionSection({
           {fieldErrors.punto_referencia && (
             <p className="text-xs text-destructive">{fieldErrors.punto_referencia}</p>
           )}
+        </div>
+
+        {/* Habilitación sanitaria (hallazgo B-02) — sin estos datos el superadmin no publica la farmacia */}
+        <div className="space-y-3 pt-2" style={{ borderTop: "1px solid var(--dy-borde)" }}>
+          <div className="pt-3">
+            <Label>Habilitación sanitaria</Label>
+            <p style={{ fontSize: 12, color: "var(--dy-tinta-suave)", marginTop: 4 }}>
+              Tu farmacia no se publica en el buscador hasta que DosisYa verifique estos datos.
+              Puedes guardarlos ahora y completarlos después.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="cfg-regente-nombre">Farmacéutico regente</Label>
+              <Input
+                id="cfg-regente-nombre"
+                value={regenteNombre}
+                onChange={(e) => setRegenteNombre(e.target.value)}
+                maxLength={200}
+                aria-invalid={Boolean(fieldErrors.regente_nombre)}
+              />
+              {fieldErrors.regente_nombre && (
+                <p className="text-xs text-destructive">{fieldErrors.regente_nombre}</p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="cfg-regente-colegiatura">N.º de colegiatura</Label>
+              <Input
+                id="cfg-regente-colegiatura"
+                value={regenteColegiatura}
+                onChange={(e) => setRegenteColegiatura(e.target.value)}
+                maxLength={50}
+                aria-invalid={Boolean(fieldErrors.regente_colegiatura)}
+              />
+              {fieldErrors.regente_colegiatura && (
+                <p className="text-xs text-destructive">{fieldErrors.regente_colegiatura}</p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="cfg-regente-entidad">Colegio de Farmacéuticos (entidad)</Label>
+              <Input
+                id="cfg-regente-entidad"
+                value={regenteEntidad}
+                onChange={(e) => setRegenteEntidad(e.target.value)}
+                maxLength={100}
+                aria-invalid={Boolean(fieldErrors.regente_colegio_entidad)}
+              />
+              {fieldErrors.regente_colegio_entidad && (
+                <p className="text-xs text-destructive">{fieldErrors.regente_colegio_entidad}</p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="cfg-regente-inh">Registro en el INH</Label>
+              <Input
+                id="cfg-regente-inh"
+                value={regenteInh}
+                onChange={(e) => setRegenteInh(e.target.value)}
+                maxLength={50}
+                aria-invalid={Boolean(fieldErrors.regente_inh)}
+              />
+              {fieldErrors.regente_inh && (
+                <p className="text-xs text-destructive">{fieldErrors.regente_inh}</p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="cfg-sacs-autorizacion">Autorización del SACS</Label>
+              <Input
+                id="cfg-sacs-autorizacion"
+                value={sacsAutorizacion}
+                onChange={(e) => setSacsAutorizacion(e.target.value)}
+                maxLength={100}
+                aria-invalid={Boolean(fieldErrors.sacs_autorizacion)}
+              />
+              {fieldErrors.sacs_autorizacion && (
+                <p className="text-xs text-destructive">{fieldErrors.sacs_autorizacion}</p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="cfg-sacs-fecha">Fecha de la autorización</Label>
+              <Input
+                id="cfg-sacs-fecha"
+                type="date"
+                value={sacsFecha}
+                onChange={(e) => setSacsFecha(e.target.value)}
+                aria-invalid={Boolean(fieldErrors.sacs_fecha)}
+              />
+              {fieldErrors.sacs_fecha && (
+                <p className="text-xs text-destructive">{fieldErrors.sacs_fecha}</p>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Ubicación en el mapa — sin esto la farmacia no existe para el buscador */}
