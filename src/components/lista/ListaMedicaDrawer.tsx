@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { ArrowLeft, ChevronRight, ClipboardList, Minus, Plus, Trash2 } from "lucide-react";
 import { farmaciaUnicaDeLista, useListaMedica, type ItemLista } from "@/hooks/useListaMedica";
 import { SelectorFarmacia } from "./SelectorFarmacia";
+import { BadgeReceta } from "@/components/BadgeReceta";
 import { registrarLeadLista } from "@/lib/leadsLista";
 import { construirMensajeLista, construirUrlWhatsApp } from "@/lib/whatsapp";
 
@@ -118,6 +119,11 @@ export function ListaMedicaDrawer({ abierta, onOpenChange, lat, lng }: ListaMedi
                             {item.presentacion}
                             {item.farmaciaNombre && ` · ${item.farmaciaNombre}`}
                           </p>
+                          {item.condicionDispensacion === "receta" && (
+                            <div className="mt-1">
+                              <BadgeReceta />
+                            </div>
+                          )}
                         </div>
 
                         {/* Stepper de cantidad */}

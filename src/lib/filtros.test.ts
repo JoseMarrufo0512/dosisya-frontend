@@ -22,6 +22,7 @@ function crearResultado(overrides: Partial<ResultadoFarmacia> = {}): ResultadoFa
     stock_disponible: true,
     distancia_m: 800,
     score_similitud: 1,
+    condicion_dispensacion: null,
     ...overrides,
   };
 }

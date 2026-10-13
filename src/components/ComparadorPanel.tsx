@@ -4,6 +4,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/u
 import { registrarLead } from "@/lib/leads";
 import { construirMensajeProducto, construirUrlWhatsApp } from "@/lib/whatsapp";
 import { claveResultado, esGenerico } from "@/lib/filtros";
+import { BadgeReceta } from "@/components/BadgeReceta";
 import type { ResultadoFarmacia } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -30,6 +31,7 @@ export function ComparadorPanel({ abierto, onOpenChange, seleccionados }: Compar
         r.medicamento_nombre,
         r.presentacion,
         r.precio_usd,
+        r.condicion_dispensacion,
       ),
     );
     if (!url) {
@@ -72,6 +74,11 @@ export function ComparadorPanel({ abierto, onOpenChange, seleccionados }: Compar
               </span>
             ) : (
               <p className="text-gray-400 text-xs mt-0.5">{r.marca_comercial}</p>
+            )}
+            {r.condicion_dispensacion === "receta" && (
+              <div className="mt-1">
+                <BadgeReceta />
+              </div>
             )}
           </div>
 

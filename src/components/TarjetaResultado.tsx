@@ -3,6 +3,7 @@ import { registrarLead } from "@/lib/leads";
 import { construirMensajeProducto, construirUrlWhatsApp } from "@/lib/whatsapp";
 import { useListaMedica } from "@/hooks/useListaMedica";
 import { useFavoritos } from "@/hooks/useFavoritos";
+import { BadgeReceta } from "@/components/BadgeReceta";
 import { MapPin, Star, Plus, Check, Heart, Pill, Share2, Scale } from "lucide-react";
 import { toast } from "sonner";
 
@@ -74,6 +75,7 @@ export function TarjetaResultado({
       farmaciaId: resultado.farmacia_id,
       farmaciaNombre: resultado.farmacia_nombre,
       farmaciaWhatsapp: resultado.whatsapp,
+      condicionDispensacion: resultado.condicion_dispensacion,
     });
     toast.success(
       item.cantidad > 1
@@ -97,6 +99,7 @@ export function TarjetaResultado({
         resultado.medicamento_nombre,
         resultado.presentacion,
         resultado.precio_usd,
+        resultado.condicion_dispensacion,
       ),
     );
     if (!url) {
@@ -183,6 +186,12 @@ export function TarjetaResultado({
               {resultado.presentacion}
             </span>
           </p>
+
+          {resultado.condicion_dispensacion === "receta" && (
+            <div className="mt-1.5">
+              <BadgeReceta />
+            </div>
+          )}
 
           {/* precio protagonista */}
           <div className="mt-2">

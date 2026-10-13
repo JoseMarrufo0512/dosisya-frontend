@@ -1,4 +1,5 @@
 import type { ItemLista } from "@/hooks/useListaMedica";
+import type { CondicionDispensacion } from "@/lib/api";
 
 /**
  * Línea comercial de DosisYa (soporte a farmacias, prensa, inversores).
@@ -24,7 +25,11 @@ export function construirMensajeLista(farmaciaNombre: string, lista: ItemLista[]
   const lineas = lista.map((item, i) => {
     const marca = item.marcaComercial ? ` (${item.marcaComercial})` : "";
     const cantidad = item.cantidad > 1 ? ` — x${item.cantidad}` : "";
-    return `${i + 1}. ${item.nombre}${marca} · ${item.presentacion}${cantidad}`;
+    // Marcador para el farmacéutico (hallazgo B-03). NO se afirma que el
+    // paciente traiga el récipe: eso le pondría en la boca algo que puede no
+    // ser cierto. El recordatorio al paciente vive en SelectorFarmacia.
+    const receta = item.condicionDispensacion === "receta" ? " (requiere récipe)" : "";
+    return `${i + 1}. ${item.nombre}${marca} · ${item.presentacion}${cantidad}${receta}`;
   });
 
   const tieneItemsDeEscaner = lista.some((item) => item.origen === "escaner_recipe");
@@ -65,9 +70,12 @@ export function construirMensajeProducto(
   nombre: string,
   presentacion: string,
   precioUsd: number,
+  condicion: CondicionDispensacion = null,
 ): string {
+  // `= null` por defecto para no romper a los llamadores existentes.
+  const receta = condicion === "receta" ? " (requiere récipe)" : "";
   return (
-    `Hola ${farmaciaNombre} 👋 Vi en *DosisYa* ${nombre} (${presentacion}) ` +
+    `Hola ${farmaciaNombre} 👋 Vi en *DosisYa* ${nombre} (${presentacion})${receta} ` +
     `a $${precioUsd.toFixed(2)}. ¿Lo tienen disponible?`
   );
 }
