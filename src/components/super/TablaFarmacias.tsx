@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { AlertTriangle } from "lucide-react";
 import {
   cambiarEstadoFarmacia,
-  requiereUbicacionAntesDeActivar,
   type AdminFarmaciasResponse,
   type EstadoAfiliacion,
   type FarmaciaAdmin,
@@ -50,7 +49,8 @@ export function TablaFarmacias({
   const navigate = useNavigate();
   const [filtro, setFiltro] = useState<"todas" | EstadoAfiliacion>("todas");
   const [editar, setEditar] = useState<FarmaciaAdmin | null>(null);
-  // Farmacia a la que se le pedirán coordenadas antes de activarla.
+  // Farmacia en proceso de activación (aprobar/reactivar): el diálogo pide las
+  // confirmaciones de regente/SACS y, si falta, la ubicación.
   const [aprobando, setAprobando] = useState<FarmaciaAdmin | null>(null);
 
   const mut = useMutation({
@@ -58,11 +58,16 @@ export function TablaFarmacias({
       id,
       estado,
       coords,
+      verificacionRegente,
+      verificacionSacs,
     }: {
       id: string;
       estado: EstadoAfiliacion;
       coords?: { lat: number; lng: number };
-    }) => cambiarEstadoFarmacia(token, id, estado, { coords }),
+      verificacionRegente?: boolean;
+      verificacionSacs?: boolean;
+    }) =>
+      cambiarEstadoFarmacia(token, id, estado, { coords, verificacionRegente, verificacionSacs }),
     onSuccess: () => {
       toast.success("Estado actualizado");
       qc.invalidateQueries({ queryKey: ["admin-farmacias"] });
@@ -139,9 +144,9 @@ export function TablaFarmacias({
                 f={f}
                 pending={mut.isPending}
                 onEstado={(estado) => {
-                  // Activar una farmacia sin coordenadas la deja invisible en
-                  // el buscador: se piden antes en vez de aprobar a ciegas.
-                  if (requiereUbicacionAntesDeActivar(f, estado)) {
+                  // Toda transición a activa exige confirmar regente y SACS
+                  // (el backend responde 422 sin ambas), y además ubicación si falta.
+                  if (estado === "activa") {
                     setAprobando(f);
                     return;
                   }
@@ -173,7 +178,7 @@ export function TablaFarmacias({
         }}
       />
 
-      <DialogoAprobarSinUbicacion
+      <DialogoAprobar
         farmacia={aprobando}
         pending={mut.isPending}
         onCancelar={() => setAprobando(null)}
@@ -185,7 +190,13 @@ export function TablaFarmacias({
           // acababa de escribir. mut.onError ya muestra el toast de error; el
           // diálogo se queda abierto con los campos intactos para reintentar.
           mut.mutate(
-            { id: aprobando.id, estado: "activa", coords },
+            {
+              id: aprobando.id,
+              estado: "activa",
+              coords,
+              verificacionRegente: true,
+              verificacionSacs: true,
+            },
             { onSuccess: () => setAprobando(null) },
           );
         }}
@@ -195,6 +206,9 @@ export function TablaFarmacias({
 }
 
 /**
+ * Diálogo de toda transición a `activa` (aprobar o reactivar): exige las dos
+ * confirmaciones de verificación y, solo si falta, pide la ubicación.
+ *
  * Aprobar una farmacia que sigue en (0,0) la deja activa pero invisible en el
  * buscador. En vez de bloquear la aprobación —a veces el superadmin no tiene
  * las coordenadas a mano— se le muestra la consecuencia y se le deja decidir.
@@ -202,7 +216,7 @@ export function TablaFarmacias({
  * Sin botón de GPS a propósito: el superadmin aprueba desde su escritorio, así
  * que su posición no es la de la farmacia.
  */
-function DialogoAprobarSinUbicacion({
+function DialogoAprobar({
   farmacia,
   pending,
   onCancelar,
@@ -216,12 +230,18 @@ function DialogoAprobarSinUbicacion({
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
   const [errores, setErrores] = useState<Record<string, string>>({});
+  const [verifRegente, setVerifRegente] = useState(false);
+  const [verifSacs, setVerifSacs] = useState(false);
+  const sinUbicar = farmacia?.ubicacion_configurada === false;
+  const verificado = verifRegente && verifSacs;
 
-  // Limpiar al cambiar de farmacia para no arrastrar las coordenadas de otra.
+  // Limpiar al cambiar de farmacia para no arrastrar datos de otra.
   useEffect(() => {
     setLat("");
     setLng("");
     setErrores({});
+    setVerifRegente(false);
+    setVerifSacs(false);
   }, [farmacia?.id]);
 
   const confirmarConUbicacion = () => {
@@ -250,31 +270,82 @@ function DialogoAprobarSinUbicacion({
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Ubicar «{farmacia?.nombre}» antes de aprobar</DialogTitle>
+          <DialogTitle>
+            {sinUbicar
+              ? `Ubicar «${farmacia?.nombre}» antes de aprobar`
+              : `Activar «${farmacia?.nombre}»`}
+          </DialogTitle>
           <DialogDescription>
-            Esta farmacia no tiene coordenadas. Si la apruebas así quedará activa, pero su
-            inventario no aparecerá en ninguna búsqueda porque los pacientes buscan por cercanía.
+            {sinUbicar
+              ? "Esta farmacia no tiene coordenadas. Si la apruebas así quedará activa, pero su inventario no aparecerá en ninguna búsqueda porque los pacientes buscan por cercanía."
+              : "Confirma la verificación de la habilitación antes de activarla."}
           </DialogDescription>
         </DialogHeader>
 
-        <CampoUbicacion
-          idPrefix="aprobar"
-          lat={lat}
-          lng={lng}
-          onLatChange={setLat}
-          onLngChange={setLng}
-          errorLat={errores.lat}
-          errorLng={errores.lng}
-          mostrarGps={false}
-        />
+        {sinUbicar && (
+          <CampoUbicacion
+            idPrefix="aprobar"
+            lat={lat}
+            lng={lng}
+            onLatChange={setLat}
+            onLngChange={setLng}
+            errorLat={errores.lat}
+            errorLng={errores.lng}
+            mostrarGps={false}
+          />
+        )}
+
+        {farmacia?.verificado_en && (
+          <p className="text-xs text-muted-foreground">
+            Verificada antes el {new Date(farmacia.verificado_en).toLocaleDateString("es-VE")}
+            {farmacia.verificado_por_email ? ` por ${farmacia.verificado_por_email}` : ""}. Confirma
+            de nuevo para reactivar.
+          </p>
+        )}
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={verifRegente}
+            onChange={(e) => setVerifRegente(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span>Verifiqué la colegiatura del regente en el Colegio de Farmacéuticos / INH.</span>
+        </label>
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={verifSacs}
+            onChange={(e) => setVerifSacs(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span>Verifiqué la autorización de funcionamiento del SACS.</span>
+        </label>
+        {farmacia?.conflicto_regente && (
+          <p className="text-xs text-red-700">
+            Este regente ya figura en «{farmacia.conflicto_regente}», que está activa. Suspéndela
+            antes de aprobar esta.
+          </p>
+        )}
 
         <DialogFooter className="gap-2 sm:gap-2">
-          <Button variant="ghost" disabled={pending} onClick={() => onConfirmar(undefined)}>
-            Aprobar sin ubicar
-          </Button>
-          <Button disabled={pending} onClick={confirmarConUbicacion}>
-            Ubicar y aprobar
-          </Button>
+          {sinUbicar ? (
+            <>
+              <Button
+                variant="ghost"
+                disabled={pending || !verificado}
+                onClick={() => onConfirmar(undefined)}
+              >
+                Aprobar sin ubicar
+              </Button>
+              <Button disabled={pending || !verificado} onClick={confirmarConUbicacion}>
+                Ubicar y aprobar
+              </Button>
+            </>
+          ) : (
+            <Button disabled={pending || !verificado} onClick={() => onConfirmar(undefined)}>
+              Aprobar
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
