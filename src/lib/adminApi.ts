@@ -17,6 +17,14 @@ export interface FarmaciaAdmin {
   lng?: number | null;
   /** false ⇒ sigue en (0,0): aprobarla la deja activa pero fuera del buscador. */
   ubicacion_configurada?: boolean;
+  /**
+   * Los seis campos de habilitación presentes (hallazgo B-02). Opcional en el
+   * tipo por el mismo motivo que `ubicacion_configurada`: un backend viejo no
+   * lo devuelve.
+   */
+  habilitacion_completa?: boolean;
+  /** Nombre de otra farmacia ACTIVA con el mismo regente, o null si no hay. */
+  conflicto_regente?: string | null;
 }
 
 export interface TotalesRed {
@@ -123,6 +131,21 @@ export function requiereUbicacionAntesDeActivar(
 }
 
 /**
+ * ¿Aprobar está bloqueado por falta de habilitación? (hallazgo B-02)
+ *
+ * Solo aplica al pasar a 'activa': suspender o devolver a pendiente nunca se
+ * bloquea. `undefined` NO se trata como `false` — si el backend no informa el
+ * campo, el frontend no puede saberlo y no lo inventa; el backend rechazará el
+ * PATCH de todas formas, que es la garantía real.
+ */
+export function faltaHabilitacion(
+  estado: EstadoAfiliacion,
+  farmacia: Pick<FarmaciaAdmin, "habilitacion_completa">,
+): boolean {
+  return estado === "activa" && farmacia.habilitacion_completa === false;
+}
+
+/**
  * Cambia el estado de afiliación y, opcionalmente, ubica la farmacia.
  *
  * Las coordenadas viajan juntas o no viajan (el backend devuelve 400 con una
@@ -134,10 +157,15 @@ export async function cambiarEstadoFarmacia(
   id: string,
   estado: EstadoAfiliacion,
   coords?: { lat: number; lng: number },
+  verificaciones?: { verificacion_regente: boolean; verificacion_sacs: boolean },
 ): Promise<void> {
   const res = await adminFetch(`/api/v1/admin/farmacias/${id}/estado`, token, {
     method: "PATCH",
-    body: JSON.stringify({ estado_afiliacion: estado, ...(coords ?? {}) }),
+    body: JSON.stringify({
+      estado_afiliacion: estado,
+      ...(coords ?? {}),
+      ...(verificaciones ?? {}),
+    }),
   });
   if (!res.ok) throw new Error("No se pudo cambiar el estado");
 }

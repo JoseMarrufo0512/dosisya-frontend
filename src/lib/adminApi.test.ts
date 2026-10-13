@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   cambiarEstadoFarmacia,
+  faltaHabilitacion,
   getFarmaciasAdmin,
   requiereUbicacionAntesDeActivar,
   type EstadoAfiliacion,
@@ -50,6 +51,29 @@ describe("requiereUbicacionAntesDeActivar", () => {
     expect(requiereUbicacionAntesDeActivar({ ubicacion_configurada: undefined }, "activa")).toBe(
       false,
     );
+  });
+});
+
+describe("faltaHabilitacion (hallazgo B-02)", () => {
+  it("bloquea aprobar cuando la habilitación está incompleta", () => {
+    expect(faltaHabilitacion("activa", { habilitacion_completa: false })).toBe(true);
+  });
+
+  it("deja aprobar cuando está completa", () => {
+    expect(faltaHabilitacion("activa", { habilitacion_completa: true })).toBe(false);
+  });
+
+  it("no bloquea suspender ni devolver a pendiente, aunque falte todo", () => {
+    // Poder suspender una farmacia problemática no puede depender de que sus
+    // datos estén completos.
+    expect(faltaHabilitacion("inactiva", { habilitacion_completa: false })).toBe(false);
+    expect(faltaHabilitacion("pendiente", { habilitacion_completa: false })).toBe(false);
+  });
+
+  it("con un backend viejo que no manda el campo, no bloquea", () => {
+    // Mismo criterio que ubicacion_configurada: undefined no es false. Si el
+    // backend no lo informa, el frontend no puede saberlo y no inventa.
+    expect(faltaHabilitacion("activa", {})).toBe(false);
   });
 });
 
