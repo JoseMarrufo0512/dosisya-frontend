@@ -71,19 +71,28 @@ export interface ParamsBusqueda {
   con_delivery?: boolean;
 }
 
-// URL del backend — se lee desde la variable de entorno VITE_API_URL.
+// URL base del backend — modelo "mismo-origen" (proxy en el borde).
 //
-// Modos de operación:
-//   DEV local (proxy Vite activo):  VITE_API_URL="" → API_BASE="" → rutas relativas
-//                                   /api/v1/... → interceptadas por proxy → localhost:8000
-//   PRODUCCIÓN (Vercel):            VITE_API_URL="https://proyecto-dosis-ya.vercel.app"
-//                                   → llamadas directas al backend FastAPI
+// El NAVEGADOR nunca llama al dominio del backend directamente: usa rutas
+// relativas /api/v1/* contra el propio dominio del frontend, y la petición se
+// reenvía al backend por detrás (server-side):
+//   DEV local:        proxy de Vite (vite.config.mts) → localhost:8000 / DEV_API_PROXY
+//   PRODUCCIÓN:       rewrite de Vercel (vercel.json) → backend FastAPI
+// Así, para el navegador, la llamada deja de ser cross-site: las extensiones de
+// privacidad/adblockers del escritorio ya no pueden bloquearla (el celular
+// nunca se vio afectado porque no corre esas extensiones). Como el proxy es
+// server-side, tampoco depende de la lista CORS del backend.
 //
-// NUNCA dejar el fallback en una URL de frontend (causaría loops de red).
-export const API_BASE: string =
-  import.meta.env.VITE_API_URL !== undefined
-    ? (import.meta.env.VITE_API_URL as string)
-    : "https://proyecto-dosis-ya.vercel.app";
+// El SERVIDOR (SSR) SÍ necesita la URL absoluta: no hay origen para resolver
+// una ruta relativa, y además ningún adblocker corre ahí. import.meta.env.SSR
+// se resuelve estáticamente por bundle, así que el cliente queda en ""
+// (relativo) y el servidor en la URL absoluta del backend.
+//
+// NUNCA dejar el fallback del servidor en una URL de frontend (loops de red).
+export const API_BASE: string = import.meta.env.SSR
+  ? ((import.meta.env.VITE_API_URL as string | undefined) ??
+    "https://proyecto-dosis-ya.vercel.app")
+  : "";
 
 // Log de diagnóstico solo en desarrollo (no llega a producción)
 if (import.meta.env.DEV) {
