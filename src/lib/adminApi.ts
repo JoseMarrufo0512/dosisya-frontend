@@ -17,6 +17,14 @@ export interface FarmaciaAdmin {
   lng?: number | null;
   /** false ⇒ sigue en (0,0): aprobarla la deja activa pero fuera del buscador. */
   ubicacion_configurada?: boolean;
+  /** B-02: los 6 campos de habilitación presentes. */
+  habilitacion_completa?: boolean;
+  /** B-02: nombre de otra farmacia activa con el mismo regente, o null. */
+  conflicto_regente?: string | null;
+  /** B-02: ISO del sellado de verificación (null si no verificada). */
+  verificado_en?: string | null;
+  /** B-02: email del superadmin que verificó, o null. */
+  verificado_por_email?: string | null;
 }
 
 export interface TotalesRed {
@@ -125,7 +133,7 @@ export function requiereUbicacionAntesDeActivar(
 /**
  * Cambia el estado de afiliación y, opcionalmente, ubica la farmacia.
  *
- * Las coordenadas viajan juntas o no viajan (el backend devuelve 400 con una
+ * Las coordenadas (`opts.coords`) viajan juntas o no viajan (el backend devuelve 400 con una
  * sola). Sirven para no aprobar una farmacia que sigue en (0,0): quedaría
  * activa pero invisible en el buscador, cobrando por leads que no va a recibir.
  */
@@ -133,11 +141,26 @@ export async function cambiarEstadoFarmacia(
   token: string,
   id: string,
   estado: EstadoAfiliacion,
-  coords?: { lat: number; lng: number },
+  opts?: {
+    coords?: { lat: number; lng: number };
+    verificacionRegente?: boolean;
+    verificacionSacs?: boolean;
+  },
 ): Promise<void> {
   const res = await adminFetch(`/api/v1/admin/farmacias/${id}/estado`, token, {
     method: "PATCH",
-    body: JSON.stringify({ estado_afiliacion: estado, ...(coords ?? {}) }),
+    body: JSON.stringify({
+      estado_afiliacion: estado,
+      ...(opts?.coords ?? {}),
+      ...(opts?.verificacionRegente !== undefined
+        ? { verificacion_regente: opts.verificacionRegente }
+        : {}),
+      ...(opts?.verificacionSacs !== undefined ? { verificacion_sacs: opts.verificacionSacs } : {}),
+    }),
   });
-  if (!res.ok) throw new Error("No se pudo cambiar el estado");
+  if (!res.ok) {
+    // El 422/409 del gate de B-02 trae el detalle en `message` (envelope) o `detail`.
+    const json = await res.json().catch(() => null);
+    throw new Error(json?.message || json?.detail || "No se pudo cambiar el estado");
+  }
 }

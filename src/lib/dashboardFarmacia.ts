@@ -40,6 +40,12 @@ export interface DashboardFarmaciaData {
   lng?: number | null;
   /** false ⇒ la farmacia sigue en (0,0) y su inventario NO sale en el buscador. */
   ubicacion_configurada?: boolean;
+  regente_nombre?: string;
+  regente_colegiatura?: string;
+  regente_colegio_entidad?: string;
+  regente_inh?: string;
+  sacs_autorizacion?: string;
+  sacs_fecha?: string; // ISO YYYY-MM-DD
   pacientes_interesados_hoy?: number;
   busquedas_zona?: number | null;
   busquedas_zona_disponible?: boolean;

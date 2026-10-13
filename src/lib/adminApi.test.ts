@@ -56,7 +56,7 @@ describe("requiereUbicacionAntesDeActivar", () => {
 describe("cambiarEstadoFarmacia", () => {
   it("manda las coordenadas cuando se le pasan", async () => {
     const spy = stubFetch();
-    await cambiarEstadoFarmacia("tok", "f1", "activa", ACARIGUA);
+    await cambiarEstadoFarmacia("tok", "f1", "activa", { coords: ACARIGUA });
     expect(bodyDe(spy)).toEqual({ estado_afiliacion: "activa", ...ACARIGUA });
   });
 
@@ -82,6 +82,59 @@ describe("cambiarEstadoFarmacia", () => {
   it("traduce 401 a UNAUTHORIZED para que la superficie cierre sesión", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 401 })));
     await expect(cambiarEstadoFarmacia("tok", "f1", "activa")).rejects.toThrow("UNAUTHORIZED");
+  });
+
+  it("manda las confirmaciones de verificación (B-02) en el body", async () => {
+    const spy = stubFetch();
+    await cambiarEstadoFarmacia("tok", "id-1", "activa", {
+      verificacionRegente: true,
+      verificacionSacs: true,
+    });
+    expect(bodyDe(spy)).toEqual({
+      estado_afiliacion: "activa",
+      verificacion_regente: true,
+      verificacion_sacs: true,
+    });
+  });
+
+  it("no manda verificacion_* cuando no se pasan", async () => {
+    const spy = stubFetch();
+    await cambiarEstadoFarmacia("tok", "id-1", "activa", { coords: ACARIGUA });
+    const body = bodyDe(spy);
+    expect("verificacion_regente" in body).toBe(false);
+    expect("verificacion_sacs" in body).toBe(false);
+  });
+
+  it("propaga el message del backend en el error (422/409)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(
+            JSON.stringify({ status: "error", message: "Faltan: regente_inh, sacs_fecha." }),
+            { status: 422 },
+          ),
+        ),
+    );
+    await expect(
+      cambiarEstadoFarmacia("tok", "id-1", "activa", {
+        verificacionRegente: true,
+        verificacionSacs: true,
+      }),
+    ).rejects.toThrow(/Faltan: regente_inh/);
+  });
+
+  it("cae a detail si no hay message, y a un genérico si el cuerpo no es JSON", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(JSON.stringify({ detail: "Conflicto" }), { status: 409 })),
+    );
+    await expect(cambiarEstadoFarmacia("tok", "f1", "activa")).rejects.toThrow("Conflicto");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("boom", { status: 500 })));
+    await expect(cambiarEstadoFarmacia("tok", "f1", "activa")).rejects.toThrow(
+      "No se pudo cambiar el estado",
+    );
   });
 });
 

@@ -62,7 +62,7 @@ export function TablaFarmacias({
       id: string;
       estado: EstadoAfiliacion;
       coords?: { lat: number; lng: number };
-    }) => cambiarEstadoFarmacia(token, id, estado, coords),
+    }) => cambiarEstadoFarmacia(token, id, estado, { coords }),
     onSuccess: () => {
       toast.success("Estado actualizado");
       qc.invalidateQueries({ queryKey: ["admin-farmacias"] });
