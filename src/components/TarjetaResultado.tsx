@@ -99,6 +99,7 @@ export function TarjetaResultado({
         resultado.medicamento_nombre,
         resultado.presentacion,
         resultado.precio_usd,
+        resultado.condicion_dispensacion,
       ),
     );
     if (!url) {
