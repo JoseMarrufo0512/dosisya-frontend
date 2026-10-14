@@ -7,6 +7,8 @@ import { useBackDismiss, useHayOverlayAbierto } from "./hooks/useBackDismiss";
 import { useTasa } from "./hooks/useTasa";
 import { useBusquedasRecientes, useRecordatorios } from "./hooks/useLocalStorage";
 import { useListaMedica } from "./hooks/useListaMedica";
+import { usePacienteSesion } from "@/hooks/usePacienteSesion";
+import { toast } from "sonner";
 import { HeroBusqueda } from "./components/HeroBusqueda";
 import { SplashScreen } from "./components/SplashScreen";
 import { CartSummary } from "./components/lista/CartSummary";
@@ -84,6 +86,7 @@ export default function App() {
   const [tab, setTab] = useState<TabPaciente>("buscar");
   const [masAbierto, setMasAbierto] = useState(false);
   const [loginAbierto, setLoginAbierto] = useState(false);
+  const { logueado, perfil, cerrarSesion } = usePacienteSesion();
   const [chatIAAbierto, setChatIAAbierto] = useState(false);
 
   // Botón atrás del teléfono → cierra el overlay abierto (uno por capa).
@@ -275,7 +278,14 @@ export default function App() {
           conDelivery={conDelivery}
           onToggleDelivery={() => setConDelivery(!conDelivery)}
           onEscanearRecipe={() => setEscanerAbierto(true)}
-          onAbrirCuenta={() => setLoginAbierto(true)}
+          onAbrirCuenta={() => {
+            if (logueado) {
+              cerrarSesion();
+              toast(perfil?.nombre ? `Hasta pronto, ${perfil.nombre}.` : "Cerraste sesión.");
+            } else {
+              setLoginAbierto(true);
+            }
+          }}
           tasa={tasa?.tasa ?? null}
         />
       ) : (
@@ -345,7 +355,11 @@ export default function App() {
       />
       <HojaChatIA open={chatIAAbierto} onClose={() => setChatIAAbierto(false)} />
       <BurbujaAsistenteIA visible={!hayOverlayAbierto} onAbrir={() => setChatIAAbierto(true)} />
-      <HojaLoginPaciente open={loginAbierto} onOpenChange={setLoginAbierto} />
+      <HojaLoginPaciente
+        open={loginAbierto}
+        onOpenChange={setLoginAbierto}
+        onSesionIniciada={() => setLoginAbierto(false)}
+      />
 
       {/* Capa de vuelo (packFly): el paquete arquea del botón "+" al carrito */}
       <div className="pointer-events-none fixed inset-0 z-[60]" aria-hidden="true">
