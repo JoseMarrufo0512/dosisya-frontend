@@ -18,16 +18,19 @@ export function usePacienteSesion(): {
     // Lectura inicial tras hidratar (evita desajuste SSR/CSR).
     setPerfil(getPacientePerfil());
     if (!getPacienteToken()) return;
-    // Valida el token guardado; si es inválido, limpia en silencio.
+    // Valida el token guardado; solo cierra sesión ante 401/403 (UNAUTHORIZED).
     let cancelado = false;
     obtenerPerfil()
       .then((p) => {
         if (!cancelado) setPerfil(p);
       })
-      .catch(() => {
+      .catch((e) => {
         if (cancelado) return;
-        cerrarSesionPaciente();
-        setPerfil(null);
+        if (e instanceof Error && e.message === "UNAUTHORIZED") {
+          cerrarSesionPaciente();
+          setPerfil(null);
+        }
+        // otro error (red/5xx/parse): conservar sesión y perfil cacheado
       });
     return () => {
       cancelado = true;
