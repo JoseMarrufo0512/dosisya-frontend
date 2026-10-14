@@ -17,10 +17,25 @@ Este archivo es la fuente de verdad para el contexto persistente de Claude Code.
 - **Notificaciones B2B:** n8n + OpenWA.
 
 ## 3. Estructura Real de `src/` (no inventar carpetas)
-- `src/routes/` — rutas file-based: `__root.tsx`, `index.tsx`, `admin.login.tsx`, `admin.dashboard.tsx`. `src/routeTree.gen.ts` es AUTO-GENERADO: nunca editarlo a mano.
-- `src/components/` — UI del dominio; `src/components/lista/` — carrito Lista Médica (CartSummary, ListaMedicaDrawer, SelectorFarmacia); `src/components/ui/` — shadcn.
-- `src/hooks/` — `useListaMedica`, `useGeolocalizacion`, `useBuscarMedicamentos`, `useLocalStorage`.
-- `src/lib/` — `api.ts` (API_BASE + tipos), `leads.ts`, `leadsLista.ts`, `whatsapp.ts`.
+- Bootstrap de TanStack Start (raíz de `src/`): `client.tsx`, `server.ts`, `start.ts`, `router.tsx`, `App.tsx`, `instrument.client.ts`. `api/ssr.js` (raíz del repo) es el entry SSR que ejecuta Vercel. `src/routeTree.gen.ts` es AUTO-GENERADO: nunca editarlo a mano.
+- `src/routes/` — rutas file-based:
+  - B2C (paciente, sin login): `index.tsx` (landing en `/`), `buscar.tsx` (buscador), `producto.$farmaciaId.$medicamentoId.tsx` (detalle/deep-link).
+  - Panel farmacia: `admin.login.tsx`, `admin.dashboard.tsx`.
+  - Superadmin: `super.login.tsx`, `super.dashboard.tsx`.
+  - Legales/informativas: `acerca-de.tsx`, `privacidad.tsx`, `terminos.tsx`.
+  - `__root.tsx` (layout raíz). Ver `src/routes/README.md`.
+- `src/components/` — UI por dominio:
+  - `lista/` — carrito Lista Médica (`CartSummary`, `ListaMedicaDrawer`, `SelectorFarmacia`).
+  - `landing/` — secciones de la home institucional (`HeroSection`, `Navbar`, `Footer`, etc.).
+  - `paciente/` — experiencia B2C: asistente IA (`BurbujaAsistenteIA`, `HojaChatIA`), `HojaLoginPaciente`, `MenuMasPaciente`.
+  - `panel/` — panel farmacia: `DashboardFarmacia`, `CampoUbicacion`, `EscanerRecipeFarmacia`.
+  - `super/` — superadmin: `TablaFarmacias`, `TablaFacturacion`, `EditarFarmaciaDrawer`.
+  - `vistas/` — vistas compuestas de búsqueda (`VistaResultados`, `VistaFarmacias`).
+  - `navegacion/` — `NavegacionPaciente`.
+  - `ui/` — shadcn/Radix (no es dominio propio).
+- `src/hooks/` — `useListaMedica`, `useBuscarMedicamentos`, `useGeolocalizacion`, `useLocalStorage`, `useFavoritos`, `useDebounce`, `useBackDismiss`, `useTasa`, `use-mobile`.
+- `src/lib/` — lógica no-UI, tipos y llamadas a API: `api.ts` (API_BASE + tipos), `leads.ts`/`leadsLista.ts`/`whatsapp.ts` (leads CPC), `adminApi.ts`/`adminAuth.ts`/`dashboardFarmacia.ts` (panel), `coordenadas.ts`/`geolocalizacionNavegador.ts` (geo), `recipeIA.ts`/`recipeIAFarmacia.ts`/`chatIA.ts` (IA vía backend), `estadoResultados.ts`, `filtros.ts`, `categorias.ts`, `rifDisponible.ts`, `comprimirImagen.ts`, `analytics.ts`, `config.server.ts`. La mayoría tiene su `*.test.ts` al lado.
+- `src/styles/` — estilos adicionales (Tailwind 4 CSS-first, sin `tailwind.config`).
 - NO existen `src/pages/` ni `src/services/`. No crearlas.
 
 ## 4. Reglas Estrictas
