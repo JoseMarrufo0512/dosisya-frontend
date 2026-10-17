@@ -41,13 +41,14 @@ describe("pacienteApi", () => {
   it("solicitarCodigo hace POST con el teléfono", async () => {
     fetchMock.mockResolvedValue(ok({ status: "success" }));
     await solicitarCodigo("04141234567");
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/v1/paciente/auth/solicitar-codigo",
-      expect.objectContaining({
-        method: "POST",
-        body: JSON.stringify({ telefono: "04141234567" }),
-      }),
-    );
+    // La URL puede traer API_BASE absoluto (SSR/CI con VITE_API_URL) o relativo
+    // (cliente), así que verificamos el path con toContain, no igualdad exacta.
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toContain("/api/v1/paciente/auth/solicitar-codigo");
+    expect(init).toMatchObject({
+      method: "POST",
+      body: JSON.stringify({ telefono: "04141234567" }),
+    });
   });
 
   it("verificarCodigo devuelve la sesión parseada de data", async () => {
