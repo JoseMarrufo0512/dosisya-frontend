@@ -23,6 +23,13 @@
 - **Causa real:** La columna `leads_interacciones.medicamento_buscado_id` es un `UUID` (nullable). El backend rechaza el valor mal formado y el lead completo se pierde **sin error visible** (los POST son fire-and-forget).
 - **Solución:** `postLead()` (en `src/lib/leads.ts`, único punto de envío) valida contra `UUID_RE` y manda `null` cuando no matchea. La interacción CPC se cobra igual, solo que sin referencia de inventario. No armar el POST de leads por fuera de `postLead`.
 
+## Pausa automática de Supabase (plan free) → 500 en toda la app
+- **Pasa cuando:** El proyecto Supabase de DosisYa (plan gratuito) se pausa automáticamente por inactividad. El backend FastAPI sigue arriba (`/docs` responde 200), pero **cualquier endpoint que toque la base de datos devuelve 500 genérico** — `{"status":"error","message":"Error interno al ejecutar la búsqueda.","data":null}` en el caso de la búsqueda, por ejemplo. No es un bug de query ni de código: no hay ninguna base de datos que responda.
+- **Cómo detectarlo (no adivinar la causa por el código primero):** consultar el `status` del proyecto vía MCP de Supabase (`list_projects` / `get_project`) o el dashboard. Si `status: INACTIVE`, esa es la causa. Los logs (`query_logs`) muestran `ClientHandler: (ENOTFOUND) tenant/user postgres.<project_ref> not found` — esa línea es la huella digital de un proyecto pausado, no de una query rota.
+- **Causa real:** Plan gratuito de Supabase pausa proyectos tras ~7 días sin actividad (conexiones, queries). Nadie lo notó hasta que un paciente real intentó buscar y recibió "Algo salió mal".
+- **Solución:** `restore_project` vía MCP (o el botón "Restore" del dashboard de Supabase) — requiere autorización explícita de José (`CLAUDE.md` §8, es un cambio sobre Supabase). Tarda unos minutos (`COMING_UP` → `ACTIVE_HEALTHY`); reintentar la búsqueda hasta que responda 200. Si esto se repite, considerar un plan pago o un ping periódico (cron) para evitar la pausa.
+- **Detectado y resuelto:** 2026-09-05, durante la verificación manual del MVP (B-002).
+
 ## Contratos frontend↔backend (verificado 2026-07-22)
 - **Regla:** El backend (`DosisYa-Backend`) es la única fuente de verdad del contrato. Verificar contra `routers/`, `models.py` y `db/schema.sql` antes de asumir nombres de campos/enums (usar el skill `contrato-api`).
 - **Estado:** Los 7 contratos que consume el frontend (búsqueda, leads, login súper, listado/estado de farmacias, récipe) están alineados 1:1 con el backend a esta fecha.
