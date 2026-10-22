@@ -159,7 +159,7 @@ function AcercaDe() {
               WhatsApp. Todo sin crear cuenta ni iniciar sesión.
             </p>
             <Link
-              to="/"
+              to="/buscar"
               className="mt-4 inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
               style={{ background: "var(--verde-cruz)" }}
             >
