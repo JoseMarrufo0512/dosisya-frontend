@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, FormEvent } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useGeolocalizacion } from "./hooks/useGeolocalizacion";
 import { useBuscarMedicamentos } from "./hooks/useBuscarMedicamentos";
 import { useDebounce } from "./hooks/useDebounce";
@@ -45,10 +45,6 @@ export default function App() {
   const recordatorios = useRecordatorios();
   const { totalDistintos } = useListaMedica();
   const tasa = useTasa();
-
-  // Splash de carga (logo + señales de confianza): visible por defecto para
-  // que coincida en SSR y en el primer render del cliente, sin parpadeo.
-  const [splashVisible, setSplashVisible] = useState(true);
 
   // Leer estado inicial de la URL (MED-7)
   const urlInit = typeof window !== "undefined" ? new URL(window.location.href) : null;
@@ -253,9 +249,7 @@ export default function App() {
 
   return (
     <>
-      <AnimatePresence>
-        {splashVisible && <SplashScreen onFinish={() => setSplashVisible(false)} />}
-      </AnimatePresence>
+      <SplashScreen />
 
       {tab === "farmacias" ? (
         <VistaFarmacias resultados={api.resultados} onSetTab={setTab} />
