@@ -116,10 +116,12 @@ Notas:
   ```
 - **Env var** en Vercel → proyecto del backend → Settings → Environment Variables:
   ```
-  RATELIMIT_STORAGE_URI="async+rediss://default:<token>@<host>.upstash.io:6379"
+  RATELIMIT_STORAGE_URI="rediss://default:<token>@<host>.upstash.io:6379"
   ```
-  (El esquema `async+rediss://` usa TLS + cliente async, apropiado para funciones async en
-  serverless. `limiter.py` ya lee `RATELIMIT_STORAGE_URI` — no hay que cambiar código.)
+  (Esquema `rediss://` = TLS con el cliente **síncrono** `redis`. **NO** usar `async+rediss://`:
+  slowapi construye su storage/estrategias con las variantes síncronas de `limits`, así que un
+  storage async devolvería coroutines que nunca se await-ean → rate-limit roto y oculto por
+  `swallow_errors`. `limiter.py` ya lee `RATELIMIT_STORAGE_URI` — no hay que cambiar código.)
 - **Por qué Upstash:** pago por request, sin costo en reposo → encaja con la operación consciente
   de costos de `operacion-produccion.md`. Alternativa: cualquier Redis gestionado.
 

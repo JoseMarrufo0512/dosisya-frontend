@@ -109,9 +109,13 @@ limiter = Limiter(key_func=client_ip, storage_uri=_storage_uri, swallow_errors=T
 **Ops (José):** provisionar Upstash (pago por request, sin costo en reposo → encaja con
 `operacion-produccion.md`), setear en Vercel → backend:
 ```
-RATELIMIT_STORAGE_URI="async+rediss://default:<token>@<host>.upstash.io:6379"
+RATELIMIT_STORAGE_URI="rediss://default:<token>@<host>.upstash.io:6379"
 TRUSTED_CLIENT_IP_HEADER="<cabecera decidida en Fase 0>"
 ```
+> Esquema **`rediss://`** (TLS, cliente síncrono `redis`), **NO `async+rediss://`**: slowapi
+> construye su storage con `storage_from_string` y estrategias **síncronas** (`limits.strategies`);
+> un storage async devolvería coroutines que slowapi nunca await-ea → rate-limit roto y, peor,
+> oculto por `swallow_errors`. El cliente síncrono `redis` (la dep de §4.2) es el correcto.
 
 > **Interdependencia:** sin 4.2 el `5/minute` sigue por-instancia; sin 4.1 un atacante evade 4.2
 > rotando la cabecera. Las dos subtareas van juntas.

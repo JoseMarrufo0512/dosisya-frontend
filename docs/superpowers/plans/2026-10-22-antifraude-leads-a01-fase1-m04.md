@@ -193,7 +193,7 @@ def client_ip(request: Request) -> str:
 
 # Sin RATELIMIT_STORAGE_URI cae a memoria (solo válido en local o instancia única).
 # En Vercel serverless hay que apuntarla a un Redis compartido (Upstash), p. ej.:
-#   RATELIMIT_STORAGE_URI="async+rediss://default:<token>@<host>.upstash.io:6379"
+#   RATELIMIT_STORAGE_URI="rediss://default:<token>@<host>.upstash.io:6379"  (sync; NO async+)
 # Usar Redis requiere el cliente `redis` (ya declarado en pyproject.toml).
 _storage_uri = os.environ.get("RATELIMIT_STORAGE_URI", "memory://")
 
@@ -459,7 +459,7 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 Tras mergear/desplegar a un preview del backend:
 
 1. **Fase 0:** desplegar con `FWD_DEBUG=1`. Hacer una request desde un dispositivo conocido por los dos caminos (directo a `proyecto-dosis-ya.vercel.app` y vía el proxy mismo-origen del frontend). En los logs, ver qué cabecera (`x-vercel-forwarded-for`, `x-real-ip`, …) trae la IP real por ambos caminos y no la puede forjar el cliente. Fijar `TRUSTED_CLIENT_IP_HEADER` con ese valor; quitar `FWD_DEBUG`.
-2. **Fase 1:** provisionar Upstash, setear `RATELIMIT_STORAGE_URI="async+rediss://…"` y `TRUSTED_CLIENT_IP_HEADER`. Script de rotación (extender `scripts/test-leads-cpc.sh` del frontend): 20 POST con `X-Forwarded-For` rotando → debe dar `429` tras el 5º. Un usuario legítimo (misma IP real, clics espaciados) NO recibe 429 de más. Smoke del buscador (`"status":"success"`) y un lead real E2E.
+2. **Fase 1:** provisionar Upstash, setear `RATELIMIT_STORAGE_URI="rediss://…"` (esquema síncrono, **NO** `async+`: slowapi usa storage/estrategias síncronas) y `TRUSTED_CLIENT_IP_HEADER`. Script de rotación (extender `scripts/test-leads-cpc.sh` del frontend): 20 POST con `X-Forwarded-For` rotando → debe dar `429` tras el 5º. Un usuario legítimo (misma IP real, clics espaciados) NO recibe 429 de más. Smoke del buscador (`"status":"success"`) y un lead real E2E.
 3. **M-04:** dos POST idénticos casi simultáneos contra el preview → una sola fila en `leads_interacciones` (no hay DB aislada local: `qa-local-dev-db-constraint`).
 
 ---
