@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import * as Sentry from "@sentry/tanstackstart-react";
 import { postLead, registrarLead } from "./leads";
 import { API_BASE } from "./api";
+
+vi.mock("@sentry/tanstackstart-react", () => ({ captureMessage: vi.fn() }));
 
 function ultimaLlamadaFetch() {
   const mockFetch = fetch as unknown as ReturnType<typeof vi.fn>;

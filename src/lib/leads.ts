@@ -54,6 +54,24 @@ export interface LeadPayload {
 }
 
 /**
+ * Reporta a Sentry un lead que no llegó a registrarse (revenue perdido).
+ * Un solo lugar para los dos modos de pérdida: respuesta no-ok del backend
+ * (4xx/5xx) y error de red.
+ */
+function reportarLeadPerdido(p: LeadPayload, detalle: Record<string, unknown>): void {
+  Sentry.captureMessage("lead_perdido", {
+    level: "warning",
+    extra: {
+      farmacia_id: p.farmaciaId,
+      tipo: p.tipo,
+      medicamento_id: p.medicamentoId,
+      origen: p.origen,
+      ...detalle,
+    },
+  });
+}
+
+/**
  * Único punto de envío de leads CPC (POST /api/v1/leads/, con trailing slash).
  * Nunca lanza (los errores se tragan y van a Sentry) para no romper el UX de
  * quien no espera la promesa — pero SÍ la retorna, porque registrarLeadLista
@@ -81,20 +99,23 @@ export function postLead(p: LeadPayload): Promise<void> {
     // (crítico cuando el clic abre wa.me).
     keepalive: p.keepalive ?? false,
   })
-    .then(() => undefined)
+    .then((res) => {
+      // ⚠️ fetch SOLO rechaza ante error de red: un 4xx/5xx resuelve con
+      // ok=false, NO entra al .catch. Sin este chequeo un 422 (payload
+      // inesperado), 404 (contrato fantasma) o 500 (Supabase pausado) pasaría
+      // como éxito y el lead cobrable se perdería sin que Sentry se entere —
+      // justo el modo de pérdida más común y documentado en las lecciones.
+      if (!res.ok) {
+        reportarLeadPerdido(p, { motivo: "respuesta_no_ok", status: res.status });
+      }
+    })
     .catch((err) => {
-      // Fire-and-forget para quien no espera esta promesa: los leads CPC
-      // nunca deben romper el UX, pero SÍ reportamos a Sentry para detectar
-      // pérdida de revenue.
-      Sentry.captureMessage("lead_perdido", {
-        level: "warning",
-        extra: {
-          farmacia_id: p.farmaciaId,
-          tipo: p.tipo,
-          medicamento_id: p.medicamentoId,
-          origen: p.origen,
-          error: err instanceof Error ? err.message : String(err),
-        },
+      // Error de red: el navegador nunca llegó al backend. Fire-and-forget
+      // para quien no espera esta promesa (los leads CPC nunca rompen el UX),
+      // pero SÍ reportamos a Sentry para detectar pérdida de revenue.
+      reportarLeadPerdido(p, {
+        motivo: "error_red",
+        error: err instanceof Error ? err.message : String(err),
       });
     });
 }
