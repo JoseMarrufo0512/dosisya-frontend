@@ -85,14 +85,17 @@ Frontend vs backend: **emitir y verificar** el token = backend; **guardar y adju
 
 ## 5 · Diseño del permiso firmado
 
-**Formato:** `base64url(payload_json) + "." + base64url(HMAC_SHA256(payload_json, JWT_SECRET_KEY))`.
-Sin librería JWT, stateless, **sin tabla nueva**. (Se reusa `JWT_SECRET_KEY`, ya presente y
-estable en el backend para la auth de pacientes.)
+**Formato:** un **JWT HS256** (decisión de builder-check: el backend YA usa PyJWT con HS256 en
+`DosisYa-Backend/src/dosisya/security.py` — reusar ese patrón es más simple y seguro que un
+HMAC a mano, maneja `exp`/firma por nosotros). Stateless, **sin tabla nueva**, reusa el secreto
+vía `security._get_secret()`.
 
-**Payload:**
+**Claims:**
 ```json
-{ "v": 1, "iat": <epoch_s>, "exp": <epoch_s>, "origen": "busqueda|escaner_recipe", "scope": "buscar|detalle|recipe" }
+{ "typ": "lead", "origen": "busqueda|escaner_recipe", "scope": "buscar|detalle|recipe", "iat": <epoch>, "exp": <epoch> }
 ```
+- `typ:"lead"`: evita que un JWT de auth del dashboard (sin ese claim) sirva como `lead_token`
+  o viceversa — `verify_lead_token` exige `typ=="lead"`.
 - `origen`: `escaner_recipe` SOLO lo emite `analizar-recipe`; `buscar`/`detalle` emiten
   `busqueda`. `lista_medica` no se firma (es un agrupador de ítems de orígenes mixtos; ver §6).
 - `scope`: de qué endpoint salió (diagnóstico/telemetría).
