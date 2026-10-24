@@ -90,6 +90,18 @@ describe("postLead — contrato HTTP (POST /api/v1/leads/)", () => {
     });
   });
 
+  it("incluye lead_token en el body cuando se provee", () => {
+    postLead({ farmaciaId: "f1", tipo: "clic_whatsapp", origen: "busqueda", leadToken: "tok" });
+    expect(ultimaLlamadaFetch().body.lead_token).toBe("tok");
+  });
+
+  it("omite la clave lead_token si no hay token o está vacío", () => {
+    postLead({ farmaciaId: "f1", tipo: "clic_whatsapp", origen: "busqueda" });
+    expect("lead_token" in ultimaLlamadaFetch().body).toBe(false);
+    postLead({ farmaciaId: "f1", tipo: "clic_whatsapp", origen: "busqueda", leadToken: "" });
+    expect("lead_token" in ultimaLlamadaFetch().body).toBe(false);
+  });
+
   it("propaga keepalive:true (crítico al abrir wa.me)", () => {
     postLead({ farmaciaId: "f1", tipo: "clic_whatsapp", origen: "busqueda", keepalive: true });
     expect(ultimaLlamadaFetch().init.keepalive).toBe(true);

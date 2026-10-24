@@ -51,6 +51,8 @@ export interface LeadPayload {
   origen: OrigenLead;
   /** true cuando el clic abre wa.me y el navegador puede abandonar la página. */
   keepalive?: boolean;
+  /** JWT firmado que el backend entregó en la búsqueda (anti-fraude Fase 2). */
+  leadToken?: string;
 }
 
 /**
@@ -94,6 +96,8 @@ export function postLead(p: LeadPayload): Promise<void> {
       tipo_interaccion: p.tipo,
       medicamento_buscado_id: medicamentoIdOrNull(p.medicamentoId),
       origen: p.origen,
+      // Solo si hay token: ausente y "" son equivalentes en el backend.
+      ...(p.leadToken ? { lead_token: p.leadToken } : {}),
     }),
     // keepalive: la petición sobrevive si el navegador abandona la página
     // (crítico cuando el clic abre wa.me).
@@ -131,7 +135,7 @@ export async function registrarLead(
   farmaciaId: string,
   tipo: TipoInteraccion,
   medicamentoId?: string,
-  opts?: { keepalive?: boolean; origen?: OrigenLead },
+  opts?: { keepalive?: boolean; origen?: OrigenLead; leadToken?: string },
 ): Promise<void> {
   await postLead({
     farmaciaId,
@@ -140,5 +144,6 @@ export async function registrarLead(
     // Clic directo en tarjeta = "busqueda" salvo que el caller diga otra cosa
     origen: opts?.origen ?? "busqueda",
     keepalive: opts?.keepalive ?? false,
+    leadToken: opts?.leadToken,
   });
 }

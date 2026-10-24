@@ -19,6 +19,8 @@ import { postLead, type OrigenLead } from "./leads";
 export interface ItemLeadLista {
   medicamentoId: string | number;
   origen?: OrigenLead;
+  /** lead_token (JWT) del resultado de búsqueda de este ítem, si lo hay. */
+  leadToken?: string;
 }
 
 /**
@@ -35,7 +37,7 @@ export async function registrarLeadLista(
   if (items.length === 0) return;
 
   // Fan-out: un lead por medicamento (schema actual de leads_interacciones).
-  for (const { medicamentoId, origen } of items) {
+  for (const { medicamentoId, origen, leadToken } of items) {
     await postLead({
       farmaciaId,
       tipo: "clic_whatsapp",
@@ -44,6 +46,7 @@ export async function registrarLeadLista(
       // premium por accidente, misma regla que el backend)
       origen: origen ?? "lista_medica",
       keepalive: true,
+      leadToken,
     });
   }
 }
