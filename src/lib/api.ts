@@ -60,6 +60,7 @@ export interface RespuestaAPI {
     total: number;
     limite_aplicado?: number;
     resultados: ResultadoFarmacia[];
+    lead_token?: string;
   } | null;
 }
 
