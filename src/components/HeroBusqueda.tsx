@@ -149,9 +149,9 @@ export function HeroBusqueda({
         {geoError ? (
           <p className="text-amber-600">⚠️ {geoError}</p>
         ) : geoCargando ? (
-          <p>Obteniendo ubicación...</p>
+          <p>Obteniendo tu ubicación para buscar farmacias cercanas...</p>
         ) : (
-          <p>📍 Usando tu ubicación actual</p>
+          <p>📍 Usando tu ubicación para mostrarte farmacias cercanas</p>
         )}
       </div>
 

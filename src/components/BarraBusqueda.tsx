@@ -60,8 +60,9 @@ export function BarraBusqueda({
             compacta ? "h-8 w-8 text-sm" : "h-11 w-11 text-xl"
           }`}
           title="Recalcular ubicación"
+          aria-label="Recalcular ubicación"
         >
-          📍
+          <span aria-hidden="true">📍</span>
         </button>
       </form>
 
