@@ -44,6 +44,7 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [archivo, setArchivo] = useState<File | null>(null);
   const [resultados, setResultados] = useState<MedicamentoRecetaUI[]>([]);
+  const [leadToken, setLeadToken] = useState<string | undefined>(undefined);
   const [errorMsg, setErrorMsg] = useState("");
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
   const [editandoId, setEditandoId] = useState<string | null>(null);
@@ -107,6 +108,7 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
           id: crypto.randomUUID(),
         }));
         setResultados(conId);
+        setLeadToken(respuesta.lead_token || undefined);
         setEstado("results");
       } else {
         const errorMsg = respuesta.message || "No pudimos leer los medicamentos del récipe.";
@@ -136,6 +138,7 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
     setPreviewUrl(null);
     setArchivo(null);
     setResultados([]);
+    setLeadToken(undefined);
     setErrorMsg("");
     setExpandidos(new Set());
     setEditandoId(null);
@@ -150,6 +153,7 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
       nombre,
       presentacion: cantidad || "según récipe",
       origen: "escaner_recipe",
+      leadToken,
     });
     toast.success(`${nombre} añadido a tu lista`, {
       description:
@@ -167,6 +171,7 @@ export function EscanerRecipe({ abierto, onOpenChange }: EscanerRecipeProps) {
         nombre: med.medicamento,
         presentacion: med.cantidad || "según récipe",
         origen: "escaner_recipe",
+        leadToken,
       });
       añadidos++;
     }

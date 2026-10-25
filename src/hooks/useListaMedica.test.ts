@@ -1,5 +1,18 @@
-import { describe, expect, test } from "vitest";
-import { claveItem, farmaciaUnicaDeLista, type ItemLista } from "./useListaMedica";
+import { beforeAll, describe, expect, test } from "vitest";
+import { agregarItem, claveItem, farmaciaUnicaDeLista, type ItemLista } from "./useListaMedica";
+
+// Env "node" sin jsdom: stub manual de window.localStorage.
+const almacen = new Map<string, string>();
+beforeAll(() => {
+  (globalThis as unknown as { window: unknown }).window = {
+    localStorage: {
+      getItem: (k: string) => almacen.get(k) ?? null,
+      setItem: (k: string, v: string) => void almacen.set(k, v),
+      removeItem: (k: string) => void almacen.delete(k),
+    },
+    addEventListener: () => {},
+  };
+});
 
 function crearItem(overrides: Partial<ItemLista> = {}): ItemLista {
   return {
@@ -57,5 +70,21 @@ describe("farmaciaUnicaDeLista", () => {
       crearItem({ farmaciaId: undefined, farmaciaNombre: undefined, farmaciaWhatsapp: undefined }),
     ];
     expect(farmaciaUnicaDeLista(lista)).toBeNull();
+  });
+});
+
+describe("agregarItem + leadToken", () => {
+  test("persiste leadToken en el item y en localStorage; claveItem intacto", () => {
+    const item = agregarItem({
+      medicamentoId: "recipe-losartan",
+      nombre: "Losartan",
+      presentacion: "según récipe",
+      origen: "escaner_recipe",
+      leadToken: "tok",
+    });
+    expect(item.leadToken).toBe("tok");
+    const guardado = JSON.parse(almacen.get("dosisya:lista-medica:v1") ?? "[]");
+    expect(guardado[0].leadToken).toBe("tok");
+    expect(claveItem(item)).toBe("sin-farmacia-recipe-losartan");
   });
 });
