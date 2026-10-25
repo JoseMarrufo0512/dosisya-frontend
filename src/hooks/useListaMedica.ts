@@ -35,6 +35,8 @@ export interface ItemLista {
   farmaciaId?: string;
   farmaciaNombre?: string;
   farmaciaWhatsapp?: string | null;
+  /** lead_token premium (récipe IA) para adjuntarlo al lead al contactar. */
+  leadToken?: string;
   /**
    * Condición de dispensación vista al añadir (hallazgo B-03). Ausente en
    * items guardados antes de esta feature y en los del escáner de récipe, que
@@ -141,6 +143,7 @@ export function agregarItem(
     const actualizado: ItemLista = {
       ...existente,
       cantidad: Math.min(99, existente.cantidad + (nuevo.cantidad ?? 1)),
+      leadToken: nuevo.leadToken ?? existente.leadToken,
     };
     setItems(items.map((i) => (claveItem(i) === clave ? actualizado : i)));
     return actualizado;

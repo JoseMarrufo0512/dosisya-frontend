@@ -22,6 +22,8 @@ interface ProductoDetalle {
   precio_ves: number;
   stock_disponible: boolean;
   condicion_dispensacion: CondicionDispensacion;
+  /** Token firmado del detalle; se adjunta al lead del deep-link. */
+  lead_token?: string | null;
 }
 
 // El loader corre isomórfico: en el servidor durante SSR/la primera carga, y
@@ -119,6 +121,7 @@ function ProductoPage() {
     void registrarLead(p.farmacia_id, "clic_whatsapp", p.medicamento_id, {
       keepalive: true,
       origen: "busqueda",
+      leadToken: p.lead_token ?? undefined,
     });
     window.open(url, "_blank", "noopener,noreferrer");
   };

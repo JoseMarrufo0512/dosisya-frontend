@@ -42,6 +42,8 @@ export interface RespuestaRecipe {
   status: "success" | "error";
   message: string;
   data: MedicamentoReceta[] | null;
+  /** Token premium del scanner (nivel raíz del JSON, no dentro de data). */
+  lead_token?: string;
 }
 
 // ── Constantes ──────────────────────────────────────────────────────────────
@@ -124,7 +126,8 @@ export async function analizarRecipe(imagen: File): Promise<RespuestaRecipe> {
     }
 
     const json = (await res.json()) as RespuestaRecipe;
-    return json;
+    // "" / ausente = sin token.
+    return json.lead_token ? json : { ...json, lead_token: undefined };
   } catch (e) {
     if (e instanceof DOMException && e.name === "AbortError") {
       return {

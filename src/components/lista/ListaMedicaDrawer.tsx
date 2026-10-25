@@ -62,7 +62,11 @@ export function ListaMedicaDrawer({ abierta, onOpenChange, lat, lng }: ListaMedi
     // No se espera: serializa internamente, pero no debe retrasar el wa.me de abajo.
     void registrarLeadLista(
       farmaciaUnica.id,
-      lista.map((i) => ({ medicamentoId: i.medicamentoId, origen: i.origen })),
+      lista.map((i) => ({
+        medicamentoId: i.medicamentoId,
+        origen: i.origen,
+        leadToken: i.leadToken,
+      })),
     );
     window.open(url, "_blank", "noopener,noreferrer");
     toast.success(`Abriendo WhatsApp de ${farmaciaUnica.nombre}…`);

@@ -51,6 +51,26 @@ export interface LeadPayload {
   origen: OrigenLead;
   /** true cuando el clic abre wa.me y el navegador puede abandonar la página. */
   keepalive?: boolean;
+  /** JWT firmado que el backend entregó en la búsqueda (anti-fraude Fase 2). */
+  leadToken?: string;
+}
+
+/**
+ * Reporta a Sentry un lead que no llegó a registrarse (revenue perdido).
+ * Un solo lugar para los dos modos de pérdida: respuesta no-ok del backend
+ * (4xx/5xx) y error de red.
+ */
+function reportarLeadPerdido(p: LeadPayload, detalle: Record<string, unknown>): void {
+  Sentry.captureMessage("lead_perdido", {
+    level: "warning",
+    extra: {
+      farmacia_id: p.farmaciaId,
+      tipo: p.tipo,
+      medicamento_id: p.medicamentoId,
+      origen: p.origen,
+      ...detalle,
+    },
+  });
 }
 
 /**
@@ -76,25 +96,30 @@ export function postLead(p: LeadPayload): Promise<void> {
       tipo_interaccion: p.tipo,
       medicamento_buscado_id: medicamentoIdOrNull(p.medicamentoId),
       origen: p.origen,
+      // Solo si hay token: ausente y "" son equivalentes en el backend.
+      ...(p.leadToken ? { lead_token: p.leadToken } : {}),
     }),
     // keepalive: la petición sobrevive si el navegador abandona la página
     // (crítico cuando el clic abre wa.me).
     keepalive: p.keepalive ?? false,
   })
-    .then(() => undefined)
+    .then((res) => {
+      // ⚠️ fetch SOLO rechaza ante error de red: un 4xx/5xx resuelve con
+      // ok=false, NO entra al .catch. Sin este chequeo un 422 (payload
+      // inesperado), 404 (contrato fantasma) o 500 (Supabase pausado) pasaría
+      // como éxito y el lead cobrable se perdería sin que Sentry se entere —
+      // justo el modo de pérdida más común y documentado en las lecciones.
+      if (!res.ok) {
+        reportarLeadPerdido(p, { motivo: "respuesta_no_ok", status: res.status });
+      }
+    })
     .catch((err) => {
-      // Fire-and-forget para quien no espera esta promesa: los leads CPC
-      // nunca deben romper el UX, pero SÍ reportamos a Sentry para detectar
-      // pérdida de revenue.
-      Sentry.captureMessage("lead_perdido", {
-        level: "warning",
-        extra: {
-          farmacia_id: p.farmaciaId,
-          tipo: p.tipo,
-          medicamento_id: p.medicamentoId,
-          origen: p.origen,
-          error: err instanceof Error ? err.message : String(err),
-        },
+      // Error de red: el navegador nunca llegó al backend. Fire-and-forget
+      // para quien no espera esta promesa (los leads CPC nunca rompen el UX),
+      // pero SÍ reportamos a Sentry para detectar pérdida de revenue.
+      reportarLeadPerdido(p, {
+        motivo: "error_red",
+        error: err instanceof Error ? err.message : String(err),
       });
     });
 }
@@ -110,7 +135,7 @@ export async function registrarLead(
   farmaciaId: string,
   tipo: TipoInteraccion,
   medicamentoId?: string,
-  opts?: { keepalive?: boolean; origen?: OrigenLead },
+  opts?: { keepalive?: boolean; origen?: OrigenLead; leadToken?: string },
 ): Promise<void> {
   await postLead({
     farmaciaId,
@@ -119,5 +144,6 @@ export async function registrarLead(
     // Clic directo en tarjeta = "busqueda" salvo que el caller diga otra cosa
     origen: opts?.origen ?? "busqueda",
     keepalive: opts?.keepalive ?? false,
+    leadToken: opts?.leadToken,
   });
 }

@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import * as Sentry from "@sentry/tanstackstart-react";
 import { postLead, registrarLead } from "./leads";
 import { API_BASE } from "./api";
+
+vi.mock("@sentry/tanstackstart-react", () => ({ captureMessage: vi.fn() }));
 
 function ultimaLlamadaFetch() {
   const mockFetch = fetch as unknown as ReturnType<typeof vi.fn>;
@@ -85,6 +88,18 @@ describe("postLead — contrato HTTP (POST /api/v1/leads/)", () => {
       medicamento_buscado_id: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
       origen: "lista_medica",
     });
+  });
+
+  it("incluye lead_token en el body cuando se provee", () => {
+    postLead({ farmaciaId: "f1", tipo: "clic_whatsapp", origen: "busqueda", leadToken: "tok" });
+    expect(ultimaLlamadaFetch().body.lead_token).toBe("tok");
+  });
+
+  it("omite la clave lead_token si no hay token o está vacío", () => {
+    postLead({ farmaciaId: "f1", tipo: "clic_whatsapp", origen: "busqueda" });
+    expect("lead_token" in ultimaLlamadaFetch().body).toBe(false);
+    postLead({ farmaciaId: "f1", tipo: "clic_whatsapp", origen: "busqueda", leadToken: "" });
+    expect("lead_token" in ultimaLlamadaFetch().body).toBe(false);
   });
 
   it("propaga keepalive:true (crítico al abrir wa.me)", () => {

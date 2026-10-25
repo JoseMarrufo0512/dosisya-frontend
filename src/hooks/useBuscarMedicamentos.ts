@@ -8,6 +8,7 @@ export interface UseBuscarMedicamentosReturn {
   cargando: boolean;
   error: string | null;
   totalResultados: number;
+  leadToken: string | null;
   buscar: (
     q: string,
     lat: number,
@@ -22,6 +23,7 @@ export function useBuscarMedicamentos(): UseBuscarMedicamentosReturn {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [totalResultados, setTotalResultados] = useState(0);
+  const [leadToken, setLeadToken] = useState<string | null>(null);
   // Guard de orden: si el usuario dispara otra búsqueda antes de que responda
   // la anterior (ej. ampliar radio 5km→10km), la respuesta vieja no debe
   // pisar el estado de la búsqueda más reciente.
@@ -39,6 +41,7 @@ export function useBuscarMedicamentos(): UseBuscarMedicamentosReturn {
       const idBusqueda = ++idBusquedaRef.current;
       setCargando(true);
       setError(null);
+      setLeadToken(null);
 
       try {
         const resp = await buscarMedicamentos(
@@ -61,6 +64,7 @@ export function useBuscarMedicamentos(): UseBuscarMedicamentosReturn {
         } else {
           setResultados(resp.data.resultados);
           setTotalResultados(resp.data.total);
+          setLeadToken(resp.data.lead_token || null);
           track("busqueda_ejecutada", { termino: q, resultados: resp.data.total });
         }
       } catch (err) {
@@ -79,5 +83,5 @@ export function useBuscarMedicamentos(): UseBuscarMedicamentosReturn {
     [],
   );
 
-  return { resultados, cargando, error, totalResultados, buscar };
+  return { resultados, cargando, error, totalResultados, leadToken, buscar };
 }

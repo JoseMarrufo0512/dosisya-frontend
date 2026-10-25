@@ -125,7 +125,11 @@ export function SelectorFarmacia({ lista, lat, lng }: SelectorFarmaciaProps) {
     // No se espera: serializa internamente, pero no debe retrasar el wa.me de abajo.
     void registrarLeadLista(
       farmacia.farmaciaId,
-      lista.map((i) => ({ medicamentoId: i.medicamentoId, origen: i.origen })),
+      lista.map((i) => ({
+        medicamentoId: i.medicamentoId,
+        origen: i.origen,
+        leadToken: i.leadToken,
+      })),
     );
 
     track("farmacia_contactada", { farmacia_id: farmacia.farmaciaId, items: lista.length });

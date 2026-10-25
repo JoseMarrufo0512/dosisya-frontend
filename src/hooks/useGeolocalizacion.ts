@@ -1,8 +1,27 @@
 import { useEffect, useState } from "react";
-import { obtenerPosicionActual } from "@/lib/geolocalizacionNavegador";
+import {
+  obtenerPosicionActual,
+  type ErrorGeolocalizacion,
+} from "@/lib/geolocalizacionNavegador";
 
 // Fallback: Acarigua, Venezuela
 export const FALLBACK_COORDS = { lat: 9.5569, lng: -69.1982 };
+
+/*
+ * Mensaje del banner cuando caemos al centro de Acarigua. NO interpolamos el
+ * error crudo: `obtenerPosicionActual` rechaza con un objeto `{ tipo }` (no es
+ * Error), así que `String(err)` imprimía literalmente "[object Object]" en la
+ * UI. Mapeamos `tipo` → texto humano y accionable, sin jerga técnica.
+ */
+function mensajeUbicacionFallback(err: unknown): string {
+  const base = "Usando ubicación aproximada (Acarigua).";
+  const tipo = (err as Partial<ErrorGeolocalizacion> | null)?.tipo;
+  if (tipo === "permiso_denegado")
+    return `${base} Activa el permiso de ubicación para ver las farmacias más cercanas.`;
+  if (tipo === "no_soportado")
+    return `${base} Tu navegador no comparte la ubicación.`;
+  return `${base} No pudimos obtener tu ubicación.`;
+}
 
 export interface GeolocalizacionState {
   lat: number | null;
@@ -36,7 +55,7 @@ export function useGeolocalizacion(): GeolocalizacionState {
         setState({
           lat: FALLBACK_COORDS.lat,
           lng: FALLBACK_COORDS.lng,
-          error: `Usando ubicación predeterminada: Acarigua (${err instanceof Error ? err.message : String(err)})`,
+          error: mensajeUbicacionFallback(err),
           cargando: false,
         });
       });
