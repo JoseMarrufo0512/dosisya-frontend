@@ -1,4 +1,9 @@
-export function renderErrorPage(): string {
+export function renderErrorPage(nonce?: string): string {
+  // El botón "Reintentar" no puede usar onclick inline (lo bloquea la CSP sin
+  // 'unsafe-inline'); se cablea con un <script nonce> cuando hay nonce (SSR).
+  const retryScript = nonce
+    ? `<script nonce="${nonce}">document.getElementById('retry').addEventListener('click',function(){location.reload()})</script>`
+    : "";
   return `<!doctype html>
 <html lang="es">
   <head>
@@ -21,10 +26,11 @@ export function renderErrorPage(): string {
       <h1>Esta página no cargó</h1>
       <p>Algo salió mal de nuestro lado. Puedes intentar recargar o volver al inicio.</p>
       <div class="actions">
-        <button class="primary" onclick="location.reload()">Reintentar</button>
+        <button id="retry" class="primary" type="button">Reintentar</button>
         <a class="secondary" href="/">Ir al inicio</a>
       </div>
     </main>
+    ${retryScript}
   </body>
 </html>`;
 }
