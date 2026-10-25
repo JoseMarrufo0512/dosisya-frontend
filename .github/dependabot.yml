@@ -1,0 +1,45 @@
+# Dependabot — actualizaciones automáticas de dependencias (D2 del delta de seguridad).
+# Objetivo: proceso continuo de parches en PRs graduales y revisables, NO un bump masivo.
+# Las actualizaciones de SEGURIDAD (Dependabot alerts) son aparte y se controlan en
+# Settings → Security del repo; este archivo configura las de versión.
+version: 2
+updates:
+  # --- Dependencias npm del frontend ---
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Caracas"
+    # Tope bajo: José revisa una por una; evita avalancha de PRs.
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+    groups:
+      # Parches/minors agrupados en un solo PR para no spamear.
+      # La mayoría de las 40 vulns actuales son de esta cadena de build.
+      produccion-minor-patch:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+      desarrollo-minor-patch:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+    # Los MAJORS llegan en PRs individuales a propósito: zod 4 y los bumps de
+    # TanStack Start son breaking y necesitan revisión manual (romperían el build).
+
+  # --- GitHub Actions usadas en los workflows (ci.yml, salud-produccion.yml) ---
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      timezone: "America/Caracas"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "ci"
