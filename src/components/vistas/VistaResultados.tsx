@@ -38,6 +38,7 @@ interface VistaResultadosProps {
   MAX_COMPARAR: number;
   volarAlCarrito: (desde: DOMRect) => void;
   toggleComparar: (clave: string) => void;
+  leadToken?: string | null;
   alLimpiarBusqueda: () => { estado: "hero" | "resultados"; query: string; terminoBuscado: string };
   montado: boolean;
 }
@@ -72,6 +73,7 @@ export function VistaResultados({
   MAX_COMPARAR,
   volarAlCarrito,
   toggleComparar,
+  leadToken,
   alLimpiarBusqueda,
   montado,
 }: VistaResultadosProps) {
@@ -229,6 +231,7 @@ export function VistaResultados({
                   comparando={comparando}
                   onToggleComparar={() => toggleComparar(clave)}
                   compararDeshabilitado={!comparando && compararClaves.length >= MAX_COMPARAR}
+                  leadToken={leadToken}
                 />
               );
             })}

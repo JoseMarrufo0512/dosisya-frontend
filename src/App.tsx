@@ -287,6 +287,7 @@ export default function App() {
           }
           totalResultados={api.totalResultados}
           resultados={api.resultados}
+          leadToken={api.leadToken}
           resultadosOrdenados={resultadosOrdenados}
           resultadosVisibles={resultadosVisibles}
           filtrosAbiertos={filtrosAbiertos}
@@ -330,6 +331,7 @@ export default function App() {
         abierto={comparadorAbierto}
         onOpenChange={setComparadorAbierto}
         seleccionados={seleccionados}
+        leadToken={api.leadToken}
       />
 
       <MenuMasPaciente

@@ -19,6 +19,8 @@ interface TarjetaResultadoProps {
   onToggleComparar?: () => void;
   /** true cuando ya se alcanzó el máximo de comparación y esta no es una de las seleccionadas. */
   compararDeshabilitado?: boolean;
+  /** lead_token de la búsqueda actual; se adjunta a los leads generados. */
+  leadToken?: string | null;
 }
 
 /**
@@ -52,6 +54,7 @@ export function TarjetaResultado({
   comparando = false,
   onToggleComparar,
   compararDeshabilitado = false,
+  leadToken,
 }: TarjetaResultadoProps) {
   const { agregar, estaEnLista } = useListaMedica();
   const enLista = estaEnLista(resultado.farmacia_id, resultado.medicamento_id);
@@ -108,6 +111,7 @@ export function TarjetaResultado({
     }
     void registrarLead(resultado.farmacia_id, "clic_whatsapp", resultado.medicamento_id, {
       keepalive: true,
+      leadToken: leadToken ?? undefined,
     });
     window.open(url, "_blank", "noopener,noreferrer");
   };
@@ -119,6 +123,7 @@ export function TarjetaResultado({
     const url = `${window.location.origin}/producto/${resultado.farmacia_id}/${resultado.medicamento_id}`;
     void registrarLead(resultado.farmacia_id, "compartir", resultado.medicamento_id, {
       origen: "busqueda",
+      leadToken: leadToken ?? undefined,
     });
 
     if (navigator.share) {

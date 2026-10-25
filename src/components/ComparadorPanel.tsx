@@ -13,6 +13,8 @@ interface ComparadorPanelProps {
   onOpenChange: (v: boolean) => void;
   /** 2-3 resultados seleccionados, en el orden en que se marcaron. */
   seleccionados: ResultadoFarmacia[];
+  /** lead_token de la búsqueda actual; se adjunta a los leads generados. */
+  leadToken?: string | null;
 }
 
 /**
@@ -20,7 +22,12 @@ interface ComparadorPanelProps {
  * modal en desktop. El botón de WhatsApp de cada columna registra su lead
  * clic_whatsapp fire-and-forget con keepalive (después se abre wa.me).
  */
-export function ComparadorPanel({ abierto, onOpenChange, seleccionados }: ComparadorPanelProps) {
+export function ComparadorPanel({
+  abierto,
+  onOpenChange,
+  seleccionados,
+  leadToken,
+}: ComparadorPanelProps) {
   const esMovil = useIsMobile();
 
   const contactar = (r: ResultadoFarmacia) => {
@@ -41,6 +48,7 @@ export function ComparadorPanel({ abierto, onOpenChange, seleccionados }: Compar
     // Lead ANTES de navegar; keepalive para sobrevivir al salto a wa.me
     void registrarLead(r.farmacia_id, "clic_whatsapp", r.medicamento_id, {
       keepalive: true,
+      leadToken: leadToken ?? undefined,
     });
     window.open(url, "_blank", "noopener,noreferrer");
   };
