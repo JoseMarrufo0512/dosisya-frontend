@@ -51,13 +51,13 @@ export interface RespuestaRecipeFarmacia {
 
 const RECIPE_TIMEOUT_MS = 45_000;
 
-/** Lee credenciales de sesión guardadas por el login del panel B2B. */
-function credencialesSesion(): { farmaciaId: string; token: string } | null {
+/**
+ * Marcador de sesión del panel B2B. D4: el JWT va en la cookie HttpOnly
+ * `auth_token`; solo queda el identificador NO sensible de la farmacia.
+ */
+function farmaciaIdSesion(): string | null {
   if (typeof window === "undefined") return null;
-  const farmaciaId = localStorage.getItem("farmacia_id");
-  const token = localStorage.getItem("auth_token");
-  if (!farmaciaId || !token) return null;
-  return { farmaciaId, token };
+  return localStorage.getItem("farmacia_id");
 }
 
 /**
@@ -65,8 +65,8 @@ function credencialesSesion(): { farmaciaId: string; token: string } | null {
  * Requiere sesión de farmacia activa (login del panel B2B) y plan Premium.
  */
 export async function analizarRecipeFarmacia(imagen: File): Promise<RespuestaRecipeFarmacia> {
-  const cred = credencialesSesion();
-  if (!cred) {
+  const farmaciaId = farmaciaIdSesion();
+  if (!farmaciaId) {
     return {
       status: "error",
       message: "Sesión no encontrada. Inicia sesión de nuevo.",
@@ -87,9 +87,10 @@ export async function analizarRecipeFarmacia(imagen: File): Promise<RespuestaRec
     // solo una guarda: el endpoint va autenticado.
     formData.append("declaracion_autorizacion", "true");
 
-    const res = await fetch(`${API_BASE}/api/v1/farmacias/${cred.farmaciaId}/ia/analizar-recipe`, {
+    const res = await fetch(`${API_BASE}/api/v1/farmacias/${farmaciaId}/ia/analizar-recipe`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${cred.token}` },
+      // La cookie HttpOnly se auto-envía en mismo-origen; sin Bearer (D4).
+      credentials: "same-origin",
       body: formData,
       signal: controller.signal,
     });

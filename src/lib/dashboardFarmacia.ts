@@ -3,7 +3,8 @@
  *
  * Contrato verificado contra GET /api/v1/farmacias/{farmacia_id}/dashboard
  * (DosisYa-Backend/src/dosisya/routers/farmacias.py, 2026-07-25):
- *  - Requiere Authorization: Bearer <auth_token>. Sin trailing slash.
+ *  - Autenticado por la cookie HttpOnly `auth_token` (D4, same-origin). Sin
+ *    trailing slash. El backend sigue aceptando Bearer como fallback.
  *  - 401/403 → sesión inválida. Devuelve `data` con los campos de abajo.
  *
  * Campos que el backend SÍ entrega y aquí se mapean. Lo que el diseño del
@@ -65,22 +66,24 @@ export type ResultadoDashboard =
   | { status: "unauthorized" }
   | { status: "error" };
 
-/** Lee credenciales de sesión guardadas por el login del panel B2B. */
-function credencialesSesion(): { farmaciaId: string; token: string } | null {
+/**
+ * Lee el marcador de sesión del panel B2B. D4: el JWT ya no vive en
+ * localStorage (está en la cookie HttpOnly `auth_token`); solo queda el
+ * identificador NO sensible de la farmacia, necesario para armar la URL.
+ */
+function farmaciaIdSesion(): string | null {
   if (typeof window === "undefined") return null;
-  const farmaciaId = localStorage.getItem("farmacia_id");
-  const token = localStorage.getItem("auth_token");
-  if (!farmaciaId || !token) return null;
-  return { farmaciaId, token };
+  return localStorage.getItem("farmacia_id");
 }
 
 export async function obtenerDashboardFarmacia(): Promise<ResultadoDashboard> {
-  const cred = credencialesSesion();
-  if (!cred) return { status: "unauthorized" };
+  const farmaciaId = farmaciaIdSesion();
+  if (!farmaciaId) return { status: "unauthorized" };
 
   try {
-    const res = await fetch(`${API_BASE}/api/v1/farmacias/${cred.farmaciaId}/dashboard`, {
-      headers: { Authorization: `Bearer ${cred.token}` },
+    // La cookie HttpOnly se auto-envía en mismo-origen; sin Bearer (D4).
+    const res = await fetch(`${API_BASE}/api/v1/farmacias/${farmaciaId}/dashboard`, {
+      credentials: "same-origin",
     });
     if (res.status === 401 || res.status === 403) return { status: "unauthorized" };
     if (!res.ok) return { status: "error" };

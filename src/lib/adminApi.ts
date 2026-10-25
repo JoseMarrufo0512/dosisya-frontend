@@ -52,6 +52,8 @@ export async function adminLogin(correo: string, password: string): Promise<Admi
   const res = await fetch(`${API_BASE}/api/v1/auth/admin/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    // D4: el backend responde con la cookie HttpOnly `auth_token`.
+    credentials: "same-origin",
     body: JSON.stringify({ correo, password }),
   });
   if (!res.ok) throw new Error("Credenciales inválidas");
@@ -60,17 +62,18 @@ export async function adminLogin(correo: string, password: string): Promise<Admi
 }
 
 /**
- * Fetch autenticado para la API de superadmin. Añade el Bearer token y traduce
- * 401/403 al error "UNAUTHORIZED" que las superficies usan para cerrar sesión y
- * redirigir a /super/login (ver manejarNoAutorizado en adminAuth.ts).
- * El Content-Type solo se añade cuando hay body (peticiones GET no lo llevaban).
+ * Fetch autenticado para la API de superadmin. D4: la sesión viaja en la cookie
+ * HttpOnly `auth_token` (same-origin), ya no en un Bearer. Traduce 401/403 al
+ * error "UNAUTHORIZED" que las superficies usan para cerrar sesión y redirigir a
+ * /super/login (ver manejarNoAutorizado en adminAuth.ts). El Content-Type solo
+ * se añade cuando hay body (las peticiones GET no lo llevaban).
  */
-async function adminFetch(path: string, token: string, init?: RequestInit): Promise<Response> {
+async function adminFetch(path: string, init?: RequestInit): Promise<Response> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
+    credentials: "same-origin",
     headers: {
       ...(init?.body ? { "Content-Type": "application/json" } : {}),
-      Authorization: `Bearer ${token}`,
       ...init?.headers,
     },
   });
@@ -87,8 +90,8 @@ const TOTALES_VACIOS: TotalesRed = {
   deuda_red_usd: 0,
 };
 
-export async function getFarmaciasAdmin(token: string): Promise<AdminFarmaciasResponse> {
-  const res = await adminFetch("/api/v1/admin/farmacias", token);
+export async function getFarmaciasAdmin(): Promise<AdminFarmaciasResponse> {
+  const res = await adminFetch("/api/v1/admin/farmacias");
   if (!res.ok) throw new Error("No se pudo cargar la lista de farmacias");
 
   const json = await res.json().catch(() => null);
@@ -153,13 +156,12 @@ export function faltaHabilitacion(
  * activa pero invisible en el buscador, cobrando por leads que no va a recibir.
  */
 export async function cambiarEstadoFarmacia(
-  token: string,
   id: string,
   estado: EstadoAfiliacion,
   coords?: { lat: number; lng: number },
   verificaciones?: { verificacion_regente: boolean; verificacion_sacs: boolean },
 ): Promise<void> {
-  const res = await adminFetch(`/api/v1/admin/farmacias/${id}/estado`, token, {
+  const res = await adminFetch(`/api/v1/admin/farmacias/${id}/estado`, {
     method: "PATCH",
     body: JSON.stringify({
       estado_afiliacion: estado,

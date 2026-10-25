@@ -83,9 +83,8 @@ export function UploadInventory({ onUploaded }: Props) {
       if (!validate(file)) return;
 
       const farmaciaId = localStorage.getItem("farmacia_id");
-      const token = localStorage.getItem("auth_token");
 
-      if (!farmaciaId || !token) {
+      if (!farmaciaId) {
         toast.error("Sesión expirada. Inicia sesión de nuevo.");
         return;
       }
@@ -101,7 +100,8 @@ export function UploadInventory({ onUploaded }: Props) {
 
         const res = await fetch(`${API_BASE}/api/v1/farmacias/${farmaciaId}/inventario/upload`, {
           method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
+          // La cookie HttpOnly se auto-envía en mismo-origen; sin Bearer (D4).
+          credentials: "same-origin",
           body: formData,
           signal: AbortSignal.timeout(180_000),
         });
