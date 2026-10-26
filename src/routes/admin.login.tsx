@@ -249,6 +249,9 @@ function LoginCard({ onSwitch }: { onSwitch: () => void }) {
       const response = await fetch(`${API_BASE}/api/v1/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        // D4: el backend responde con la cookie HttpOnly `auth_token`. En
+        // mismo-origen `same-origin` basta para que el navegador la guarde.
+        credentials: "same-origin",
         body: JSON.stringify({ correo: parsed.data.email, password: parsed.data.password }),
       });
       const data = (await response.json()) as LoginResponse;
@@ -257,9 +260,9 @@ function LoginCard({ onSwitch }: { onSwitch: () => void }) {
         throw new Error("Credenciales inválidas");
       }
 
-      const authToken = data.data.auth_token;
+      // El JWT ya NO se guarda en localStorage (D4): vive en la cookie HttpOnly.
+      // Solo persistimos marcadores NO sensibles para la UI y el guard optimista.
       const farmaciaId = data.data.farmacia_id;
-      localStorage.setItem("auth_token", authToken);
       localStorage.setItem("farmacia_id", farmaciaId);
       if (data.data.nombre_farmacia) {
         localStorage.setItem("nombre_farmacia", data.data.nombre_farmacia);
@@ -505,6 +508,8 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
       const res = await fetch(`${API_BASE}/api/v1/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        // D4: el registro también devuelve la cookie HttpOnly de sesión.
+        credentials: "same-origin",
         body: JSON.stringify({
           nombre_farmacia: data.nombre,
           rif: data.rif,
@@ -526,9 +531,9 @@ function RegisterCard({ onSwitch }: { onSwitch: () => void }) {
             "No se pudo completar el registro",
         );
       }
+      // D4: solo el marcador NO sensible. El JWT va en la cookie HttpOnly.
       const farmaciaId = json?.data?.farmacia_id || json?.farmacia_id;
       if (farmaciaId) localStorage.setItem("farmacia_id", farmaciaId);
-      if (json?.data?.auth_token) localStorage.setItem("auth_token", json.data.auth_token);
       setDone(true);
       // La farmacia entra en estado 'pendiente' (gate de aprobación del súper admin):
       // no aparece en búsquedas hasta que un superadmin la apruebe. Igual la llevamos

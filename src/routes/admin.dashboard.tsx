@@ -28,6 +28,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 
 import { API_BASE } from "@/lib/api";
+import { cerrarSesionServidor } from "@/lib/sesionApi";
 import DashboardFarmacia from "@/components/panel/DashboardFarmacia";
 import { CampoUbicacion } from "@/components/panel/CampoUbicacion";
 import { parsearParCoordenadas } from "@/lib/coordenadas";
@@ -109,9 +110,10 @@ function AdminDashboard() {
     setLoading(true);
     setError(false);
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+      // D4: la sesión viaja en la cookie HttpOnly `auth_token` (same-origin),
+      // ya no en un Bearer leído de localStorage.
       const res = await fetch(`${API_BASE}/api/v1/farmacias/${farmaciaId}/dashboard`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: "same-origin",
       });
       // 401/403 → sesión inválida, redirigir al login
       if (res.status === 401 || res.status === 403) {
@@ -137,8 +139,11 @@ function AdminDashboard() {
   }, [cargarDashboard]);
 
   const logout = () => {
+    // D4: expira la cookie HttpOnly en el servidor (fire-and-forget) y borra los
+    // marcadores locales no sensibles.
+    void cerrarSesionServidor();
     localStorage.removeItem("farmacia_id");
-    localStorage.removeItem("auth_token");
+    localStorage.removeItem("nombre_farmacia");
     navigate({ to: "/admin/login" });
   };
 
@@ -960,7 +965,6 @@ function ConfiguracionSection({
     const payload = { ...parsed.data, ...habilitacion, ...(coords ?? {}) };
 
     const farmaciaId = typeof window !== "undefined" ? localStorage.getItem("farmacia_id") : null;
-    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
     if (!farmaciaId) {
       setError("Sesión no encontrada. Inicia sesión de nuevo.");
       return;
@@ -970,10 +974,8 @@ function ConfiguracionSection({
     try {
       const res = await fetch(`${API_BASE}/api/v1/farmacias/${farmaciaId}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify(payload),
       });
       if (res.status === 401 || res.status === 403) {
@@ -1602,13 +1604,12 @@ function HistorialFacturas() {
 
   useEffect(() => {
     const farmaciaId = typeof window !== "undefined" ? localStorage.getItem("farmacia_id") : null;
-    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
     if (!farmaciaId) return;
     let cancelado = false;
     (async () => {
       try {
         const res = await fetch(`${API_BASE}/api/v1/farmacias/${farmaciaId}/facturas`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          credentials: "same-origin",
         });
         if (!res.ok) {
           if (!cancelado) setError(true);
@@ -1632,14 +1633,13 @@ function HistorialFacturas() {
 
     setLeadsPorFactura((prev) => ({ ...prev, [f.id]: "cargando" }));
     const farmaciaId = typeof window !== "undefined" ? localStorage.getItem("farmacia_id") : null;
-    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
     try {
       const params = new URLSearchParams({
         periodo_inicio: f.periodo_inicio,
         periodo_fin: f.periodo_fin,
       });
       const res = await fetch(`${API_BASE}/api/v1/farmacias/${farmaciaId}/leads?${params}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: "same-origin",
       });
       if (!res.ok) throw new Error("leads fetch failed");
       const json = await res.json();

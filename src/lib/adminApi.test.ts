@@ -80,13 +80,13 @@ describe("faltaHabilitacion (hallazgo B-02)", () => {
 describe("cambiarEstadoFarmacia", () => {
   it("manda las coordenadas cuando se le pasan", async () => {
     const spy = stubFetch();
-    await cambiarEstadoFarmacia("tok", "f1", "activa", ACARIGUA);
+    await cambiarEstadoFarmacia("f1", "activa", ACARIGUA);
     expect(bodyDe(spy)).toEqual({ estado_afiliacion: "activa", ...ACARIGUA });
   });
 
   it("omite lat/lng si no se le pasan, para que el backend conserve la ubicación", async () => {
     const spy = stubFetch();
-    await cambiarEstadoFarmacia("tok", "f1", "inactiva");
+    await cambiarEstadoFarmacia("f1", "inactiva");
     const body = bodyDe(spy);
     expect(body).toEqual({ estado_afiliacion: "inactiva" });
     // Mandar lat/lng en null o undefined no es lo mismo que omitirlas.
@@ -96,7 +96,7 @@ describe("cambiarEstadoFarmacia", () => {
 
   it("usa PATCH sobre la ruta del estado, sin trailing slash", async () => {
     const spy = stubFetch();
-    await cambiarEstadoFarmacia("tok", "abc-123", "activa");
+    await cambiarEstadoFarmacia("abc-123", "activa");
     const [url, init] = spy.mock.calls[0];
     expect(String(url)).toContain("/api/v1/admin/farmacias/abc-123/estado");
     expect(String(url).endsWith("/estado")).toBe(true);
@@ -105,7 +105,16 @@ describe("cambiarEstadoFarmacia", () => {
 
   it("traduce 401 a UNAUTHORIZED para que la superficie cierre sesión", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 401 })));
-    await expect(cambiarEstadoFarmacia("tok", "f1", "activa")).rejects.toThrow("UNAUTHORIZED");
+    await expect(cambiarEstadoFarmacia("f1", "activa")).rejects.toThrow("UNAUTHORIZED");
+  });
+
+  it("D4: autentica por cookie (credentials same-origin) y NO manda Authorization", async () => {
+    const spy = stubFetch();
+    await cambiarEstadoFarmacia("f1", "activa");
+    const init = spy.mock.calls[0][1];
+    expect(init.credentials).toBe("same-origin");
+    const headers = (init.headers ?? {}) as Record<string, string>;
+    expect("Authorization" in headers).toBe(false);
   });
 });
 
@@ -127,7 +136,7 @@ describe("getFarmaciasAdmin — respuestas mal formadas", () => {
 
   it("devuelve la lista cuando el cuerpo es correcto", async () => {
     responder({ data: { farmacias: [{ id: "f1" }], totales: { pendientes: 1 } } });
-    const r = await getFarmaciasAdmin("tok");
+    const r = await getFarmaciasAdmin();
     expect(r.farmacias).toHaveLength(1);
     expect(r.totales.pendientes).toBe(1);
   });
@@ -147,12 +156,12 @@ describe("getFarmaciasAdmin — respuestas mal formadas", () => {
     } else {
       responder(body);
     }
-    await expect(getFarmaciasAdmin("tok")).rejects.toThrow();
+    await expect(getFarmaciasAdmin()).rejects.toThrow();
   });
 
   it("rellena los totales que falten en vez de fallar: la lista vale más", async () => {
     responder({ data: { farmacias: [] } });
-    const r = await getFarmaciasAdmin("tok");
+    const r = await getFarmaciasAdmin();
     expect(r.totales).toEqual({
       total_farmacias: 0,
       pendientes: 0,
@@ -164,7 +173,7 @@ describe("getFarmaciasAdmin — respuestas mal formadas", () => {
 
   it("conserva los totales que sí vienen", async () => {
     responder({ data: { farmacias: [], totales: { total_farmacias: 9, sin_ubicacion: 3 } } });
-    const r = await getFarmaciasAdmin("tok");
+    const r = await getFarmaciasAdmin();
     expect(r.totales.total_farmacias).toBe(9);
     expect(r.totales.sin_ubicacion).toBe(3);
     expect(r.totales.leads_mes_red).toBe(0); // el que falta, en neutro

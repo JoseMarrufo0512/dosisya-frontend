@@ -22,13 +22,11 @@ const formatoTelefonoVE = (raw: string) => {
 
 export function EditarFarmaciaDrawer({
   farmacia,
-  token,
   open,
   onOpenChange,
   onSaved,
 }: {
   farmacia: FarmaciaAdmin | null;
-  token: string;
   open: boolean;
   onOpenChange: (o: boolean) => void;
   onSaved: () => void;
@@ -77,7 +75,9 @@ export function EditarFarmaciaDrawer({
     try {
       const res = await fetch(`${API_BASE}/api/v1/farmacias/${farmacia.id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        // La cookie HttpOnly se auto-envía en mismo-origen; sin Bearer (D4).
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({
           nombre_farmacia: nombre,
           whatsapp,

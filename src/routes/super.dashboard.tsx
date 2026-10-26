@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Building2, Receipt, LogOut, Loader2 } from "lucide-react";
 import { getFarmaciasAdmin } from "@/lib/adminApi";
-import { getSuperToken, esSuperadmin, cerrarSesionSuper } from "@/lib/adminAuth";
+import { esSuperadmin, cerrarSesionSuper } from "@/lib/adminAuth";
 import { TablaFarmacias } from "@/components/super/TablaFarmacias";
 import { TablaFacturacion } from "@/components/super/TablaFacturacion";
 import { Button } from "@/components/ui/button";
@@ -30,11 +30,10 @@ function SuperDashboard() {
     setReady(true);
   }, [navigate]);
 
-  const token = getSuperToken() ?? "";
   const query = useQuery({
     queryKey: ["admin-farmacias"],
-    queryFn: () => getFarmaciasAdmin(token),
-    enabled: ready && Boolean(token),
+    queryFn: () => getFarmaciasAdmin(),
+    enabled: ready,
   });
 
   // 401/403 → cerrar sesión.
@@ -96,7 +95,7 @@ function SuperDashboard() {
           </div>
         ) : query.data ? (
           seccion === "farmacias" ? (
-            <TablaFarmacias data={query.data} token={token} onReload={() => query.refetch()} />
+            <TablaFarmacias data={query.data} onReload={() => query.refetch()} />
           ) : (
             <TablaFacturacion data={query.data} />
           )

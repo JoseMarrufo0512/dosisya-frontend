@@ -40,11 +40,9 @@ const BADGE: Record<EstadoAfiliacion, string> = {
 
 export function TablaFarmacias({
   data,
-  token,
   onReload,
 }: {
   data: AdminFarmaciasResponse;
-  token: string;
   onReload: () => void;
 }) {
   const qc = useQueryClient();
@@ -65,7 +63,7 @@ export function TablaFarmacias({
       estado: EstadoAfiliacion;
       coords?: { lat: number; lng: number };
       verificaciones?: { verificacion_regente: boolean; verificacion_sacs: boolean };
-    }) => cambiarEstadoFarmacia(token, id, estado, coords, verificaciones),
+    }) => cambiarEstadoFarmacia(id, estado, coords, verificaciones),
     onSuccess: () => {
       toast.success("Estado actualizado");
       qc.invalidateQueries({ queryKey: ["admin-farmacias"] });
@@ -168,7 +166,6 @@ export function TablaFarmacias({
 
       <EditarFarmaciaDrawer
         farmacia={editar}
-        token={token}
         open={editar !== null}
         onOpenChange={(o) => {
           if (!o) setEditar(null);
