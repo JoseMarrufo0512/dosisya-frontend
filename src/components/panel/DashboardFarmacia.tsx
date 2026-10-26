@@ -2,9 +2,9 @@
  * DashboardFarmacia — pantalla "Resumen" del panel B2B (rol Farmacia).
  *
  * Recreación del handoff (docs/design_handoff_dosisya/PanelFarmacia.dc.html)
- * ADAPTADA al contrato real del backend. Presentacional y tipado: recibe datos
- * ya mapeados (ver src/lib/dashboardFarmacia.ts). Los defaults son de muestra
- * para previsualizar el diseño de forma aislada.
+ * ADAPTADA al contrato real del backend. Presentacional y tipado: recibe los
+ * datos ya mapeados desde src/lib/dashboardFarmacia.ts. `kpis`, `leads` y
+ * `resumen` son obligatorios — esta pantalla nunca inventa cifras de muestra.
  *
  * Diferencias con el mock del handoff, por fidelidad al backend:
  *  - Los KPIs son data-driven (array), no fijos.
@@ -50,61 +50,14 @@ export interface TarjetaResumen {
 }
 
 export interface DashboardFarmaciaProps {
-  kpis?: KpiItem[];
-  leads?: LeadFila[];
-  resumen?: TarjetaResumen;
+  kpis: KpiItem[];
+  leads: LeadFila[];
+  resumen: TarjetaResumen;
   /** Serie diaria opcional. Si es undefined, la tarjeta no se muestra. */
   barras?: BarraDia[];
   /** Texto del encabezado de la tabla ("Últimas 24 h", etc.). */
   leadsSubtitulo?: string;
 }
-
-const KPIS_MOCK: KpiItem[] = [
-  { etiqueta: "Leads este mes", valor: "128", delta: "12% vs. mes anterior" },
-  { etiqueta: "Costo por lead", valor: "$0,35", nota: "por clic a WhatsApp", valorVerde: true },
-  { etiqueta: "Inversión del mes", valor: "$44,80", nota: "128 leads facturados" },
-  { etiqueta: "Pacientes hoy", valor: "9", nota: "clics a WhatsApp hoy" },
-];
-
-const LEADS_MOCK: LeadFila[] = [
-  {
-    hora: "10:24",
-    medicamento: "Losartán 50 mg",
-    interaccion: { texto: "WhatsApp", tono: "verde" },
-    costo: "$0,35",
-  },
-  {
-    hora: "09:58",
-    medicamento: "Amoxicilina 500 mg",
-    interaccion: { texto: "Vio detalle", tono: "neutral" },
-    costo: "$0,35",
-  },
-  {
-    hora: "09:12",
-    medicamento: "Metformina 850 mg",
-    interaccion: { texto: "WhatsApp", tono: "verde" },
-    costo: "$0,35",
-  },
-  {
-    hora: "08:40",
-    medicamento: "Atorvastatina 20 mg",
-    interaccion: { texto: "Vio el mapa", tono: "neutral" },
-    costo: "$0,35",
-  },
-  {
-    hora: "08:03",
-    medicamento: "Ibuprofeno 400 mg",
-    interaccion: { texto: "Llamada", tono: "verde" },
-    costo: "$0,35",
-  },
-];
-
-const RESUMEN_MOCK: TarjetaResumen = {
-  titulo: "Deuda estimada del mes",
-  monto: "$44,80",
-  nota: "Se acumula por cada clic a WhatsApp · Corte 31 jul",
-  accion: { label: "Ver facturación" },
-};
 
 const TONO_INTERACCION: Record<TonoInteraccion, { color: string; bg: string }> = {
   verde: { color: "var(--dy-disp-text)", bg: "var(--dy-disp-bg)" },
@@ -119,9 +72,9 @@ const tarjeta: React.CSSProperties = {
 };
 
 export default function DashboardFarmacia({
-  kpis = KPIS_MOCK,
-  leads = LEADS_MOCK,
-  resumen = RESUMEN_MOCK,
+  kpis,
+  leads,
+  resumen,
   barras,
   leadsSubtitulo = "Últimas 24 h",
 }: DashboardFarmaciaProps) {
