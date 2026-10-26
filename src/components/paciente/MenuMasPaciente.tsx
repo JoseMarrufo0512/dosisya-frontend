@@ -27,9 +27,13 @@ import {
 } from "lucide-react";
 import { useRecordatorios } from "@/hooks/useLocalStorage";
 import { useBackDismiss } from "@/hooks/useBackDismiss";
+import { construirUrlWhatsApp, WHATSAPP_COMERCIAL } from "@/lib/whatsapp";
 import { HojaBase, Asa } from "./_hojaBase";
 
-const WA_SOPORTE = "https://wa.me/584120000000?text=Hola%20DosisYa%2C%20necesito%20ayuda";
+// Soporte del paciente → línea comercial de DosisYa (misma que /acerca-de y el
+// panel de farmacia). WHATSAPP_COMERCIAL es una constante válida, así que
+// construirUrlWhatsApp nunca devuelve null aquí.
+const WA_SOPORTE = construirUrlWhatsApp(WHATSAPP_COMERCIAL, "Hola DosisYa, necesito ayuda")!;
 
 type SubHoja = "recordatorios" | "comparar" | "ayuda" | null;
 
