@@ -1,8 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Building2, Search, TrendingUp } from "lucide-react";
-import { construirUrlWhatsApp } from "@/lib/whatsapp";
-
-const WHATSAPP_COMERCIAL = "+584245928624";
+import { construirUrlWhatsApp, WHATSAPP_COMERCIAL } from "@/lib/whatsapp";
 
 export const Route = createFileRoute("/acerca-de")({
   head: () => ({
