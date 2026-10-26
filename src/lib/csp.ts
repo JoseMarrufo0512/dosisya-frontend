@@ -29,13 +29,17 @@ export function construirCsp(nonce: string): string {
     "base-uri 'self'",
     "object-src 'none'",
     "frame-ancestors 'none'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    // Google Identity Services: el host en script-src es fallback para navegadores
+    // sin 'strict-dynamic' (los modernos lo ignoran y confían vía strict-dynamic,
+    // porque el script lo inyecta nuestro propio código ya confiable).
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://accounts.google.com`,
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com",
     "font-src 'self' https://fonts.gstatic.com data:",
     "img-src 'self' data: blob: https:",
-    "connect-src 'self' https://us.i.posthog.com https://*.posthog.com https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.sentry.io",
+    "connect-src 'self' https://accounts.google.com https://us.i.posthog.com https://*.posthog.com https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.sentry.io",
     "form-action 'self'",
-    "frame-src 'self'",
+    // frame-src: One Tab/consentimiento de Google carga un iframe de accounts.google.com.
+    "frame-src 'self' https://accounts.google.com",
   ].join("; ");
 }
 

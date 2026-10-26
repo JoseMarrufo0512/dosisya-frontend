@@ -1,31 +1,30 @@
-// Sesión del paciente (login opcional). Espejo de adminAuth.ts pero para el
-// paciente B2C. Guardado en localStorage; SSR-safe.
+// Sesión del paciente (login opcional, registro v2). Espejo de adminAuth.ts
+// pero para el paciente B2C. Guardado en localStorage; SSR-safe.
 
 const K_TOKEN = "paciente_token";
 const K_PERFIL = "paciente_perfil";
 
+export type Genero = "femenino" | "masculino" | "no_binario" | "no_especifica";
+
 export interface PacientePerfil {
   paciente_id: string;
-  telefono: string;
   nombre: string;
+  apellido: string;
+  correo: string;
+  telefono: string;
+  documento: string;
+  genero: Genero | null;
 }
 
-export interface VerificarCodigoResponse {
-  paciente_id: string;
+export interface SesionPaciente extends PacientePerfil {
   auth_token: string;
-  telefono: string;
-  nombre: string;
-  es_nuevo: boolean;
 }
 
-export function guardarSesionPaciente(r: VerificarCodigoResponse): void {
+export function guardarSesionPaciente(s: SesionPaciente): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(K_TOKEN, r.auth_token);
-  const perfil: PacientePerfil = {
-    paciente_id: r.paciente_id,
-    telefono: r.telefono,
-    nombre: r.nombre,
-  };
+  localStorage.setItem(K_TOKEN, s.auth_token);
+  const { auth_token: _omit, ...perfil } = s;
+  void _omit;
   localStorage.setItem(K_PERFIL, JSON.stringify(perfil));
 }
 
