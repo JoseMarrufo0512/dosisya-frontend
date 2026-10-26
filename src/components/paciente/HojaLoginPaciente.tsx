@@ -1,20 +1,32 @@
 /*
- * HojaLoginPaciente — hoja de "Iniciar sesión" (opcional) del paciente.
+ * HojaLoginPaciente — hoja de "Iniciar sesión / Crear cuenta" (opcional) del paciente.
  *
- * Flujo de 2 pasos: teléfono → código OTP por WhatsApp. El login es OPCIONAL por
- * diseño ("Cero Fricción"): "Seguir sin cuenta" está disponible en todo momento.
+ * Registro v2: correo + contraseña, y registro/login con Google. El login es
+ * OPCIONAL por diseño ("Cero Fricción"): "Seguir sin cuenta" está disponible en
+ * todo momento. Reemplaza el flujo OTP por WhatsApp.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Drawer } from "vaul";
 import { toast } from "sonner";
-import { ArrowLeft, Smartphone, X } from "lucide-react";
-import { solicitarCodigo, verificarCodigo, actualizarNombre } from "@/lib/pacienteApi";
-import { actualizarPerfilGuardado, guardarSesionPaciente } from "@/lib/pacienteAuth";
+import { X } from "lucide-react";
+import {
+  registro,
+  login,
+  googleLogin,
+  completarPerfilGoogle,
+} from "@/lib/pacienteApi";
+import { guardarSesionPaciente, type Genero, type SesionPaciente } from "@/lib/pacienteAuth";
+import { cargarGoogleIdentity, solicitarIdTokenGoogle } from "@/lib/googleIdentity";
 
-type Paso = "telefono" | "codigo" | "nombre";
+type Modo = "entrar" | "crear" | "completar";
 
-const COOLDOWN_S = 60;
+const GENEROS: { valor: Genero; etiqueta: string }[] = [
+  { valor: "femenino", etiqueta: "Femenino" },
+  { valor: "masculino", etiqueta: "Masculino" },
+  { valor: "no_binario", etiqueta: "No binario" },
+  { valor: "no_especifica", etiqueta: "Prefiero no especificar" },
+];
 
 export function HojaLoginPaciente({
   open,
@@ -25,94 +37,125 @@ export function HojaLoginPaciente({
   onOpenChange: (v: boolean) => void;
   onSesionIniciada?: () => void;
 }) {
-  const [paso, setPaso] = useState<Paso>("telefono");
-  const [telefono, setTelefono] = useState("");
-  const [codigo, setCodigo] = useState("");
-  const [nombre, setNombre] = useState("");
+  const [modo, setModo] = useState<Modo>("entrar");
   const [cargando, setCargando] = useState(false);
-  const [restante, setRestante] = useState(0);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [preToken, setPreToken] = useState<string | null>(null);
+
+  // Campos del formulario.
+  const [nombre, setNombre] = useState("");
+  const [apellido, setApellido] = useState("");
+  const [correo, setCorreo] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [documento, setDocumento] = useState("");
+  const [genero, setGenero] = useState<Genero | "">("");
+  const [password, setPassword] = useState("");
 
   // Reinicia el formulario cada vez que se abre la hoja.
   useEffect(() => {
     if (open) {
-      setPaso("telefono");
-      setTelefono("");
-      setCodigo("");
-      setNombre("");
+      setModo("entrar");
       setCargando(false);
-      setRestante(0);
+      setPreToken(null);
+      setNombre("");
+      setApellido("");
+      setCorreo("");
+      setTelefono("");
+      setDocumento("");
+      setGenero("");
+      setPassword("");
     }
   }, [open]);
 
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, []);
-
-  const iniciarCooldown = () => {
-    setRestante(COOLDOWN_S);
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => {
-      setRestante((s) => {
-        if (s <= 1 && timerRef.current) clearInterval(timerRef.current);
-        return s - 1;
-      });
-    }, 1000);
+  const finalizar = (s: SesionPaciente) => {
+    guardarSesionPaciente(s);
+    onSesionIniciada?.();
+    onOpenChange(false);
+    toast(`¡Hola, ${s.nombre || "bienvenido"}!`);
   };
 
-  const pedirCodigo = async () => {
+  const onEntrar = async () => {
     setCargando(true);
     try {
-      await solicitarCodigo(telefono);
-      setPaso("codigo");
-      iniciarCooldown();
-      toast("Te enviamos un código por WhatsApp.");
+      finalizar(await login(correo.trim(), password));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo enviar el código.");
+      toast.error(e instanceof Error ? e.message : "No se pudo iniciar sesión.");
     } finally {
       setCargando(false);
     }
   };
 
-  const confirmarCodigo = async () => {
+  const onCrear = async () => {
+    if (password.length < 8) {
+      toast.error("La contraseña debe tener al menos 8 caracteres.");
+      return;
+    }
     setCargando(true);
     try {
-      const sesion = await verificarCodigo(telefono, codigo);
-      guardarSesionPaciente(sesion);
-      onSesionIniciada?.();
-      if (sesion.es_nuevo) {
-        setPaso("nombre");
-        toast("¡Listo! ¿Cómo te llamamos?");
+      finalizar(
+        await registro({
+          nombre: nombre.trim(),
+          apellido: apellido.trim(),
+          correo: correo.trim(),
+          telefono: telefono.trim(),
+          documento: documento.trim(),
+          genero: genero || null,
+          password,
+        }),
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo crear la cuenta.");
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  const onGoogle = async () => {
+    setCargando(true);
+    try {
+      await cargarGoogleIdentity();
+      const idToken = await solicitarIdTokenGoogle();
+      const r = await googleLogin(idToken);
+      if (r.tipo === "sesion") {
+        finalizar(r.sesion);
       } else {
-        toast(sesion.nombre ? `¡Hola de nuevo, ${sesion.nombre}!` : "¡Sesión iniciada!");
-        onOpenChange(false);
+        setPreToken(r.preregistroToken);
+        setNombre(r.prefill.nombre);
+        setCorreo(r.prefill.correo);
+        setModo("completar");
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Código incorrecto o vencido.");
+      toast.error(e instanceof Error ? e.message : "No se pudo continuar con Google.");
     } finally {
       setCargando(false);
     }
   };
 
-  const guardarNombre = async () => {
+  const onCompletar = async () => {
+    if (!preToken) return;
     setCargando(true);
     try {
-      const perfil = await actualizarNombre(nombre.trim());
-      actualizarPerfilGuardado(perfil); // actualiza el nombre sin tocar el token
-      onSesionIniciada?.();
-    } catch {
-      // No bloqueante: el nombre es opcional, la sesión ya existe.
+      finalizar(
+        await completarPerfilGoogle(preToken, {
+          telefono: telefono.trim(),
+          documento: documento.trim(),
+          genero: genero || null,
+        }),
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo completar tu perfil.");
     } finally {
       setCargando(false);
-      onOpenChange(false);
-      toast("¡Bienvenido a DosisYa!");
     }
   };
 
-  const puedeEnviarTelefono = telefono.replace(/\D/g, "").length >= 10;
-  const puedeVerificar = codigo.replace(/\D/g, "").length === 6;
+  const telOk = telefono.replace(/\D/g, "").length >= 10;
+  const docOk = documento.trim().length >= 5;
+  const correoOk = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo.trim());
+
+  const puedeEntrar = correoOk && password.length >= 1;
+  const puedeCrear =
+    nombre.trim() && apellido.trim() && correoOk && telOk && docOk && password.length >= 8;
+  const puedeCompletar = telOk && docOk;
 
   const estiloPrimario = {
     height: 48,
@@ -145,14 +188,18 @@ export function HojaLoginPaciente({
     padding: "0 14px",
     fontSize: 15,
     color: "var(--tinta)",
+    marginTop: 8,
   } as const;
+
+  const titulo =
+    modo === "crear" ? "Crear cuenta" : modo === "completar" ? "Completa tu perfil" : "Iniciar sesión";
 
   return (
     <Drawer.Root open={open} onOpenChange={onOpenChange}>
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-40 bg-black/40" />
         <Drawer.Content
-          className="dosisya-ui fixed inset-x-0 bottom-0 z-50 mx-auto flex max-w-md flex-col rounded-t-3xl outline-none"
+          className="dosisya-ui fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[92vh] max-w-md flex-col overflow-y-auto rounded-t-3xl outline-none"
           style={{ background: "var(--papel)", padding: "10px 18px 26px" }}
           aria-describedby={undefined}
         >
@@ -161,22 +208,11 @@ export function HojaLoginPaciente({
             style={{ width: 38, height: 4, borderRadius: 999, background: "#d8dad3", margin: "2px auto 14px" }}
           />
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {paso === "codigo" && (
-                <button
-                  type="button"
-                  aria-label="Volver"
-                  onClick={() => setPaso("telefono")}
-                  className="dy-foco flex h-[34px] w-[34px] items-center justify-center rounded-[11px]"
-                  style={{ background: "var(--fondo-suave)", border: 0, color: "var(--tinta-suave)" }}
-                >
-                  <ArrowLeft className="h-[18px] w-[18px]" aria-hidden="true" />
-                </button>
-              )}
-              <Drawer.Title style={{ fontSize: 17, fontWeight: 500, color: "var(--tinta)", letterSpacing: "-0.02em" }}>
-                {paso === "nombre" ? "¿Cómo te llamamos?" : "Iniciar sesión"}
-              </Drawer.Title>
-            </div>
+            <Drawer.Title
+              style={{ fontSize: 17, fontWeight: 500, color: "var(--tinta)", letterSpacing: "-0.02em" }}
+            >
+              {titulo}
+            </Drawer.Title>
             <button
               type="button"
               aria-label="Cerrar"
@@ -188,100 +224,213 @@ export function HojaLoginPaciente({
             </button>
           </div>
 
-          {paso === "telefono" && (
+          {/* ─────────── Entrar (correo + contraseña) ─────────── */}
+          {modo === "entrar" && (
             <>
-              <p style={{ fontSize: 13, color: "var(--tinta-suave)", lineHeight: 1.5, margin: "10px 0 16px" }}>
-                Es <span style={{ color: "var(--tinta)", fontWeight: 500 }}>opcional</span>. Inicia sesión para
-                guardar tu Lista Médica y acceder a beneficios.
+              <p style={{ fontSize: 13, color: "var(--tinta-suave)", lineHeight: 1.5, margin: "10px 0 6px" }}>
+                Inicia sesión para guardar tu Lista Médica y acceder a beneficios. Es{" "}
+                <span style={{ color: "var(--tinta)", fontWeight: 500 }}>opcional</span>.
               </p>
               <input
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel"
-                placeholder="Tu teléfono (ej. 0414 123 4567)"
-                value={telefono}
-                onChange={(e) => setTelefono(e.target.value)}
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                placeholder="Correo electrónico"
+                value={correo}
+                onChange={(e) => setCorreo(e.target.value)}
                 style={estiloInput}
-                aria-label="Teléfono"
+                aria-label="Correo electrónico"
+              />
+              <input
+                type="password"
+                autoComplete="current-password"
+                placeholder="Contraseña"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={estiloInput}
+                aria-label="Contraseña"
               />
               <button
                 type="button"
-                onClick={pedirCodigo}
-                disabled={cargando || !puedeEnviarTelefono}
-                className="dy-foco mt-3 flex w-full items-center justify-center gap-2"
+                onClick={onEntrar}
+                disabled={cargando || !puedeEntrar}
+                className="dy-foco mt-3 w-full"
                 style={estiloPrimario}
               >
-                <Smartphone className="h-[18px] w-[18px]" strokeWidth={1.75} aria-hidden="true" />
-                Continuar con teléfono
+                Iniciar sesión
               </button>
-              <button type="button" onClick={() => onOpenChange(false)} className="dy-foco w-full" style={estiloSecundario}>
+              <button
+                type="button"
+                onClick={onGoogle}
+                disabled={cargando}
+                className="dy-foco w-full"
+                style={estiloSecundario}
+              >
+                Continuar con Google
+              </button>
+              <p style={{ fontSize: 13, color: "var(--tinta-suave)", textAlign: "center", marginTop: 14 }}>
+                ¿No tienes cuenta?{" "}
+                <button
+                  type="button"
+                  onClick={() => setModo("crear")}
+                  className="dy-foco"
+                  style={{ background: "none", border: 0, color: "var(--verde-cruz)", fontWeight: 500, padding: 0 }}
+                >
+                  Crear cuenta
+                </button>
+              </p>
+              <button
+                type="button"
+                onClick={() => onOpenChange(false)}
+                className="dy-foco w-full"
+                style={{ ...estiloSecundario, border: 0, color: "var(--tinta-suave)" }}
+              >
                 Seguir sin cuenta
               </button>
             </>
           )}
 
-          {paso === "codigo" && (
+          {/* ─────────── Crear cuenta (formulario) ─────────── */}
+          {modo === "crear" && (
             <>
-              <p style={{ fontSize: 13, color: "var(--tinta-suave)", lineHeight: 1.5, margin: "10px 0 16px" }}>
-                Escribe el código de 6 dígitos que te enviamos por WhatsApp.
-              </p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  autoComplete="given-name"
+                  placeholder="Nombre"
+                  value={nombre}
+                  onChange={(e) => setNombre(e.target.value)}
+                  style={estiloInput}
+                  aria-label="Nombre"
+                />
+                <input
+                  type="text"
+                  autoComplete="family-name"
+                  placeholder="Apellido"
+                  value={apellido}
+                  onChange={(e) => setApellido(e.target.value)}
+                  style={estiloInput}
+                  aria-label="Apellido"
+                />
+              </div>
+              <input
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                placeholder="Correo electrónico"
+                value={correo}
+                onChange={(e) => setCorreo(e.target.value)}
+                style={estiloInput}
+                aria-label="Correo electrónico"
+              />
+              <input
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                placeholder="Teléfono (ej. 0414 123 4567)"
+                value={telefono}
+                onChange={(e) => setTelefono(e.target.value)}
+                style={estiloInput}
+                aria-label="Teléfono"
+              />
               <input
                 type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                maxLength={6}
-                placeholder="______"
-                value={codigo}
-                onChange={(e) => setCodigo(e.target.value.replace(/\D/g, ""))}
-                style={{ ...estiloInput, letterSpacing: "0.4em", textAlign: "center", fontSize: 20 }}
-                aria-label="Código de verificación"
+                placeholder="Número de documento (ej. V12345678)"
+                value={documento}
+                onChange={(e) => setDocumento(e.target.value)}
+                style={estiloInput}
+                aria-label="Número de documento"
+              />
+              <select
+                value={genero}
+                onChange={(e) => setGenero(e.target.value as Genero | "")}
+                style={{ ...estiloInput, appearance: "auto" }}
+                aria-label="Género (opcional)"
+              >
+                <option value="">Género (opcional)</option>
+                {GENEROS.map((g) => (
+                  <option key={g.valor} value={g.valor}>
+                    {g.etiqueta}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="password"
+                autoComplete="new-password"
+                placeholder="Contraseña (mínimo 8 caracteres)"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={estiloInput}
+                aria-label="Contraseña"
               />
               <button
                 type="button"
-                onClick={confirmarCodigo}
-                disabled={cargando || !puedeVerificar}
+                onClick={onCrear}
+                disabled={cargando || !puedeCrear}
                 className="dy-foco mt-3 w-full"
                 style={estiloPrimario}
               >
-                Verificar
+                Crear cuenta
               </button>
-              <button
-                type="button"
-                onClick={pedirCodigo}
-                disabled={cargando || restante > 0}
-                className="dy-foco w-full"
-                style={{ ...estiloSecundario, opacity: restante > 0 ? 0.6 : 1 }}
-              >
-                {restante > 0 ? `Reenviar en ${restante}s` : "Reenviar código"}
-              </button>
+              <p style={{ fontSize: 13, color: "var(--tinta-suave)", textAlign: "center", marginTop: 14 }}>
+                ¿Ya tienes cuenta?{" "}
+                <button
+                  type="button"
+                  onClick={() => setModo("entrar")}
+                  className="dy-foco"
+                  style={{ background: "none", border: 0, color: "var(--verde-cruz)", fontWeight: 500, padding: 0 }}
+                >
+                  Iniciar sesión
+                </button>
+              </p>
             </>
           )}
 
-          {paso === "nombre" && (
+          {/* ─────────── Completar perfil (tras Google) ─────────── */}
+          {modo === "completar" && (
             <>
-              <p style={{ fontSize: 13, color: "var(--tinta-suave)", lineHeight: 1.5, margin: "10px 0 16px" }}>
-                Opcional — así personalizamos tu saludo.
+              <p style={{ fontSize: 13, color: "var(--tinta-suave)", lineHeight: 1.5, margin: "10px 0 6px" }}>
+                Solo falta un paso para terminar tu registro con Google.
               </p>
               <input
-                type="text"
-                autoComplete="given-name"
-                placeholder="Tu nombre"
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                placeholder="Teléfono (ej. 0414 123 4567)"
+                value={telefono}
+                onChange={(e) => setTelefono(e.target.value)}
                 style={estiloInput}
-                aria-label="Nombre"
+                aria-label="Teléfono"
               />
+              <input
+                type="text"
+                placeholder="Número de documento (ej. V12345678)"
+                value={documento}
+                onChange={(e) => setDocumento(e.target.value)}
+                style={estiloInput}
+                aria-label="Número de documento"
+              />
+              <select
+                value={genero}
+                onChange={(e) => setGenero(e.target.value as Genero | "")}
+                style={{ ...estiloInput, appearance: "auto" }}
+                aria-label="Género (opcional)"
+              >
+                <option value="">Género (opcional)</option>
+                {GENEROS.map((g) => (
+                  <option key={g.valor} value={g.valor}>
+                    {g.etiqueta}
+                  </option>
+                ))}
+              </select>
               <button
                 type="button"
-                onClick={guardarNombre}
-                disabled={cargando || nombre.trim().length === 0}
+                onClick={onCompletar}
+                disabled={cargando || !puedeCompletar}
                 className="dy-foco mt-3 w-full"
                 style={estiloPrimario}
               >
-                Guardar
-              </button>
-              <button type="button" onClick={() => onOpenChange(false)} className="dy-foco w-full" style={estiloSecundario}>
-                Omitir
+                Terminar registro
               </button>
             </>
           )}
