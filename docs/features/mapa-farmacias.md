@@ -1,9 +1,11 @@
 # Feature: Localizador de Farmacias en Mapa
 
-> **Estado:** SPEC / diseño para tu revisión (2026-10-26). **No implementado.**
-> Coordina **dos repos**: añade un endpoint público en `DosisYa-Backend`
-> (autorización expresa dada — CLAUDE.md §2) y una ruta nueva en el frontend.
-> Relacionado: la lección del `(0,0)` y `ubicacion_configurada` (CLAUDE.md §5).
+> **Estado:** SPEC con **contrato verificado (Fase 0 ✅, 2026-10-26)** contra el
+> backend real (`JoseMarrufo0512/ProyectoDosisYA`, commit `b44fac1`). **No
+> implementado aún.** Coordina **dos repos**: añade un endpoint público en el
+> backend (autorización expresa dada — CLAUDE.md §2) y una ruta nueva en el
+> frontend. Relacionado: la lección del `(0,0)` y `ubicacion_configurada`
+> (CLAUDE.md §5).
 
 ## 1. Objetivo
 Una página pública (sin login, Cero Fricción) que muestre en un **mapa + lista
@@ -35,8 +37,8 @@ botón WhatsApp → lead.
   `src/routes/producto.$farmaciaId.$medicamentoId.tsx`.
 - **Ruta:** `/farmacias`.
 - **Lead del mapa:** el contacto por WhatsApp **sí** genera lead facturable, con
-  `tipo_interaccion: "clic_whatsapp"`. (Confirmar el nombre exacto del enum contra
-  el backend en Fase 0 con `contrato-api`.)
+  `tipo_interaccion: "clic_whatsapp"`. **Verificado (2026-10-26):** es el valor
+  canónico en `tipo_interaccion_enum` (schema.sql).
 - **Exposición de la red:** se muestran públicamente **todas** las farmacias
   afiliadas y ubicadas (la ubicación de un negocio es pública).
 - **Clustering:** **no** en el MVP; se evaluará cuando el volumen de pines lo
@@ -48,31 +50,45 @@ reflejadas en §3: ruta `/farmacias`, lead `clic_whatsapp`, exponer toda la red,
 sin clustering aún. Único punto a verificar en Fase 0: el nombre exacto del
 `tipo_interaccion` contra el backend (skill `contrato-api`).
 
-## 5. Contrato backend (Fase 0 — skill `contrato-api`)
-Endpoint **nuevo, público, read-only** (hoy no existe fuente pública de todas las
-farmacias con coordenadas: el buscador exige medicamento + radio 50 km, y
-`/admin/farmacias` está protegido y expone facturación).
+## 5. Contrato backend — VERIFICADO (Fase 0 ✅ 2026-10-26)
+Verificado contra `src/dosisya/routers/farmacias.py`, `medicamentos.py`,
+`db/schema.sql` y `geo.py` del backend. Endpoint **nuevo, público, read-only**:
+hoy **no existe** ningún listado de farmacias (el buscador exige medicamento +
+radio ≤ 50 km; todo lo demás bajo `/api/v1/farmacias/` es con `{farmacia_id}` y
+protegido con JWT). **Sin colisión** con las rutas existentes.
 
-- **Ruta propuesta:** `GET /api/v1/farmacias/` (confirmar nombre y trailing slash
-  con `contrato-api`, para no colisionar con rutas existentes).
-- **Respuesta (JSON, array). Cero PII, cero facturación:**
-  | Campo | Tipo | Nota |
+- **Ruta:** `GET /api/v1/farmacias/mapa` (explícita y sin ambigüedad frente a las
+  rutas `/{farmacia_id}/...` existentes). Alternativa RESTful: `GET /api/v1/farmacias/`.
+- **Autenticación:** ninguna (público). **Rate-limit** suave vía `@limiter.limit`
+  (patrón ya usado en el backend) y **`Cache-Control`** generoso (el listado
+  cambia poco; importa en conexiones lentas).
+- **Respuesta:** envelope `RespuestaEstructurada` → `{ status, message, data: [...] }`
+  (igual que dashboard/búsqueda). Cada ítem del array:
+  | Campo | Tipo | Origen SQL / nota |
   |---|---|---|
-  | `id` | uuid | |
-  | `nombre` | string | |
-  | `sector` | string\|null | para filtro por zona |
-  | `punto_referencia` | string\|null | ayuda a ubicar |
-  | `whatsapp` | string | para el lead |
-  | `lat` | float | `ST_Y(ubicacion)` |
-  | `lng` | float | `ST_X(ubicacion)` |
-  | `nivel` | `"gratuita"\|"premium"` | estilar pin premium (opcional) |
-- **Filtro server-side obligatorio:** solo farmacias **activas/aprobadas** y con
-  **`ubicacion_configurada`** → reusar el predicado de `dosisya/geo.py` (epsilon
-  compartido), **nunca** devolver una farmacia en `(0,0)`.
-- **No auth. Rate-limit suave. `Cache-Control` generoso** (el listado cambia poco;
-  importa en conexiones lentas).
-- **Seguridad:** encaja con la auditoría 2026-10 (sin PII, sin datos de cobro,
-  solo lectura). No expone `correo`, `password_hash`, `facturas`, ni pacientes.
+  | `id` | uuid | `f.id` |
+  | `nombre` | string | `f.nombre` |
+  | `sector` | string\|null | `f.sector` — filtro por zona |
+  | `punto_referencia` | string\|null | `f.punto_referencia` — ayuda a ubicar |
+  | `direccion` | string | `f.direccion` (dirección del negocio, pública) |
+  | `whatsapp` | string | `f.telefono_whatsapp` — para el lead |
+  | `tiene_delivery` | bool | `f.tiene_delivery` — badge "con delivery" |
+  | `nivel` | `"gratuita"\|"premium"` | `f.nivel_suscripcion::text` — pin premium |
+  | `lat` | float | `ST_Y(f.ubicacion::geometry)` |
+  | `lng` | float | `ST_X(f.ubicacion::geometry)` |
+- **Filtro server-side obligatorio:**
+  - `WHERE f.estado_afiliacion = 'activa'` (igual que el buscador en
+    `medicamentos.py`).
+  - **Excluir `(0,0)`** filtrando con `geo.ubicacion_configurada(lat, lng)` en
+    Python tras extraer `lat`/`lng` (reusa `EPSILON_COORD`; **no** reimplementar
+    el epsilon en SQL — CLAUDE.md §5).
+- **Seguridad (encaja con la auditoría 2026-10):** solo lectura, cero PII, cero
+  facturación. **NO exponer** `correo`, `rif`, `regente_*`, `sacs_*` ni
+  `estado_afiliacion`. (La `anon` key de Supabase no entra aquí: el frontend
+  llama por el proxy mismo-origen al backend, que consulta como `postgres`.)
+- **`tipo_interaccion` del lead:** `clic_whatsapp` — **verificado canónico** en
+  `tipo_interaccion_enum`. (Evitar los alias legacy `click_whatsapp`/`abrir_mapa`/
+  `expandir_detalle`.)
 
 ## 6. Modelo de datos frontend
 - Nuevo tipo `FarmaciaMapa` y función `listarFarmaciasMapa()` en `src/lib/`
@@ -126,9 +142,9 @@ farmacias con coordenadas: el buscador exige medicamento + radio 50 km, y
   no los bloquee un adblocker y que carguen en preview.
 
 ## 10. Plan de implementación (TDD)
-1. **Fase 0** — Contrato del endpoint (`contrato-api`); cerrar §4 y §5.
-2. **Fase 1** — Backend: implementar `GET /api/v1/farmacias/` (con tu OK, commit a
-   commit; validar contra `schema.sql`/`models.py`).
+1. **Fase 0 ✅** — Contrato verificado contra el backend (ver §5). Hecho 2026-10-26.
+2. **Fase 1** — Backend: implementar `GET /api/v1/farmacias/mapa` (con tu OK,
+   commit a commit; validar contra `schema.sql`/`geo.py`).
 3. **Fase 2** — Frontend infra: instalar Leaflet, wrapper SSR-safe, `FarmaciaMapa`
    + `listarFarmaciasMapa()` (tests primero).
 4. **Fase 3** — Ruta `/farmacias` + componentes `mapa/`, sincronía, GPS, lead.
@@ -145,8 +161,8 @@ farmacias con coordenadas: el buscador exige medicamento + radio 50 km, y
 
 ## 12. Riesgos
 - **Elegir mal el `tipo_interaccion`** del lead del mapa corrompe la métrica
-  facturable → verificar que `clic_whatsapp` es el nombre canónico del enum con
-  `contrato-api` antes de cablear.
+  facturable → `clic_whatsapp` **verificado canónico** en Fase 0 (§5); evitar los
+  alias legacy de Lovable.
 - **Tile usage policy de OSM** en producción con tráfico real → migrar a MapTiler
   free-tier si hace falta.
 - **Exposición de la red afiliada** — decisión de negocio **aceptada** (§3): se
