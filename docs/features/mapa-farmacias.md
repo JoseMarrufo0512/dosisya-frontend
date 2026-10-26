@@ -143,8 +143,9 @@ protegido con JWT). **Sin colisión** con las rutas existentes.
 
 ## 10. Plan de implementación (TDD)
 1. **Fase 0 ✅** — Contrato verificado contra el backend (ver §5). Hecho 2026-10-26.
-2. **Fase 1** — Backend: implementar `GET /api/v1/farmacias/mapa` (con tu OK,
-   commit a commit; validar contra `schema.sql`/`geo.py`).
+2. **Fase 1 ✅** — Backend: `GET /api/v1/farmacias/mapa` implementado con TDD
+   (6 tests) en `ProyectoDosisYA`, rama `feat/endpoint-farmacias-mapa` (sin PR,
+   sin merge a `main` aún). Hecho 2026-10-26.
 3. **Fase 2** — Frontend infra: instalar Leaflet, wrapper SSR-safe, `FarmaciaMapa`
    + `listarFarmaciasMapa()` (tests primero).
 4. **Fase 3** — Ruta `/farmacias` + componentes `mapa/`, sincronía, GPS, lead.
