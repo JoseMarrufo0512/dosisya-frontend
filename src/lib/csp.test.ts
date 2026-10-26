@@ -71,3 +71,11 @@ describe("lector de nonce por-request (indirección isomorfa)", () => {
     expect(getRequestNonce()).toBe("nonce-de-prueba");
   });
 });
+
+describe("construirCsp — Google Identity Services", () => {
+  it("permite accounts.google.com en connect-src y frame-src", () => {
+    const csp = construirCsp("n0nce");
+    expect(csp).toMatch(/connect-src[^;]*https:\/\/accounts\.google\.com/);
+    expect(csp).toMatch(/frame-src[^;]*https:\/\/accounts\.google\.com/);
+  });
+});

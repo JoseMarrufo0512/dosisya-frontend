@@ -29,9 +29,12 @@ afterEach(() => localStorage.clear());
 const RESP = {
   paciente_id: "pac-1",
   auth_token: "tok-abc",
-  telefono: "+584141234567",
   nombre: "Ana",
-  es_nuevo: false,
+  apellido: "Pérez",
+  correo: "ana@b.com",
+  telefono: "+584141234567",
+  documento: "V12345678",
+  genero: "femenino" as const,
 };
 
 describe("pacienteAuth", () => {
@@ -41,8 +44,12 @@ describe("pacienteAuth", () => {
     expect(esPacienteLogueado()).toBe(true);
     expect(getPacientePerfil()).toEqual({
       paciente_id: "pac-1",
-      telefono: "+584141234567",
       nombre: "Ana",
+      apellido: "Pérez",
+      correo: "ana@b.com",
+      telefono: "+584141234567",
+      documento: "V12345678",
+      genero: "femenino",
     });
   });
 
@@ -61,7 +68,15 @@ describe("pacienteAuth", () => {
 
   it("actualizarPerfilGuardado cambia el perfil sin tocar el token", () => {
     guardarSesionPaciente(RESP);
-    actualizarPerfilGuardado({ paciente_id: "pac-1", telefono: "+584141234567", nombre: "Ana María" });
+    actualizarPerfilGuardado({
+      paciente_id: "pac-1",
+      nombre: "Ana María",
+      apellido: "Pérez",
+      correo: "ana@b.com",
+      telefono: "+584141234567",
+      documento: "V12345678",
+      genero: "femenino",
+    });
     expect(getPacienteToken()).toBe("tok-abc"); // token intacto
     expect(getPacientePerfil()?.nombre).toBe("Ana María");
   });

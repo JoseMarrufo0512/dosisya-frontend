@@ -1,71 +1,82 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { solicitarCodigo, verificarCodigo } from "./pacienteApi";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { registro, login, googleLogin } from "./pacienteApi";
 
-// El entorno de vitest es "node" (sin jsdom): simulamos window + localStorage
-// en memoria, igual que pacienteAuth.test.ts, para que localStorage.clear() funcione.
-const memoriaStorage = new Map<string, string>();
-vi.stubGlobal("window", {});
-// Se define con defineProperty (no vi.stubGlobal) para que vi.unstubAllGlobals()
-// del afterEach no lo borre antes de que localStorage.clear() se ejecute.
-Object.defineProperty(globalThis, "localStorage", {
-  configurable: true,
-  writable: true,
-  value: {
-    getItem: (k: string) => memoriaStorage.get(k) ?? null,
-    setItem: (k: string, v: string) => {
-      memoriaStorage.set(k, String(v));
-    },
-    removeItem: (k: string) => {
-      memoriaStorage.delete(k);
-    },
-    clear: () => memoriaStorage.clear(),
-  },
-});
-
-const fetchMock = vi.fn();
-
-beforeEach(() => {
-  vi.stubGlobal("fetch", fetchMock);
-  fetchMock.mockReset();
-});
-afterEach(() => {
-  vi.unstubAllGlobals();
-  localStorage.clear();
-});
-
-function ok(json: unknown) {
-  return { ok: true, status: 200, json: async () => json } as Response;
+function mockFetchOnce(status: number, body: unknown) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({
+      ok: status < 400,
+      status,
+      json: async () => body,
+    }),
+  );
 }
 
+const SESION = {
+  paciente_id: "p1",
+  auth_token: "t",
+  nombre: "Ana",
+  apellido: "Pérez",
+  correo: "ana@b.com",
+  telefono: "+584141234567",
+  documento: "V1",
+  genero: "femenino" as const,
+};
+
 describe("pacienteApi", () => {
-  it("solicitarCodigo hace POST con el teléfono", async () => {
-    fetchMock.mockResolvedValue(ok({ status: "success" }));
-    await solicitarCodigo("04141234567");
-    // La URL puede traer API_BASE absoluto (SSR/CI con VITE_API_URL) o relativo
-    // (cliente), así que verificamos el path con toContain, no igualdad exacta.
-    const [url, init] = fetchMock.mock.calls[0];
-    expect(String(url)).toContain("/api/v1/paciente/auth/solicitar-codigo");
-    expect(init).toMatchObject({
-      method: "POST",
-      body: JSON.stringify({ telefono: "04141234567" }),
+  beforeEach(() => vi.unstubAllGlobals());
+
+  it("registro devuelve la sesión parseada", async () => {
+    mockFetchOnce(201, { data: SESION });
+    const s = await registro({
+      nombre: "Ana",
+      apellido: "Pérez",
+      correo: "ana@b.com",
+      telefono: "04141234567",
+      documento: "V1",
+      genero: "femenino",
+      password: "supersecreta",
     });
+    expect(s.auth_token).toBe("t");
+    expect(s.correo).toBe("ana@b.com");
   });
 
-  it("verificarCodigo devuelve la sesión parseada de data", async () => {
-    const resp = {
-      paciente_id: "pac-1",
-      auth_token: "tok",
-      telefono: "+584141234567",
-      nombre: "",
-      es_nuevo: true,
-    };
-    fetchMock.mockResolvedValue(ok({ data: resp }));
-    const r = await verificarCodigo("04141234567", "042317");
-    expect(r).toEqual(resp);
+  it("registro mapea el 409 con el code de {error:{code}}", async () => {
+    mockFetchOnce(409, { error: { code: "correo_en_uso", message: "x" } });
+    await expect(
+      registro({
+        nombre: "Ana",
+        apellido: "P",
+        correo: "ana@b.com",
+        telefono: "04141234567",
+        documento: "V1",
+        genero: null,
+        password: "supersecreta",
+      }),
+    ).rejects.toThrow(/correo ya está registrado/i);
   });
 
-  it("verificarCodigo lanza en 401", async () => {
-    fetchMock.mockResolvedValue({ ok: false, status: 401, json: async () => ({}) } as Response);
-    await expect(verificarCodigo("04141234567", "000000")).rejects.toThrow();
+  it("login lanza en 401", async () => {
+    mockFetchOnce(401, null);
+    await expect(login("ana@b.com", "mala")).rejects.toThrow();
+  });
+
+  it("googleLogin devuelve 'completar' cuando el perfil está incompleto", async () => {
+    mockFetchOnce(200, {
+      data: {
+        perfil_incompleto: true,
+        preregistro_token: "pre",
+        prefill: { nombre: "Nuevo", correo: "n@gmail.com" },
+      },
+    });
+    const r = await googleLogin("idtok");
+    expect(r.tipo).toBe("completar");
+    if (r.tipo === "completar") expect(r.preregistroToken).toBe("pre");
+  });
+
+  it("googleLogin devuelve 'sesion' cuando la cuenta existe", async () => {
+    mockFetchOnce(200, { data: SESION });
+    const r = await googleLogin("idtok");
+    expect(r.tipo).toBe("sesion");
   });
 });
