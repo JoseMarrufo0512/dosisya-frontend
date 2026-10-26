@@ -24,7 +24,7 @@ botón WhatsApp → lead.
 **No incluye (por ahora):** ruteo/navegación paso a paso, clustering avanzado
 (ver §9), búsqueda de inventario desde el mapa, perfiles de farmacia con horarios.
 
-## 3. Decisiones confirmadas
+## 3. Decisiones confirmadas (2026-10-26)
 - **Tipo de página:** híbrida (todas + resaltar cercanas con GPS).
 - **Tecnología de mapa:** **Leaflet + `react-leaflet`**, tiles OSM en MVP
   (MapTiler free-tier en producción si el volumen lo exige). Gratis/free-tier,
@@ -33,19 +33,20 @@ botón WhatsApp → lead.
 - **Render:** mapa **client-only + lazy** (Leaflet necesita `window`); la lista
   renderiza en SSR. Patrón `.client()`/`.server()` ya usado en
   `src/routes/producto.$farmaciaId.$medicamentoId.tsx`.
+- **Ruta:** `/farmacias`.
+- **Lead del mapa:** el contacto por WhatsApp **sí** genera lead facturable, con
+  `tipo_interaccion: "clic_whatsapp"`. (Confirmar el nombre exacto del enum contra
+  el backend en Fase 0 con `contrato-api`.)
+- **Exposición de la red:** se muestran públicamente **todas** las farmacias
+  afiliadas y ubicadas (la ubicación de un negocio es pública).
+- **Clustering:** **no** en el MVP; se evaluará cuando el volumen de pines lo
+  exija (ver §9).
 
-## 4. Decisiones PENDIENTES (confirmar antes de implementar)
-1. **Nombre de ruta:** recomiendo `/farmacias` (alternativas `/tiendas`,
-   `/cobertura`).
-2. **¿El contacto desde el mapa es lead facturable?** Recomendación: **sí**, con
-   `tipo_interaccion: "clic_whatsapp"` (es intención de compra válida). Opcional:
-   emitir `ver_mapa` (no facturable, analítica) al abrir el popup de un pin.
-   **Confirmar con el skill `contrato-api`** antes de cablear.
-3. **Riesgo competitivo:** mostrar públicamente *toda* la red afiliada permite que
-   un competidor la mapee. La ubicación de un negocio es pública, así que
-   recomiendo mostrarla; decisión de negocio.
-4. **Volumen de farmacias:** define si hace falta clustering/paginación desde el
-   MVP (ver §9).
+## 4. Decisiones resueltas
+Las cuatro decisiones que estaban abiertas se cerraron el **2026-10-26** y están
+reflejadas en §3: ruta `/farmacias`, lead `clic_whatsapp`, exponer toda la red,
+sin clustering aún. Único punto a verificar en Fase 0: el nombre exacto del
+`tipo_interaccion` contra el backend (skill `contrato-api`).
 
 ## 5. Contrato backend (Fase 0 — skill `contrato-api`)
 Endpoint **nuevo, público, read-only** (hoy no existe fuente pública de todas las
@@ -104,7 +105,7 @@ farmacias con coordenadas: el buscador exige medicamento + radio 50 km, y
    centrar en Acarigua/Araure y mostrar todas, sin bloquear.
 4. Pines en el mapa + tarjetas en la lista, sincronizados.
 5. Click en "Contactar por WhatsApp" de una tarjeta:
-   - Disparar `postLead(...)` (único emisor; `tipo_interaccion` según §4.2;
+   - Disparar `postLead(...)` (único emisor; `tipo_interaccion: "clic_whatsapp"`;
      `medicamento_buscado_id = null` → el guard UUID de `postLead` ya lo maneja).
      Fire-and-forget, `keepalive: true` porque se abre `wa.me` acto seguido.
    - Abrir `wa.me/<whatsapp>?text=<mensaje prellenado>`.
@@ -117,8 +118,8 @@ farmacias con coordenadas: el buscador exige medicamento + radio 50 km, y
   buscador público); nunca error bloqueante.
 - **Defensa contra `(0,0)`:** ya filtrado server-side; filtrar también en cliente
   por si acaso.
-- **Clustering** (`leaflet.markercluster`) **solo si el volumen lo amerita**
-  (decisión §4.4); en MVP, probablemente innecesario.
+- **Clustering** (`leaflet.markercluster`): **fuera del MVP** (decisión §3); se
+  añadirá solo si el volumen de pines lo exige.
 - **Anti-spam del lead:** deshabilitar el botón WhatsApp ~2 s tras el primer clic
   (igual que el buscador).
 - **Tiles cross-origin:** son imágenes de otro dominio (no la API); verificar que
@@ -144,10 +145,12 @@ farmacias con coordenadas: el buscador exige medicamento + radio 50 km, y
 
 ## 12. Riesgos
 - **Elegir mal el `tipo_interaccion`** del lead del mapa corrompe la métrica
-  facturable → cerrar §4.2 con `contrato-api` antes de implementar.
+  facturable → verificar que `clic_whatsapp` es el nombre canónico del enum con
+  `contrato-api` antes de cablear.
 - **Tile usage policy de OSM** en producción con tráfico real → migrar a MapTiler
   free-tier si hace falta.
-- **Exposición de la red afiliada** (§4.3) — decisión de negocio.
+- **Exposición de la red afiliada** — decisión de negocio **aceptada** (§3): se
+  expone toda la red.
 - **Backend cambia contrato** → desplegar backend antes que frontend y tolerar la
   ausencia del endpoint durante la transición (la página degrada a solo-lista
   vacía, no rompe).
