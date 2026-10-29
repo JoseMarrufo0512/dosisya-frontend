@@ -160,6 +160,7 @@ function TabBoton({
       aria-label={ariaLabel}
       aria-current={activo ? "page" : undefined}
       onClick={() => onSel(id)}
+      data-tour={`nav-${id}`}
       className="dy-foco-in"
       style={{
         flex: 1,
@@ -278,6 +279,7 @@ function BotonEscanear({ onEscanear }: { onEscanear: () => void }) {
         type="button"
         aria-label="Escanear récipe"
         onClick={onEscanear}
+        data-tour="nav-escanear"
         className="dy-foco"
         whileTap={reduce ? undefined : { scale: 0.9 }}
         transition={REBOTE}

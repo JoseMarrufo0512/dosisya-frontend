@@ -1,6 +1,6 @@
 import { type FormEvent } from "react";
 import { Link } from "@tanstack/react-router";
-import { Building2, Info, User } from "lucide-react";
+import { Building2, Info, User, HelpCircle } from "lucide-react";
 import { BarraBusqueda } from "./BarraBusqueda";
 import { CATEGORIAS } from "@/lib/categorias";
 import type { Recordatorio } from "@/hooks/useLocalStorage";
@@ -31,6 +31,8 @@ interface HeroBusquedaProps {
   onEscanearRecipe?: () => void;
   /** Abre la hoja de "Iniciar sesión" (opcional) desde el botón de cuenta. */
   onAbrirCuenta?: () => void;
+  /** Relanza el tour guiado de onboarding (enlace "¿Cómo usar DosisYa?"). */
+  onVerTour?: () => void;
   /** Tasa USD→VES vigente para el chip del header; null la oculta. */
   tasa?: number | null;
 }
@@ -56,6 +58,7 @@ export function HeroBusqueda({
   onToggleDelivery,
   onEscanearRecipe,
   onAbrirCuenta,
+  onVerTour,
   tasa,
 }: HeroBusquedaProps) {
   return (
@@ -98,20 +101,25 @@ export function HeroBusqueda({
         <p className="text-gray-400 text-sm mt-1">Encuentra tu medicamento</p>
       </div>
 
-      <BarraBusqueda
-        query={query}
-        onQueryChange={onQueryChange}
-        onSubmit={onSubmit}
-        cargando={cargando}
-        onRecalcularUbicacion={onRecalcularUbicacion}
-        busquedasRecientes={busquedasRecientes}
-        onBusquedaRecienteClick={onBuscarTermino}
-        compacta={false}
-        onEscanearRecipe={onEscanearRecipe}
-      />
+      <div data-tour="buscador" className="w-full max-w-xl">
+        <BarraBusqueda
+          query={query}
+          onQueryChange={onQueryChange}
+          onSubmit={onSubmit}
+          cargando={cargando}
+          onRecalcularUbicacion={onRecalcularUbicacion}
+          busquedasRecientes={busquedasRecientes}
+          onBusquedaRecienteClick={onBuscarTermino}
+          compacta={false}
+          onEscanearRecipe={onEscanearRecipe}
+        />
+      </div>
 
       {/* Chips de categorías — cada uno dispara una búsqueda real */}
-      <div className="mt-4 w-full max-w-xl mx-auto flex flex-wrap justify-center gap-2">
+      <div
+        data-tour="categorias"
+        className="mt-4 w-full max-w-xl mx-auto flex flex-wrap justify-center gap-2"
+      >
         {CATEGORIAS.map((c) => (
           <button
             key={c.termino}
@@ -190,6 +198,16 @@ export function HeroBusqueda({
         <Info className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
         Acerca de DosisYa
       </Link>
+      {onVerTour && (
+        <button
+          type="button"
+          onClick={onVerTour}
+          className="dy-foco mt-2 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-gray-400 transition-colors hover:text-[color:var(--verde-cruz)]"
+        >
+          <HelpCircle className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
+          ¿Cómo usar DosisYa?
+        </button>
+      )}
     </div>
   );
 }

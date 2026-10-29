@@ -24,6 +24,9 @@ import { BurbujaAsistenteIA } from "@/components/paciente/BurbujaAsistenteIA";
 import { Pill } from "lucide-react";
 import { VistaFarmacias } from "./components/vistas/VistaFarmacias";
 import { VistaResultados } from "./components/vistas/VistaResultados";
+import { TourGuiado } from "./components/tour/TourGuiado";
+import { PASOS_PACIENTE } from "./components/tour/pasos";
+import { useTourGuiado } from "./hooks/useTourGuiado";
 import {
   type Filtros,
   FILTROS_INICIALES,
@@ -84,6 +87,13 @@ export default function App() {
   const [loginAbierto, setLoginAbierto] = useState(false);
   const { logueado, perfil, cerrarSesion } = usePacienteSesion();
   const [chatIAAbierto, setChatIAAbierto] = useState(false);
+
+  // Tour guiado de onboarding. Auto-arranca solo la 1ª vez y solo en el hero de
+  // búsqueda, cuando sus elementos ancla ya están en pantalla (un deep-link a
+  // resultados o la pestaña de farmacias no lo disparan).
+  const tourPaciente = useTourGuiado("paciente", {
+    autoIniciar: montado && estado === "hero" && tab === "buscar",
+  });
 
   // Botón atrás del teléfono → cierra el overlay abierto (uno por capa).
   useBackDismiss(listaAbierta, () => setListaAbierta(false));
@@ -280,6 +290,7 @@ export default function App() {
               setLoginAbierto(true);
             }
           }}
+          onVerTour={tourPaciente.iniciar}
           tasa={tasa?.tasa ?? null}
         />
       ) : (
@@ -391,6 +402,13 @@ export default function App() {
           </motion.div>
         ))}
       </div>
+
+      {/* Tour guiado de onboarding (paciente) */}
+      <TourGuiado
+        pasos={PASOS_PACIENTE}
+        activo={tourPaciente.activo}
+        onCerrar={tourPaciente.cerrar}
+      />
 
       {/* Barra de navegación inferior (handoff) */}
       <div className="fixed inset-x-0 bottom-0 z-40">
