@@ -1,13 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, Receipt, LogOut, Loader2 } from "lucide-react";
+import { Building2, Receipt, LogOut, Loader2, HelpCircle } from "lucide-react";
 import { getFarmaciasAdmin } from "@/lib/adminApi";
 import { esSuperadmin, cerrarSesionSuper } from "@/lib/adminAuth";
 import { TablaFarmacias } from "@/components/super/TablaFarmacias";
 import { TablaFacturacion } from "@/components/super/TablaFacturacion";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TourGuiado } from "@/components/tour/TourGuiado";
+import { pasosSuper } from "@/components/tour/pasos";
+import { useTourGuiado } from "@/hooks/useTourGuiado";
 
 export const Route = createFileRoute("/super/dashboard")({
   head: () => ({ meta: [{ title: "Súper Admin — DosisYa" }] }),
@@ -20,6 +23,11 @@ function SuperDashboard() {
   const navigate = useNavigate();
   const [seccion, setSeccion] = useState<Seccion>("farmacias");
   const [ready, setReady] = useState(false);
+
+  // Tour guiado. Arranca solo tras validar la sesión (ready): antes el panel
+  // devuelve null y los anclajes no existen. `pasos` memoizado.
+  const tour = useTourGuiado("super", { autoIniciar: ready });
+  const pasosTour = useMemo(() => pasosSuper((s) => setSeccion(s)), []);
 
   // Guard: sin sesión superadmin → login.
   useEffect(() => {
@@ -56,9 +64,14 @@ function SuperDashboard() {
       <header className="border-b bg-card">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="font-bold">DosisYa · Súper Admin</div>
-          <Button variant="ghost" size="sm" onClick={logout}>
-            <LogOut className="h-4 w-4 mr-1" /> Salir
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" onClick={tour.iniciar}>
+              <HelpCircle className="h-4 w-4 mr-1" /> Guía
+            </Button>
+            <Button variant="ghost" size="sm" onClick={logout} data-tour="nav-salir">
+              <LogOut className="h-4 w-4 mr-1" /> Salir
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -69,12 +82,14 @@ function SuperDashboard() {
             onClick={() => setSeccion("farmacias")}
             icon={<Building2 className="h-4 w-4" />}
             label="Farmacias"
+            dataTour="nav-farmacias"
           />
           <TabBtn
             active={seccion === "facturacion"}
             onClick={() => setSeccion("facturacion")}
             icon={<Receipt className="h-4 w-4" />}
             label="Facturación"
+            dataTour="nav-facturacion"
           />
         </nav>
 
@@ -107,6 +122,9 @@ function SuperDashboard() {
           </div>
         )}
       </div>
+
+      {/* Tour guiado de onboarding (superadmin) */}
+      <TourGuiado pasos={pasosTour} activo={tour.activo} onCerrar={tour.cerrar} />
     </div>
   );
 }
@@ -116,15 +134,18 @@ function TabBtn({
   onClick,
   icon,
   label,
+  dataTour,
 }: {
   active: boolean;
   onClick: () => void;
   icon: React.ReactNode;
   label: string;
+  dataTour?: string;
 }) {
   return (
     <button
       onClick={onClick}
+      data-tour={dataTour}
       className={`inline-flex items-center gap-2 h-9 px-4 rounded-lg text-sm font-medium transition-colors ${
         active ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-accent"
       }`}

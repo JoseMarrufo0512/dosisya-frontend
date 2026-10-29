@@ -26,6 +26,20 @@ interface Recorte {
   height: number;
 }
 
+/**
+ * Primer elemento VISIBLE que coincide con el selector. Las superficies
+ * responsive duplican controles (p. ej. el panel: sidebar en desktop y
+ * píldoras en móvil comparten data-tour); el que está oculto mide 0×0.
+ */
+function elementoVisible(selector: string): Element | null {
+  const nodos = Array.from(document.querySelectorAll(selector));
+  for (const n of nodos) {
+    const r = n.getBoundingClientRect();
+    if (r.width > 0 || r.height > 0) return n;
+  }
+  return null;
+}
+
 interface TourGuiadoProps {
   pasos: PasoTour[];
   activo: boolean;
@@ -58,34 +72,44 @@ export function TourGuiado({ pasos, activo, onCerrar }: TourGuiadoProps) {
   }, [total, esUltimo, cerrar]);
   const atras = useCallback(() => setIndice((i) => Math.max(0, i - 1)), []);
 
-  // Lee el rect del elemento del paso actual (sin provocar scroll).
+  // Lee el rect del elemento visible del paso actual (sin provocar scroll).
   const leerRecorte = useCallback((): Recorte | null => {
     if (!paso?.selector) return null;
-    const el = document.querySelector(paso.selector);
+    const el = elementoVisible(paso.selector);
     if (!el) return null;
     const r = el.getBoundingClientRect();
-    if (r.width === 0 && r.height === 0) return null;
     return { top: r.top, left: r.left, width: r.width, height: r.height };
   }, [paso]);
 
-  // Al entrar a un paso: dejar que `alEntrar` aplique cambios de vista, traer el
-  // elemento a la pantalla y medirlo. Dos pasadas (timeout + rAF) absorben el
-  // relayout que puede disparar `alEntrar`.
+  // Al entrar a un paso: dejar que `alEntrar` aplique cambios de vista (que en el
+  // panel disparan una transición de AnimatePresence) y sondear el elemento hasta
+  // que aparezca, trayéndolo a pantalla una sola vez. Si nunca aparece, la
+  // tarjeta queda centrada sin foco en vez de romperse.
   useEffect(() => {
     if (!activo || !paso) return;
     paso.alEntrar?.();
-    let raf = 0;
-    const medir = () => {
-      const el = paso.selector ? document.querySelector(paso.selector) : null;
-      if (el) {
-        el.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
+    let cancelado = false;
+    let scrolled = false;
+    let intentos = 0;
+    let timer = 0;
+    const tick = () => {
+      if (cancelado) return;
+      const rec = leerRecorte();
+      setRecorte(rec);
+      if (rec && !scrolled) {
+        scrolled = true;
+        elementoVisible(paso.selector)?.scrollIntoView({
+          block: "center",
+          behavior: reduce ? "auto" : "smooth",
+        });
       }
-      raf = requestAnimationFrame(() => setRecorte(leerRecorte()));
+      intentos += 1;
+      if (intentos < 12) timer = window.setTimeout(tick, 110);
     };
-    const t = window.setTimeout(medir, 70);
+    timer = window.setTimeout(tick, 60);
     return () => {
-      window.clearTimeout(t);
-      cancelAnimationFrame(raf);
+      cancelado = true;
+      window.clearTimeout(timer);
     };
   }, [activo, paso, reduce, leerRecorte]);
 

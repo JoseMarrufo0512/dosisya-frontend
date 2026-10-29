@@ -51,3 +51,72 @@ export const PASOS_PACIENTE: PasoTour[] = [
     texto: "Mira las farmacias de tu zona, con su ubicación y cómo llegar.",
   },
 ];
+
+// ── Panel de farmacia (B2B) ───────────────────────────────────────────────────
+// Secciones del dashboard; el tour navega entre ellas con `alEntrar`.
+export type SeccionPanel = "inicio" | "inventario" | "facturacion" | "configuracion" | "soporte";
+
+export function pasosPanel(irA: (s: SeccionPanel) => void): PasoTour[] {
+  return [
+    {
+      selector: '[data-tour="nav-inicio"]',
+      titulo: "Tu resumen",
+      texto: "Aquí ves tu actividad y los leads (pacientes interesados) que recibes cada mes.",
+      alEntrar: () => irA("inicio"),
+    },
+    {
+      selector: '[data-tour="subir-inventario"]',
+      titulo: "Sube tu inventario",
+      texto:
+        "Carga tu Excel de medicamentos y precios. Es lo que te hace aparecer en las búsquedas de los pacientes.",
+      alEntrar: () => irA("inventario"),
+    },
+    {
+      selector: '[data-tour="ubicacion"]',
+      titulo: "Ubica tu farmacia",
+      texto:
+        "Marca tu ubicación en el mapa. Sin coordenadas, tu inventario NO aparece en el buscador, aunque tengas stock.",
+      padding: 10,
+      alEntrar: () => irA("configuracion"),
+    },
+    {
+      selector: '[data-tour="nav-facturacion"]',
+      titulo: "Tu facturación",
+      texto: "Cobramos por lead, no por venta. Aquí ves tus leads del mes y lo que pagarás al corte.",
+      alEntrar: () => irA("facturacion"),
+    },
+    {
+      selector: '[data-tour="nav-soporte"]',
+      titulo: "¿Necesitas ayuda?",
+      texto: "Escríbenos por WhatsApp desde aquí. Te respondemos en menos de una hora.",
+      alEntrar: () => irA("soporte"),
+    },
+  ];
+}
+
+// ── Superadmin ────────────────────────────────────────────────────────────────
+export type SeccionSuper = "farmacias" | "facturacion";
+
+export function pasosSuper(irA: (s: SeccionSuper) => void): PasoTour[] {
+  return [
+    {
+      selector: '[data-tour="nav-farmacias"]',
+      titulo: "Farmacias afiliadas",
+      texto:
+        "Aquí apruebas, editas y verificas las farmacias. Confirma siempre que tengan ubicación antes de publicarlas.",
+      alEntrar: () => irA("farmacias"),
+    },
+    {
+      selector: '[data-tour="nav-facturacion"]',
+      titulo: "Facturación",
+      texto: "El consumo de leads y la facturación de cada farmacia, para el corte del mes.",
+      alEntrar: () => irA("facturacion"),
+    },
+    {
+      selector: '[data-tour="nav-salir"]',
+      titulo: "Cerrar sesión",
+      texto: "Cierra tu sesión de superadmin cuando termines. Es un panel sensible.",
+      alEntrar: () => irA("farmacias"),
+    },
+  ];
+}

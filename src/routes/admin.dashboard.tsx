@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LogOut,
@@ -17,7 +17,11 @@ import {
   Clock,
   Loader2,
   ScanLine,
+  HelpCircle,
 } from "lucide-react";
+import { TourGuiado } from "@/components/tour/TourGuiado";
+import { pasosPanel } from "@/components/tour/pasos";
+import { useTourGuiado } from "@/hooks/useTourGuiado";
 import { UploadInventory } from "@/components/UploadInventory";
 import { EscanerRecipeFarmacia } from "@/components/panel/EscanerRecipeFarmacia";
 import { Button } from "@/components/ui/button";
@@ -100,6 +104,12 @@ function AdminDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+
+  // Tour guiado de onboarding del panel. Auto-arranca la 1ª vez cuando ya hay
+  // datos (los elementos ancla están montados y no estamos en plena redirección
+  // al login). `pasos` memoizado: recrearlo en cada render reiniciaría el paso.
+  const tour = useTourGuiado("panel", { autoIniciar: Boolean(data) });
+  const pasosTour = useMemo(() => pasosPanel((s) => setSection(s)), []);
 
   const cargarDashboard = useCallback(async () => {
     const farmaciaId = typeof window !== "undefined" ? localStorage.getItem("farmacia_id") : null;
@@ -209,6 +219,14 @@ function AdminDashboard() {
         <div className="flex items-center justify-between px-1 pb-3">
           <LogoNegocios compact />
           <div className="flex items-center gap-2">
+            <button
+              onClick={tour.iniciar}
+              aria-label="Cómo funciona el panel"
+              className="h-[30px] w-[30px] rounded-[9px] flex items-center justify-center"
+              style={{ background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.85)" }}
+            >
+              <HelpCircle className="h-4 w-4" aria-hidden="true" />
+            </button>
             <div
               className="h-[30px] w-[30px] rounded-[9px] flex items-center justify-center text-[12px] font-bold"
               style={{ background: "var(--dy-verde-claro)", color: "var(--dy-verde-cruz)" }}
@@ -233,6 +251,7 @@ function AdminDashboard() {
                 key={item.id}
                 onClick={() => setSection(item.id)}
                 aria-current={active ? "page" : undefined}
+                data-tour={`nav-${item.id}`}
                 className="flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[12.5px] whitespace-nowrap flex-none transition-colors"
                 style={{
                   background: active ? "#fff" : "rgba(255,255,255,0.1)",
@@ -266,6 +285,7 @@ function AdminDashboard() {
               {subtitulo}
             </div>
           </div>
+          <BotonAyudaTour onClick={tour.iniciar} />
         </div>
 
         <main className="flex-1 px-4 sm:px-6 lg:px-10 py-6 sm:py-8 max-w-6xl w-full mx-auto">
@@ -319,7 +339,29 @@ function AdminDashboard() {
           </AnimatePresence>
         </main>
       </div>
+
+      {/* Tour guiado de onboarding (panel farmacia) */}
+      <TourGuiado pasos={pasosTour} activo={tour.activo} onCerrar={tour.cerrar} />
     </div>
+  );
+}
+
+// Botón discreto para relanzar el tour (topbar de escritorio).
+function BotonAyudaTour({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex items-center gap-1.5 rounded-[10px] px-3 py-2 text-[12.5px] font-medium transition-colors"
+      style={{
+        color: "var(--dy-tinta-suave)",
+        border: "1px solid var(--dy-borde)",
+        background: "var(--dy-blanco)",
+      }}
+    >
+      <HelpCircle className="h-4 w-4" aria-hidden="true" />
+      ¿Cómo funciona?
+    </button>
   );
 }
 
@@ -368,6 +410,7 @@ function SidebarItem({
     <button
       onClick={onSelect}
       aria-current={active ? "page" : undefined}
+      data-tour={`nav-${item.id}`}
       className="flex items-center gap-2.5 w-full rounded-[11px] px-3 py-2.5 text-left text-[13.5px] transition-colors"
       style={{
         background: active ? "rgba(255,255,255,0.12)" : "transparent",
@@ -572,7 +615,9 @@ function InventarioSection({
       {/* Releer el dashboard en vez de fiarse del conteo que devuelve el upload:
           la tabla de abajo sale de `data.inventario`, así que sin refetch se
           queda mostrando el inventario anterior. */}
-      <UploadInventory onUploaded={() => onUploaded()} />
+      <div data-tour="subir-inventario">
+        <UploadInventory onUploaded={() => onUploaded()} />
+      </div>
 
       <div
         style={{
@@ -1191,7 +1236,11 @@ function ConfiguracionSection({
         </div>
 
         {/* Ubicación en el mapa — sin esto la farmacia no existe para el buscador */}
-        <div className="space-y-2 pt-2" style={{ borderTop: "1px solid var(--dy-borde)" }}>
+        <div
+          data-tour="ubicacion"
+          className="space-y-2 pt-2"
+          style={{ borderTop: "1px solid var(--dy-borde)" }}
+        >
           <div className="pt-3">
             <Label>Ubicación en el mapa</Label>
             <p style={{ fontSize: 12, color: "var(--dy-tinta-suave)", marginTop: 4 }}>
