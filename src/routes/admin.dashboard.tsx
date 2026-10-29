@@ -157,11 +157,16 @@ function AdminDashboard() {
     navigate({ to: "/admin/login" });
   };
 
-  const [nombre, setNombre] = useState<string>(
-    typeof window !== "undefined"
-      ? (localStorage.getItem("nombre_farmacia") ?? "tu farmacia")
-      : "tu farmacia",
-  );
+  // Arranca con el valor SSR-safe (igual en servidor y cliente): leer
+  // localStorage durante el render rompía la hidratación, porque el servidor
+  // renderizaba "tu farmacia" y el cliente el nombre cacheado. El cache se lee
+  // tras montar y la data del dashboard lo pisa cuando llega.
+  const [nombre, setNombre] = useState<string>("tu farmacia");
+
+  useEffect(() => {
+    const cacheado = localStorage.getItem("nombre_farmacia");
+    if (cacheado) setNombre(cacheado);
+  }, []);
 
   useEffect(() => {
     if (data?.nombre_farmacia) setNombre(data.nombre_farmacia);
